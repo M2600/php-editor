@@ -1,9 +1,12 @@
 <?php
+header('Content-Type: application/json');
+
 session_start();
 if(!isset($_SESSION["id"])){
     echo json_encode(array("status" => "session_error", "error" => "Not logged in"));
     exit();
 }
+
 
 
 $FILE_ROOT = "/tmp/";

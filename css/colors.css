@@ -1,0 +1,11 @@
+@import url("colors.css");
+
+:root{
+	--color-text: #333;
+	--color-text-alt: #fff;
+
+	--color-accept: #5cb85c;
+	--color-reject: #e68e8c;
+	
+	
+}

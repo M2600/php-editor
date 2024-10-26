@@ -5,24 +5,193 @@
     <meta charset="UTF-8">
     <title>Ace Editor</title>
     <style>
+        @import url("/css/colors.css");
+
         body {
+            font-family: sans-serif;
             margin: 0;
             padding: 0;
+            height: 100vh;
+            /*overflow: hidden;*/
+        }
+
+        header {
+            height: 4em;
+            background-color: #333;
+            color: var(--color-text-alt);
+        }
+
+        h1 {
+            margin: 0;
+        }
+
+        main {
+            display: flex;
+            height: calc(100vh - 4em);
+        }
+
+        .window {
+            border: 1px solid #333;
             overflow: hidden;
         }
 
+        .window-title {
+            color: var(--color-text);
+            font-size: 1em;
+            margin: .1em;
+        }
+
+        #left-side-bar {
+            padding: 0;
+            margin: 0;
+            width: 15%;
+            resize: horizontal;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #explorer-menu {
+            padding: 0;
+            margin: 0;
+            display: flex;
+        }
+
+        #explorer-title {
+            padding-left: .3em;
+            margin: 0;
+            display: flex;
+        }
+
+        #explorer-controls {
+            padding: 0;
+            margin: 0;
+            display: flex;
+            margin-left: auto;
+        }
+
+        .explorer-control-item {
+            cursor: pointer;
+            margin: 0;
+            padding: 0;
+        }
+
+        .explorer-control-item, button {
+            background-color: #333;
+            color: var(--color-text-alt);
+            border: solid 1px #666;
+            padding: .1em;
+            margin: 0;
+            cursor: pointer;
+        }
+        .explorer-control-item:hover, button:hover {
+            background-color: #666;
+        }
+
+
+        
+
+        .file {
+            cursor: pointer;
+            margin: 0;
+            padding-left: .5em;
+        }
+        .file:hover {
+            background-color: #ccc;
+        }
+
+
+        #main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #main-top-bar {
+            padding: 0;
+            margin: 0;
+        }
+
+        .top-bar-text {
+            margin: 0;
+            padding: 0;
+            padding-left: .5em;
+            padding-right: .5em;
+            display: inline-block;
+        }
+        .top-bar-button {
+            background-color: #333;
+            color: var(--color-text-alt);
+            border: solid 1px #666;
+            padding: .5em;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        #main-bottom-bar {
+            background-color: #333;
+            padding: 2px;
+            margin: 0;
+            height: 10%;
+        }
+
+        .console {
+            color: var(--color-text-alt);
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .success {
+            color: lightgreen;
+        }
+
         #editor {
-            position: absolute;
+            /*position: absolute;
             top: 0;
             right: 0;
             bottom: 0;
-            left: 0;
+            left: 0;*/
+            width: 100%;
+            height: 100%;
         }
     </style>
 </head>
 
 <body>
-    <div id="editor"></div>
+
+    <header>
+        <h1>PHP Editor</h1>
+    </header>
+    <main>
+        <div id="left-side-bar" class="window">
+            <div id="explorer">
+                <h2 class="window-title">EXPLORER</h2>
+                <div id="explorer-menu">
+                    <div id="explorer-title" class="explorer-menu-item">/</div>
+                    <div id="explorer-controls" class="explorer-menu-item">
+                        <button id="newFile" class="explorer-control-item">新規</button>
+                    </div>
+                </div>
+                <div id="explorer-content"></div>
+            </div>
+        </div>
+
+        <div id="main-container" class="window">
+            <div id="main-top-bar">
+                <button id="save-button" class="top-bar-button">Save</button>
+                <p class="top-bar-text" id="file-name"></p>
+                <a id="filePageUrl" class="top-bar-text" href="" target="_blank"></a>
+            </div>
+            <div id="editor"></div>
+            <div id="main-bottom-bar">
+                <div id="log-output" class="console"></div>
+            </div>
+        </div>
+
+    </main>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/ace.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/ext-language_tools.js"></script>
     <script>
@@ -31,6 +200,7 @@
         editor.setFontSize(14);
         editor.setShowPrintMargin(false);
         editor.setOptions({
+            fontFamily: "monospace",
             enableBasicAutocompletion: true,
             enableSnippets: true,
             enableLiveAutocompletion: true
@@ -38,9 +208,242 @@
         editor.getSession().setMode("ace/mode/php");
         editor.getSession().setUseWrapMode(true);
         editor.getSession().setTabSize(4);
-        editor.setValue("<?php\n\techo(\"Hello World!\") \n?>");
+        editor.setValue("");
 
     </script>
+
+    <script>
+        const DEBUG = true;
+
+        var FILENAME;
+        var NEWFILEDISABLED = false;
+
+        async function loadExplorer(){
+            let explorerContent = document.getElementById("explorer-content");
+            let explorerTitle = document.getElementById("explorer-title");
+            await fetch("/api/file_manager.php" ,{
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    action: "list",
+                    path: ""
+                }),
+            }).then(response => response.json())
+            .then(data => {
+                DEBUG && console.log(data);
+                if(data.status == "session_error"){
+                    console.error(data.error);
+                    window.location.href = "/login.php";
+                    return;
+                }
+                userId = data.id;
+                explorerTitle.innerHTML = userId + "/";
+                explorerContent.innerHTML = "";
+                let files = data.files;
+                files.forEach(file => {
+                    let fileElement = document.createElement("div");
+                    fileElement.classList.add("file");
+                    fileElement.innerHTML = file;
+                    fileElement.addEventListener("click", () => {
+                        loadFile(file);
+                    });
+                    explorerContent.appendChild(fileElement);
+                });
+                
+            });
+        }
+
+
+        async function loadFile(path){
+            let saveButton = document.getElementById("save-button");
+            let fileName = document.getElementById("file-name");
+            let filePageUrl = document.getElementById("filePageUrl");
+            await fetch("/api/file_manager.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    action: "get",
+                    path: path
+                })
+            }).then(response => response.json()).then(data => {
+                DEBUG && console.log(data);
+                if(data.status == "error"){
+                    console.error(data.error);
+                    return;
+                }
+                editor.setValue(data.content);
+            });
+            FILENAME = path;
+            fileName.innerHTML = FILENAME;
+            filePageUrl.href = "";
+            filePageUrl.innerHTML = "File page";
+            saveButton.removeEventListener("click", pushSaveButton);
+            saveButton.addEventListener("click", pushSaveButton);
+        }
+
+        async function pushSaveButton(){
+            let content = editor.getValue();
+            saveFile(FILENAME, content);
+        }
+
+        
+
+        async function saveFile(path, content){
+            await fetch("/api/file_manager.php", {
+                method: "POST",
+                headere: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    action: "save",
+                    path: path,
+                    content: content
+                })
+            }).then(response => response.json()).then(data => {
+                DEBUG && console.log(data);
+                if(data.status == "error"){
+                    console.error(data.error);
+                    return;
+                }
+                DEBUG && console.log("File saved");
+            })
+            await phpSyntaxCheck(path);
+        }
+
+        async function createFile(path){
+            await fetch("/api/file_manager.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    action: "touch",
+                    path: path
+                })
+            }).then(response => response.json()).then(data => {
+                DEBUG && console.log(data);
+                if(data.status == "error"){
+                    console.error(data.error);
+                    return;
+                }
+                DEBUG && console.log("File created");
+            });
+        }
+
+
+
+
+        async function newFileDialog(){
+            if(NEWFILEDISABLED){
+                return;
+            }
+            NEWFILEDISABLED = true;
+
+            let dialog = document.createElement("div");
+            dialog.style.position = "absolute";
+            dialog.style.padding = ".5rem";
+            dialog.style.backgroundColor = "#333";
+            dialog.style.color = "var(--color-text-alt)";
+            dialog.style.border = "1px solid #666";
+            dialog.style.top = "50%";
+            dialog.style.left = "50%";
+            dialog.style.transform = "translate(-50%, -50%)";
+
+
+            let newFileName = document.createElement("input");
+            newFileName.type = "text";
+            newFileName.id = "new-file-name";
+            newFileName.placeholder = "File name";
+            newFileName.addEventListener("keydown", (e) => {
+                if(e.key == "Enter"){
+                    let fileName = document.getElementById("new-file-name").value;
+                    createFile(fileName);
+                    loadExplorer();
+                    dialog.remove();
+                    NEWFILEDISABLED = false;
+                }
+            })
+            dialog.appendChild(newFileName);
+
+
+            let controls = document.createElement("div");
+            controls.style.display = "flex";
+            controls.style.flexDirection = "row-reverse";
+            controls.style.marginTop = ".2rem";
+
+            let createButton = document.createElement("button");
+            createButton.id = "create-file";
+            createButton.innerHTML = "Create";
+            createButton.addEventListener("click", () => {
+                let fileName = document.getElementById("new-file-name").value;
+                createFile(fileName);
+                loadExplorer();
+                dialog.remove();
+                NEWFILEDISABLED = false;
+            });
+            controls.appendChild(createButton);
+
+            let cancelButton = document.createElement("button");
+            cancelButton.innerHTML = "Cancel";
+            cancelButton.addEventListener("click", () => {
+                dialog.remove();
+                NEWFILEDISABLED = false;
+            });
+            controls.appendChild(cancelButton);
+
+
+            dialog.appendChild(controls);
+
+            document.body.appendChild(dialog);
+            newFileName.focus();
+            
+        }
+
+        async function phpSyntaxCheck(path){
+            let logOutput = document.getElementById("log-output");
+            await fetch("/api/file_manager.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    action: "syntax_check",
+                    path: path
+                })
+            }).then(response => response.json()).then(data => {
+                DEBUG && console.log(data);
+                if(data.status == "error"){
+                    console.error(data.error);
+                    return;
+                }
+
+                logOutput.innerHTML = "";
+                if(data.result){
+                    console.log("syntax error: " + data.message);
+                    data.message.forEach(message => {
+                        logOutput.innerHTML += "<span class=\"error\">" + message.replaceAll("\n", "<br>") + "</span><br>";
+                    });
+                }
+                else{
+                    console.log("syntax ok");
+                    logOutput.innerHTML = "<span class=\"success\">Syntax OK</span>";
+                }
+                
+                logOutput.scrollTop = logOutput.scrollHeight;
+            })
+        }
+
+
+
+        document.getElementById("newFile").addEventListener("click", newFileDialog);
+
+        loadExplorer();
+    </script>
+
 </body>
 
 </html>

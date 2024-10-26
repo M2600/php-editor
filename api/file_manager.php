@@ -9,20 +9,26 @@ if(!isset($_SESSION["id"])){
 
 
 
-$FILE_ROOT = "/tmp/";
+$FILE_ROOT = "/tmp/phpEditor/";
 
-// make safe path
-// remove "../" from path
+// make safe file name
 function safePath($path){
-    $safe = str_replace("../", "", $path);
+    //$safe = str_replace("../", "", $path);
+    //$safe = str_replace("/", "", $safe);
+    $safe = basename($path);
 
     return $safe;
 }
 
+function getUserRoot(){
+    global $FILE_ROOT;
+    return $FILE_ROOT . basename($_SESSION["id"]) . "/";
+}
+
 // convert user path to server path
 function convertUserPath($path){
-    global $FILE_ROOT;
-    $userPath = $FILE_ROOT . basename($_SESSION["id"]) . "/" . safePath($path);
+    $userPath = getUserRoot() . safePath($path);
+    error_log($userPath);
     return $userPath;
 }
 
@@ -43,7 +49,26 @@ function getFile($userPath){
 function saveFile($userPath, $file){
     try{
         $serverPath = convertUserPath($userPath);
-        file_put_contents($serverPath, $file);
+        $serverDir = dirname($serverPath);
+        if(!file_exists($serverDir)){
+            mkdir($serverDir, 0777, true);
+        }
+        file_put_contents($serverPath, $file, LOCK_EX);
+    }
+    catch(Exception $e){
+        echo json_encode(array("status" => "error", "error" => $e->getMessage()));
+        exit();
+    }
+}
+
+function touchFile($userPath){
+    try{
+        $serverPath = convertUserPath($userPath);
+        $serverDir = dirname($serverPath);
+        if(!file_exists($serverDir)){
+            mkdir($serverDir, 0777, true);
+        }
+        touch($serverPath);
     }
     catch(Exception $e){
         echo json_encode(array("status" => "error", "error" => $e->getMessage()));
@@ -65,6 +90,10 @@ function uploadFile($userPath, $fileInfo){
     }
 }
 
+function downloadFile($userPath){
+
+}
+
 
 // delete file
 function deleteFile($userPath){
@@ -83,7 +112,19 @@ function deleteFile($userPath){
 function fileList($userPath){
     try{
         $serverPath = convertUserPath($userPath);
-        $files = scandir($serverPath);
+        $pathes = scandir($serverPath);
+        if($pathes === false){
+            $pathes = array();
+        }
+        $files = array();
+        foreach($pathes as $path){
+            // skip . and ..
+            if($path == "." || $path == "..") continue;
+            $fullPath = $serverPath . "/" . $path;
+            // skip directories
+            if(is_dir($fullPath)) continue;
+            $files[] = $path;
+        }
         return $files;
     }
     catch(Exception $e){
@@ -91,6 +132,30 @@ function fileList($userPath){
         exit();
     }
 }
+
+
+
+
+
+function phpSyntaxError($userPath){
+    try{
+        $serverPath = convertUserPath($userPath);
+        exec("php -l " . $serverPath . " 2>&1", $output, $return);
+        for($i = 0; $i < count($output); $i++){
+            $output[$i] = str_replace($serverPath, basename($serverPath), $output[$i]);
+            $output[$i] = htmlspecialchars($output[$i]);
+        }
+        if($return != 0){
+            return array("status" => true, "message" => $output);
+        }
+        return array("status" => false, "message" => array());
+    }
+    catch(Exception $e){
+        echo json_encode(array("status" => "error", "error" => $e->getMessage()));
+        exit();
+    }
+}
+
 
 
 
@@ -108,18 +173,26 @@ if(!$_SERVER["REQUEST_METHOD"] == "POST"){
     exit();
 }
 
-$action = $_POST["action"];
-$path = $_POST["path"];
+$params = json_decode(file_get_contents('php://input'), true);
+error_log(print_r($params, true));
+$action = $params["action"];
+$path = $params["path"];
 
 if($action == "get"){
     $file = getFile($path);
-    echo json_encode(array("status" => "success", "file" => $file));
+    echo json_encode(array("status" => "success", "content" => $file));
     exit();
 }
 
 if($action == "save"){
-    $file = $_POST["file"];
+    $file = $params["content"];
     saveFile($path, $file);
+    echo json_encode(array("status" => "success"));
+    exit();
+}
+
+if($action == "touch"){
+    touchFile($path);
     echo json_encode(array("status" => "success"));
     exit();
 }
@@ -138,10 +211,22 @@ if($action == "delete"){
 }
 
 if($action == "list"){
-    $files = fileList($path);
-    echo json_encode(array("status" => "success", "files" => $files));
+    $files = fileList("");
+    echo json_encode(array("status" => "success", "id" => $_SESSION["id"], "files" => $files));
     exit();
 }
+
+
+if($action == "syntax_check"){
+    $result = phpSyntaxError($path);
+    echo json_encode(array("status" => "success", "result" => $result["status"], "message" => $result["message"]));
+    exit();
+}
+
+
+
+
+echo json_encode(array("status" => "error", "error" => "Invalid action"));
 
 
 ?>

@@ -37,6 +37,9 @@ function getFile($userPath){
     try{
         $serverPath = convertUserPath($userPath);
         $file = file_get_contents($serverPath);
+        // if($file === false){
+        //     $file = "";
+        // }
         return $file;
     }
     catch(Exception $e){
@@ -123,7 +126,8 @@ function fileList($userPath){
             $fullPath = $serverPath . "/" . $path;
             // skip directories
             if(is_dir($fullPath)) continue;
-            $files[] = $path;
+            $htmlSafePath = htmlspecialchars($path);
+            $files[] = $htmlSafePath;
         }
         return $files;
     }
@@ -140,7 +144,7 @@ function fileList($userPath){
 function phpSyntaxError($userPath){
     try{
         $serverPath = convertUserPath($userPath);
-        exec("php -l " . $serverPath . " 2>&1", $output, $return);
+        exec("php -l '" . $serverPath . "' 2>&1", $output, $return);
         for($i = 0; $i < count($output); $i++){
             $output[$i] = str_replace($serverPath, basename($serverPath), $output[$i]);
             $output[$i] = htmlspecialchars($output[$i]);
@@ -176,7 +180,7 @@ if(!$_SERVER["REQUEST_METHOD"] == "POST"){
 $params = json_decode(file_get_contents('php://input'), true);
 error_log(print_r($params, true));
 $action = $params["action"];
-$path = $params["path"];
+$path = htmlspecialchars_decode($params["path"]);
 
 if($action == "get"){
     $file = getFile($path);

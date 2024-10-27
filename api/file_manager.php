@@ -172,7 +172,7 @@ function phpRunError($userPath){
         if($return != 0){
             return array("status" => true, "message" => $output);
         }
-        return array("status" => false, "message" => array());
+        return array("status" => false, "message" => $output);
     }
     catch(Exception $e){
         echo json_encode(array("status" => "error", "error" => $e->getMessage()));

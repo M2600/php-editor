@@ -30,15 +30,23 @@
             height: calc(100vh - 4em);
         }
 
-        .window {
-            border: 1px solid #333;
-            overflow: hidden;
+        a {
+            color: var(--color-link-alt);
         }
 
+        .window {
+            overflow: hidden;
+            background-color: var(--color-bg-alt);
+            color: var(--color-text-alt);
+            /*border: solid 1px #666;*/
+        }
+
+
         .window-title {
-            color: var(--color-text);
             font-size: 1em;
             margin: .1em;
+            white-space: nowrap;
+            overflow: hidden;
         }
 
         #left-side-bar {
@@ -59,11 +67,14 @@
         #explorer-title {
             padding-left: .3em;
             margin: 0;
-            display: flex;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         #explorer-controls {
             padding: 0;
+            padding-right: .3em;
             margin: 0;
             display: flex;
             margin-left: auto;
@@ -73,44 +84,103 @@
             cursor: pointer;
             margin: 0;
             padding: 0;
+            white-space: nowrap;
         }
 
-        .explorer-control-item, button {
-            background-color: #333;
+        .explorer-control-item, .explorer-control-item button {
+            background-color: var(--color-bg-alt);
             color: var(--color-text-alt);
             border: solid 1px #666;
             padding: .1em;
             margin: 0;
             cursor: pointer;
+            border-radius: .3em;
         }
-        .explorer-control-item:hover, button:hover {
-            background-color: #666;
+        .explorer-control-item:hover, .explorer-control-item button:hover {
+            background-color: var(--color-bg-active-alt);
         }
 
 
         
 
         .file {
+            display: flex;
             cursor: pointer;
             margin: 0;
             padding-left: .5em;
+            padding-right: .5em;
             white-space: nowrap;
             overflow: hidden;
         }
         .file:hover {
-            background-color: #ccc;
+            background-color: var(--color-bg-active-alt);
+        }
+
+        .file-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
 
-        #main-container {
-            flex: 1;
+
+        .file-control {
+            cursor: pointer;
+            margin: 0;
+            margin-left: auto;
+            padding-left: .1em;
+            padding-right: .1em;
+            pointer-events: painted;
+            border-radius: 20%;
+        }
+        .file-control:hover {
+            background-color: var(--color-bg-active-active-alt)
+        }
+
+        .file-menu {
+            min-width: 10em;
             display: flex;
             flex-direction: column;
+            position: absolute;
+            background-color: var(--color-bg-alt);
+            color: var(--color-text-alt);
+            border: 1px solid #666;
+            padding-top: .4rem;
+            padding-bottom: .4rem;
+            border-radius: .2rem;
+            z-index: 1000;
+        }
+
+        .file-menu-item {
+            background-color: var(--color-bg-alt);
+            color: var(--color-text-alt);
+            cursor: pointer;
+            margin: 0;
+            padding-left: 2em;
+            white-space: nowrap;
+            border: none;
+            text-align: left;
+        }
+        .file-menu-item:hover {
+            background-color: var(--color-bg-active-alt);
+        }
+
+
+
+
+
+
+
+        #main-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
         }
 
         #main-top-bar {
             padding: 0;
             margin: 0;
+            border-bottom: solid 1px #666;
         }
 
         .top-bar-text {
@@ -121,29 +191,53 @@
             display: inline-block;
         }
         .top-bar-button {
-            background-color: #333;
+            background-color: var(--color-bg-alt);
             color: var(--color-text-alt);
             border: solid 1px #666;
             padding: .5em;
             margin: 0;
             cursor: pointer;
         }
+        .top-bar-button:hover {
+            background-color: var(--color-bg-active-alt);
+        }
+
+
+        #main-body {
+            background-color: var(--color-editor-bg);
+            height: 85%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            resize: vertical;
+        }
+
 
         #main-bottom-bar {
-            background-color: #333;
+            background-color: var(--color-bg-alt);
             padding: 2px;
             margin: 0;
-            height: 10%;
+            border-top: solid 1px #666;
+            overflow: hidden;
+            flex: 1;
         }
 
         .console {
             color: var(--color-text-alt);
-            height: 100%;
-            overflow-y: auto;
+            padding-left: .5em;
+            padding-bottom: .2em;
+            overflow: hidden;
         }
 
         .error {
             color: red;
+        }
+
+        .warning {
+            color: yellow;
+        }
+
+        .info {
+            color: var(--color-text-alt);
         }
 
         .success {
@@ -159,6 +253,27 @@
             width: 100%;
             height: 100%;
         }
+
+
+
+        .delete-dialog {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: var(--color-bg-alt);
+            color: var(--color-text-alt);
+            border: 1px solid #666;
+            padding: .5rem;
+            z-index: 1000;
+            top: 50%;
+            left: 50%;
+        }
+        .delete-dialog-controls{
+            display: flex;
+            flex-direction: row-reverse;
+            margin-top: .2rem;
+        }
+
+
     </style>
 </head>
 
@@ -170,7 +285,7 @@
     <main>
         <div id="left-side-bar" class="window">
             <div id="explorer">
-                <h2 class="window-title">EXPLORER</h2>
+                <h2 class="window-title">エクスプローラー</h2>
                 <div id="explorer-menu">
                     <div id="explorer-title" class="explorer-menu-item">/</div>
                     <div id="explorer-controls" class="explorer-menu-item">
@@ -183,11 +298,14 @@
 
         <div id="main-container" class="window">
             <div id="main-top-bar">
-                <button id="save-button" class="top-bar-button">Save</button>
+                <button id="save-button" class="top-bar-button">保存</button>
+                <button id="run-button" class="top-bar-button">実行</button>
                 <p class="top-bar-text" id="file-name"></p>
                 <a id="filePageUrl" class="top-bar-text" href="" target="_blank"></a>
             </div>
-            <div id="editor"></div>
+            <div id="main-body">
+                <div id="editor"></div>
+            </div>
             <div id="main-bottom-bar">
                 <div id="log-output" class="console"></div>
             </div>
@@ -201,11 +319,13 @@
         editor.setTheme("ace/theme/monokai");
         editor.setFontSize(14);
         editor.setShowPrintMargin(false);
+        editor.setReadOnly(true);
         editor.setOptions({
             fontFamily: "monospace",
             enableBasicAutocompletion: true,
             enableSnippets: true,
-            enableLiveAutocompletion: true
+            enableLiveAutocompletion: true,
+            maxLines: Infinity,
         });
         editor.getSession().setMode("ace/mode/php");
         editor.getSession().setUseWrapMode(true);
@@ -219,6 +339,106 @@
 
         var FILENAME;
         var NEWFILEDISABLED = false;
+        var DELETEDIALOGDISABLED = false;
+
+        function removeMenu() {
+            oldMenues = document.getElementsByClassName("file-menu");
+            for(let i = 0; i < oldMenues.length; i++){
+                oldMenues[i].remove();
+                window.removeEventListener("click", removeMenu);
+            }
+        }
+
+
+        function fileMenu(parent, path){
+            removeMenu();
+
+            window.addEventListener("click", removeMenu);
+
+            let menu = document.createElement("div");
+            menu.classList.add("file-menu");
+            menu.style.top = parent.offsetTop + "px";
+            menu.style.left = parent.offsetLeft + parent.offsetWidth + "px";
+            menu.addEventListener("click", (e) => {
+                e.stopPropagation();
+            });
+
+            parent.appendChild(menu);
+
+            let duplicateButton = document.createElement("button");
+            duplicateButton.classList.add("file-menu-item");
+            duplicateButton.innerHTML = "複製";
+            duplicateButton.addEventListener("click", (e) => {
+                e.stopPropagation();
+                console.log("Duplicate");
+            });
+
+            menu.appendChild(duplicateButton);
+
+            let renameButton = document.createElement("button");
+            renameButton.classList.add("file-menu-item");
+            renameButton.innerHTML = "名前変更";
+            renameButton.addEventListener("click", (e) => {
+                e.stopPropagation();
+                console.log("rename");
+            });
+
+            menu.appendChild(renameButton);
+
+            let deleteButton = document.createElement("button");
+            deleteButton.classList.add("file-menu-item");
+            deleteButton.style.color = "red";
+            deleteButton.innerHTML = "削除";
+            deleteButton.addEventListener("click", (e) => {
+                e.stopPropagation();
+                console.log("delete");
+                deleteDialog(path);
+                removeMenu();
+            });
+
+            menu.appendChild(deleteButton);
+        }
+
+        async function deleteDialog(path){
+            if(DELETEDIALOGDISABLED){
+                return;
+            }
+            DELETEDIALOGDISABLED = true;
+
+            let dialog = document.createElement("div");
+            dialog.classList.add("delete-dialog");
+
+            let message = document.createElement("div");
+            message.innerHTML = path + ": 本当に削除しますか？";
+            dialog.appendChild(message);
+
+            let controls = document.createElement("div");
+            controls.classList.add("delete-dialog-controls");
+            dialog.appendChild(controls);
+
+            let deleteButton = document.createElement("button");
+            deleteButton.innerHTML = "削除";
+            deleteButton.addEventListener("click", async () => {
+                console.log("delete");
+                dialog.remove();
+                DELETEDIALOGDISABLED = false;
+                await deleteFile(path);
+                loadExplorer();
+            });
+            controls.appendChild(deleteButton);
+
+            let cancelButton = document.createElement("button");
+            cancelButton.innerHTML = "キャンセル";
+            cancelButton.addEventListener("click", () => {
+                dialog.remove();
+                DELETEDIALOGDISABLED = false;
+            });
+            controls.appendChild(cancelButton);
+
+            document.body.appendChild(dialog);
+        }
+
+
 
         async function loadExplorer(){
             let explorerContent = document.getElementById("explorer-content");
@@ -247,12 +467,29 @@
                 files.forEach(file => {
                     let fileElement = document.createElement("div");
                     fileElement.classList.add("file");
-                    fileElement.innerHTML = file;
                     fileElement.addEventListener("click", () => {
                         loadFile(file);
                     });
+
+                    fileName = document.createElement("div");
+                    fileName.classList.add("file-name");
+                    fileName.innerHTML = file;
+                    fileElement.appendChild(fileName);
+
+                    fileControl = document.createElement("div");
+                    fileControl.classList.add("file-control");
+                    fileControl.innerHTML = "⋮";
+                    fileControl.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        fileMenu(fileElement, file);
+                    });
+
+                    fileElement.appendChild(fileControl);
+
+
                     explorerContent.appendChild(fileElement);
                 });
+                DEBUG && console.log("Explorer loaded");
                 
             });
         }
@@ -260,6 +497,7 @@
 
         async function loadFile(path){
             let saveButton = document.getElementById("save-button");
+            let runButton = document.getElementById("run-button");
             let fileName = document.getElementById("file-name");
             let filePageUrl = document.getElementById("filePageUrl");
             await fetch("/api/file_manager.php", {
@@ -278,6 +516,9 @@
                     return;
                 }
                 editor.setValue(data.content);
+                editor.setReadOnly(false);
+                editor.gotoLine(0);
+                DEBUG && console.log("File loaded");
             });
             FILENAME = path;
             fileName.innerHTML = FILENAME;
@@ -285,11 +526,19 @@
             filePageUrl.innerHTML = "File page";
             saveButton.removeEventListener("click", pushSaveButton);
             saveButton.addEventListener("click", pushSaveButton);
+            runButton.removeEventListener("click", pushRunButton);
+            runButton.addEventListener("click", pushRunButton);
         }
 
         async function pushSaveButton(){
             let content = editor.getValue();
             saveFile(FILENAME, content);
+            phpSyntaxCheck(FILENAME);
+        }
+
+        async function pushRunButton(){
+            saveFile(FILENAME, editor.getValue());
+            runFile(FILENAME);
         }
 
         
@@ -313,10 +562,77 @@
                 }
                 DEBUG && console.log("File saved");
             })
-            await phpSyntaxCheck(path);
         }
 
+
+        async function deleteFile(path){
+            await fetch("/api/file_manager.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    action: "delete",
+                    path: path,
+                })
+            }).then(response => response.json()).then(data => {
+                DEBUG && console.log(data);
+                if(data.status == "error"){
+                    console.error(data.error);
+                    return;
+                }
+                DEBUG && console.log("File deleted");
+            })
+        }
+
+
+        async function runFile(path){
+            let logOutput = document.getElementById("log-output");
+            await fetch("/api/file_manager.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    action: "run",
+                    path: path
+                })
+            }).then(response => response.json()).then(data => {
+                DEBUG && console.log(data);
+                if(data.status == "error"){
+                    console.error(data.error);
+                    return;
+                }
+                DEBUG && console.log("File run");
+                logOutput.innerHTML = "";
+
+                if(data.result){
+                    console.log("run error: " + data.message);
+                }
+                else{
+                    console.log("run ok");
+                }
+                data.message.forEach(message => {
+                    $categoryStr = message.split(":")[0];
+                    if($categoryStr.indexOf("error") > -1){
+                        logOutput.innerHTML += "<span class=\"error\">" + message.replaceAll("\n", "<br>") + "</span><br>";
+                    }
+                    else if($categoryStr.indexOf("Warning") > -1){
+                        logOutput.innerHTML += "<span class=\"warning\">" + message.replaceAll("\n", "<br>") + "</span><br>";
+                    }
+                    else{
+                        logOutput.innerHTML += "<span class=\"info\">" + message.replaceAll("\n", "<br>") + "</span><br>";
+                    }
+                })
+
+                logOutput.scrollTop = logOutput.scrollHeight;
+            });
+        }
+
+
+
         async function createFile(path){
+            ret = "";
             await fetch("/api/file_manager.php", {
                 method: "POST",
                 headers: {
@@ -333,7 +649,9 @@
                     return;
                 }
                 DEBUG && console.log("File created");
+                ret = data.createdFilePath;
             });
+            return ret;
         }
 
 
@@ -348,7 +666,7 @@
             let dialog = document.createElement("div");
             dialog.style.position = "absolute";
             dialog.style.padding = ".5rem";
-            dialog.style.backgroundColor = "#333";
+            dialog.style.backgroundColor = "var(--color-bg-alt)";
             dialog.style.color = "var(--color-text-alt)";
             dialog.style.border = "1px solid #666";
             dialog.style.top = "50%";
@@ -360,13 +678,16 @@
             newFileName.type = "text";
             newFileName.id = "new-file-name";
             newFileName.placeholder = "File name";
-            newFileName.addEventListener("keydown", (e) => {
+            newFileName.addEventListener("keydown", async (e) => {
                 if(e.key == "Enter"){
                     let fileName = document.getElementById("new-file-name").value;
-                    createFile(fileName);
-                    loadExplorer();
                     dialog.remove();
                     NEWFILEDISABLED = false;
+                    createFile(fileName).then(path => {
+                        DEBUG && console.log(path);
+                        loadFile(path);
+                    });
+                    await loadExplorer();
                 }
             })
             dialog.appendChild(newFileName);
@@ -380,12 +701,15 @@
             let createButton = document.createElement("button");
             createButton.id = "create-file";
             createButton.innerHTML = "Create";
-            createButton.addEventListener("click", () => {
+            createButton.addEventListener("click", async () => {
                 let fileName = document.getElementById("new-file-name").value;
-                createFile(fileName);
-                loadExplorer();
                 dialog.remove();
                 NEWFILEDISABLED = false;
+                await createFile(fileName).then(path => {
+                    DEBUG && console.log(path);
+                    loadFile(path);
+                });
+                await loadExplorer();
             });
             controls.appendChild(createButton);
 
@@ -427,17 +751,28 @@
                 if(data.result){
                     console.log("syntax error: " + data.message);
                     data.message.forEach(message => {
-                        logOutput.innerHTML += "<span class=\"error\">" + message.replaceAll("\n", "<br>") + "</span><br>";
+                        $categoryStr = message.split(":")[0];
+                        if($categoryStr.indexOf("error") > -1){
+                            logOutput.innerHTML += "<span class=\"error\">" + message.replaceAll("\n", "<br>") + "</span><br>";
+                        }
+                        else if($categoryStr.indexOf("warning") > -1){
+                            logOutput.innerHTML += "<span class=\"warning\">" + message.replaceAll("\n", "<br>") + "</span><br>";
+                        }
+                        else{
+                            logOutput.innerHTML += "<span class=\"info\">" + message.replaceAll("\n", "<br>") + "</span><br>";
+                        }
                     });
                 }
                 else{
                     console.log("syntax ok");
-                    logOutput.innerHTML = "<span class=\"success\">Syntax OK</span>";
+                    logOutput.innerHTML = "<span class=\"success\">No syntax error occurred</span>";
                 }
                 
                 logOutput.scrollTop = logOutput.scrollHeight;
             })
         }
+
+        function phpRun(path){}
 
 
 

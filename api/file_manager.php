@@ -72,11 +72,13 @@ function touchFile($userPath){
             mkdir($serverDir, 0777, true);
         }
         touch($serverPath);
+        return str_replace(getUserRoot(), "", $serverPath);
     }
     catch(Exception $e){
         echo json_encode(array("status" => "error", "error" => $e->getMessage()));
         exit();
     }
+    
 }
 
 // upload file
@@ -254,8 +256,8 @@ if($action == "save"){
 }
 
 if($action == "touch"){
-    touchFile($path);
-    echo json_encode(array("status" => "success"));
+    $createdFilePath = touchFile($path);
+    echo json_encode(array("status" => "success", "createdFilePath" => $createdFilePath));
     exit();
 }
 

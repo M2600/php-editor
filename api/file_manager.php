@@ -161,6 +161,64 @@ function phpSyntaxError($userPath){
 }
 
 
+function phpRunError($userPath){
+    try{
+        $serverPath = convertUserPath($userPath);
+        exec("php '" . $serverPath . "' 2>&1", $output, $return);
+        for($i = 0; $i < count($output); $i++){
+            $output[$i] = str_replace($serverPath, basename($serverPath), $output[$i]);
+            $output[$i] = htmlspecialchars($output[$i]);
+        }
+        if($return != 0){
+            return array("status" => true, "message" => $output);
+        }
+        return array("status" => false, "message" => array());
+    }
+    catch(Exception $e){
+        echo json_encode(array("status" => "error", "error" => $e->getMessage()));
+        exit();
+    }
+}
+
+
+
+function phpRemoveSystemFunctions($phpString){
+    $functions = array(
+        "system",
+        "exec",
+        "shell_exec",
+        "passthru",
+        "proc_open",
+        "popen",
+        "pcntl_exec",
+        "`",
+
+        "eval",
+        "assert",
+        "include",
+        "require",
+        "include_once",
+        "require_once",
+
+        "phpinfo",
+        "posix_mkfifo",
+        "posix_getlogin",
+        "posix_ttyname",
+        "getenv",
+        "get_current_user",
+        "proc_get_status",
+        "get_cfg_var",
+        "disk_free_space",
+        "disk_total_space",
+        "diskfreespace",
+        "getcwd",
+        "getlastmo",
+        "getmygid",
+        "getmyinode",
+        "getmypid",
+        "getmyuid",
+    );
+}
 
 
 
@@ -223,6 +281,13 @@ if($action == "list"){
 
 if($action == "syntax_check"){
     $result = phpSyntaxError($path);
+    echo json_encode(array("status" => "success", "result" => $result["status"], "message" => $result["message"]));
+    exit();
+}
+
+
+if($action == "run"){
+    $result = phpRunError($path);
     echo json_encode(array("status" => "success", "result" => $result["status"], "message" => $result["message"]));
     exit();
 }

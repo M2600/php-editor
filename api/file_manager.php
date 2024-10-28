@@ -196,9 +196,10 @@ function phpSyntaxError($userPath){
 function phpRunError($userPath){
     try{
         $serverPath = convertUserPath($userPath);
+        chdir(getUserRoot());
         exec("php '" . $serverPath . "' 2>&1", $output, $return);
         for($i = 0; $i < count($output); $i++){
-            $output[$i] = str_replace($serverPath, basename($serverPath), $output[$i]);
+            $output[$i] = str_replace($serverPath, str_replace(getUserRoot(), "", $serverPath), $output[$i]);
             $output[$i] = htmlspecialchars($output[$i]);
         }
         if($return != 0){

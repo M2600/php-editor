@@ -7,9 +7,10 @@ if(!isset($_SESSION["id"])){
     exit();
 }
 
+$iniConf = parse_ini_file("../config.ini");
+error_log(print_r($iniConf, true));
 
-
-$FILE_ROOT = "/tmp/phpEditor/";
+$FILE_ROOT = $iniConf["file_root"];
 
 // make safe file name
 function safePath($path){

@@ -1,6 +1,10 @@
 
 <?php
-$DATA_PATH = "../user.csv";
+header('Content-Type: application/json');
+
+$iniConf = parse_ini_file("../config.ini");
+
+$DATA_PATH = $iniConf["user_data"];
 
 
 
@@ -24,9 +28,10 @@ function checkPassword($id, $pw){
 
 if($_SERVER["REQUEST_METHOD"] == "POST"){
 	session_start();
-    
-	$id = $_POST["id"];
-	$pw = $_POST["pw"];
+    $params = json_decode(file_get_contents('php://input'), true);
+	error_log(print_r($params, true));
+	$id = $params["id"];
+	$pw = $params["pw"];
 
 	// if id and pw are correct
 	$verified = checkPassword($id, $pw);
@@ -34,11 +39,11 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
 	if($verified){
 		$_SESSION["id"] = $id;
 		// redirect to main page
-		header("Location: /");
+		echo json_encode(array("status" => "success"));
 	}
 	else{
 		// redirect to login page
-		header("Location: /login.php");
+		echo json_encode(array("status" => "error", "message" => "Invalid login"));
 	}
 }
 

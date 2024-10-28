@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        @import url("css/colors.css");
+
+        #login-container {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+
+        #login-form {
+            min-width: 200px;
+            max-width: 200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #id-block {
+            width: 100%;
+        }
+        #password-block {
+            width: 100%;
+        }
+
+        #error-message {
+            color: var(--color-reject);
+            width: 100%;
+        }
+
+        .login-id, .login-pw {
+            width: 100%;
+            height: 2.5em;
+            margin-bottom: .5em;
+            box-sizing: border-box;
+        }
+        .login-submit {
+            width: 100%;
+            height: 2.5em;
+            background-color: var(--color-accept);
+            color: var(--color-text-alt);
+        }
+    </style>
+</head>
+<body>
+    <div id="login-container">
+        <div id="login-form">
+            <div id="id-block">
+                <input id="id" class="login-id" type="text" placeholder="ID" required>
+            </div>
+            <div id="password-block">
+                <input id="pw" class="login-pw" type="password" placeholder="パスワード" required>
+            </div>
+            <div id="error-message"></div>
+            <button id="submit" class="login-submit">ログイン</button>
+        </div>
+    </div>
+    <script>
+        async function loginRequest(){
+            let error = document.getElementById("error-message");
+            let id = document.getElementById("id").value;
+            let pw = document.getElementById("pw").value;
+            if(id == "" || pw == ""){
+                error.innerHTML = "IDまたはパスワードが入力されていません";
+                return;
+            }
+
+            await fetch("api/login.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    id: id,
+                    pw: pw,
+                })
+            }).then(response => response.json()).then((data) => {
+                console.log(data);
+                if(data.status == "success"){
+                    window.location.href = "index.php";
+                } else {
+                    error.innerHTML = data.message;
+                }
+            });
+            
+        }
+        document.getElementById("submit").addEventListener("click", function() {
+            loginRequest();
+        });
+        document.getElementById("id").addEventListener("keydown", function(e) {
+            if(e.key == "Enter"){
+                loginRequest();
+            }
+        });
+        document.getElementById("pw").addEventListener("keydown", function(e) {
+            if(e.key == "Enter"){
+                loginRequest();
+            }
+        });
+
+    </script>
+</body>
+</html>

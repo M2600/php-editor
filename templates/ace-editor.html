@@ -235,10 +235,15 @@
         }
 
         .console {
+            height: 100%;
             color: var(--color-text-alt);
             padding-left: .5em;
             padding-bottom: .2em;
-            overflow: hidden;
+            white-space: pre-wrap;
+            word-break: break-all;
+            overflow-x: hidden;
+            overflow-y: auto;
+
         }
 
         .error {
@@ -634,6 +639,9 @@
 
 
         async function loadFile(path){
+            if(FILENAME){
+                saveFile(FILENAME, editor.getValue());
+            }
             let fileElement = document.getElementById(path);
             let saveButton = document.getElementById("save-button");
             let runButton = document.getElementById("run-button");

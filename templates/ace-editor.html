@@ -16,6 +16,8 @@
         }
 
         header {
+            align-items: center;
+            display: flex;
             height: 4em;
             background-color: #333;
             color: var(--color-text-alt);
@@ -23,6 +25,8 @@
 
         h1 {
             margin: 0;
+            padding-left: .5em;
+            padding-right: .5em;
         }
 
         main {
@@ -32,6 +36,11 @@
 
         a {
             color: var(--color-link-alt);
+        }
+
+        #user-menu {
+            margin-left: auto;
+            padding: .5em;
         }
 
         .window {
@@ -319,6 +328,9 @@
 
     <header>
         <h1>PHP Editor</h1>
+        <div id="user-menu">
+            <a href="/logout.php">ログアウト</a>
+        </div>
     </header>
     <main>
         <div id="left-side-bar" class="window">

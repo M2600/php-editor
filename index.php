@@ -8,6 +8,5 @@ if(!isset($_SESSION["id"])){
 
 require("editor.php");
 
-echo "Hello World!";
 
 ?>

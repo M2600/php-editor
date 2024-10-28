@@ -3,9 +3,7 @@ session_start();
 if(!isset($_SESSION["id"])){
     header("Location: /login.php");
 }
-echo "editor<br>";
 
-
-
+require("templates/ace-editor.html");
 
 ?>

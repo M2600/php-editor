@@ -81,6 +81,35 @@ function touchFile($userPath){
     
 }
 
+function renameFile($userPath, $newPath){
+    try{
+        $serverPath = convertUserPath($userPath);
+        $newServerPath = convertUserPath($newPath);
+        rename($serverPath, $newServerPath);
+        return str_replace(getUserRoot(), "", $newServerPath);
+    }
+    catch(Exception $e){
+        echo json_encode(array("status" => "error", "error" => $e->getMessage()));
+        exit();
+    }
+}
+
+function duplicateFile($userPath, $newPath){
+    try{
+        $serverPath = convertUserPath($userPath);
+        $newServerPath = convertUserPath($newPath);
+        while(file_exists($newServerPath)){
+            $newServerPath = explode(".", $newServerPath)[0] . "_" . "." . explode(".", $newServerPath)[1];
+        }
+        copy($serverPath, $newServerPath);
+        return str_replace(getUserRoot(), "", $newServerPath);
+    }
+    catch(Exception $e){
+        echo json_encode(array("status" => "error", "error" => $e->getMessage()));
+        exit();
+    }
+}
+
 // upload file
 function uploadFile($userPath, $fileInfo){
     try{
@@ -258,6 +287,20 @@ if($action == "save"){
 if($action == "touch"){
     $createdFilePath = touchFile($path);
     echo json_encode(array("status" => "success", "createdFilePath" => $createdFilePath));
+    exit();
+}
+
+if($action == "rename"){
+    $newPath = $params["newPath"];
+    $newPath = renameFile($path, $newPath);
+    echo json_encode(array("status" => "success", "newPath" => $newPath));
+    exit();
+}
+
+if($action == "duplicate"){
+    $newPath = explode(".", $path)[0] . "_copy." . explode(".", $path)[1];
+    $newPath = duplicateFile($path, $newPath);
+    echo json_encode(array("status" => "success", "newPath" => $newPath));
     exit();
 }
 

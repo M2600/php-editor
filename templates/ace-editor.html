@@ -256,6 +256,40 @@
 
 
 
+        .duplicate-dialog {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: var(--color-bg-alt);
+            color: var(--color-text-alt);
+            border: 1px solid #666;
+            padding: .5rem;
+            z-index: 1000;
+            top: 50%;
+            left: 50%;
+        }
+        .duplicate-dialog-controls{
+            display: flex;
+            flex-direction: row-reverse;
+            margin-top: .2rem;
+        }
+
+        .rename-dialog {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: var(--color-bg-alt);
+            color: var(--color-text-alt);
+            border: 1px solid #666;
+            padding: .5rem;
+            z-index: 1000;
+            top: 50%;
+            left: 50%;
+        }
+        .rename-dialog-controls{
+            display: flex;
+            flex-direction: row-reverse;
+            margin-top: .2rem;
+        }
+
         .delete-dialog {
             position: absolute;
             transform: translate(-50%, -50%);
@@ -340,6 +374,8 @@
         var FILENAME;
         var NEWFILEDISABLED = false;
         var DELETEDIALOGDISABLED = false;
+        var RENAMEDIALOGDISABLED = false;
+        var DUPLICATEDIALOGDISABLED = false;
 
         function removeMenu() {
             oldMenues = document.getElementsByClassName("file-menu");
@@ -347,6 +383,22 @@
                 oldMenues[i].remove();
                 window.removeEventListener("click", removeMenu);
             }
+        }
+
+
+        function fileNameCheck(fileName){
+            allowedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.";
+
+            if(fileName.length == 0){
+                return false;
+            }
+
+            for(let i = 0; i < fileName.length; i++){
+                if(allowedChars.indexOf(fileName[i]) == -1){
+                    return false;
+                }
+            }
+            return true;
         }
 
 
@@ -371,6 +423,8 @@
             duplicateButton.addEventListener("click", (e) => {
                 e.stopPropagation();
                 console.log("Duplicate");
+                newPath = duplicateFile(path);
+                loadExplorer();
             });
 
             menu.appendChild(duplicateButton);
@@ -381,6 +435,8 @@
             renameButton.addEventListener("click", (e) => {
                 e.stopPropagation();
                 console.log("rename");
+                renameDialog(path);
+                removeMenu();
             });
 
             menu.appendChild(renameButton);
@@ -398,6 +454,71 @@
 
             menu.appendChild(deleteButton);
         }
+
+
+        
+
+        async function renameDialog(path){
+            if(RENAMEDIALOGDISABLED){
+                return;
+            }
+            RENAMEDIALOGDISABLED = true;
+
+            let dialog = document.createElement("div");
+            dialog.classList.add("rename-dialog");
+
+            let func = () => {
+                let newName = document.getElementById("new-file-name").value;
+                if(!fileNameCheck(newName)){
+                    console.error("Invalid file name");
+                    return;
+                }
+                dialog.remove();
+                RENAMEDIALOGDISABLED = false;
+                renameFile(path, newName);
+                loadExplorer();
+            }
+
+            let newName = document.createElement("input");
+            newName.type = "text";
+            newName.id = "new-file-name";
+            newName.placeholder = "New name";
+            newName.addEventListener("change", () => {
+                if(!fileNameCheck(newName.value)){
+                    newName.style.borderColor = "red";
+                }
+                else{
+                    newName.style.borderColor = "initial";
+                }
+            })
+            newName.addEventListener("keydown", async (e) => {
+                if(e.key == "Enter"){
+                    func();
+                }
+            })
+            dialog.appendChild(newName);
+
+            let controls = document.createElement("div");
+            controls.classList.add("rename-dialog-controls");
+            dialog.appendChild(controls);
+
+            let renameButton = document.createElement("button");
+            renameButton.innerHTML = "Rename";
+            renameButton.addEventListener("click", func);
+            controls.appendChild(renameButton);
+            
+            let cancelButton = document.createElement("button");
+            cancelButton.innerHTML = "Cancel";
+            cancelButton.addEventListener("click", () => {
+                dialog.remove();
+                RENAMEDIALOGDISABLED = false;
+            });
+            controls.appendChild(cancelButton);
+
+            document.body.appendChild(dialog);
+            newName.focus();
+        }
+
 
         async function deleteDialog(path){
             if(DELETEDIALOGDISABLED){
@@ -565,6 +686,50 @@
         }
 
 
+        async function renameFile(path, newPath){
+            await fetch("/api/file_manager.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    action: "rename",
+                    path: path,
+                    newPath: newPath,
+                })
+            }).then(response => response.json()).then(data => {
+                DEBUG && console.log(data);
+                if(data.status == "error"){
+                    console.error(data.error);
+                    return;
+                }
+                DEBUG && console.log("File renamed");
+                newPath = data.newPath;
+            })
+        }
+
+        async function duplicateFile(path){
+            await fetch("/api/file_manager.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    action: "duplicate",
+                    path: path,
+                })
+            }).then(response => response.json()).then(data => {
+                DEBUG && console.log(data);
+                if(data.status == "error"){
+                    console.error(data.error);
+                    return;
+                }
+                DEBUG && console.log("File duplicated");
+                newPath = data.newPath;
+            })
+            return newPath;
+        }
+
         async function deleteFile(path){
             await fetch("/api/file_manager.php", {
                 method: "POST",
@@ -674,20 +839,36 @@
             dialog.style.transform = "translate(-50%, -50%)";
 
 
+            func = () => {
+                let fileName = document.getElementById("new-file-name").value;
+                if (!fileNameCheck(fileName)) {
+                    console.error("Invalid file name");
+                    return;
+                }
+                dialog.remove();
+                NEWFILEDISABLED = false;
+                createFile(fileName).then(path => {
+                    DEBUG && console.log(path);
+                    loadFile(path);
+                });
+                loadExplorer();
+            }
+
             let newFileName = document.createElement("input");
             newFileName.type = "text";
             newFileName.id = "new-file-name";
             newFileName.placeholder = "File name";
+            newFileName.addEventListener("change", () => {
+                if(!fileNameCheck(newFileName.value)){
+                    newFileName.style.borderColor = "red";
+                }
+                else{
+                    newFileName.style.borderColor = "initial";
+                }
+            })
             newFileName.addEventListener("keydown", async (e) => {
                 if(e.key == "Enter"){
-                    let fileName = document.getElementById("new-file-name").value;
-                    dialog.remove();
-                    NEWFILEDISABLED = false;
-                    createFile(fileName).then(path => {
-                        DEBUG && console.log(path);
-                        loadFile(path);
-                    });
-                    await loadExplorer();
+                    func();
                 }
             })
             dialog.appendChild(newFileName);
@@ -701,16 +882,7 @@
             let createButton = document.createElement("button");
             createButton.id = "create-file";
             createButton.innerHTML = "Create";
-            createButton.addEventListener("click", async () => {
-                let fileName = document.getElementById("new-file-name").value;
-                dialog.remove();
-                NEWFILEDISABLED = false;
-                await createFile(fileName).then(path => {
-                    DEBUG && console.log(path);
-                    loadFile(path);
-                });
-                await loadExplorer();
-            });
+            createButton.addEventListener("click", func);
             controls.appendChild(createButton);
 
             let cancelButton = document.createElement("button");

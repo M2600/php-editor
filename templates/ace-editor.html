@@ -402,6 +402,8 @@
     <script>
         const DEBUG = true;
 
+        const FILEPAGEBASEURL = "/"
+
         var FILENAME;
         var NEWFILEDISABLED = false;
         var DELETEDIALOGDISABLED = false;
@@ -695,7 +697,7 @@
             });
             FILENAME = path;
             fileName.innerHTML = FILENAME;
-            filePageUrl.href = "";
+            filePageUrl.href = FILEPAGEBASEURL + FILENAME;
             filePageUrl.innerHTML = "File page";
             saveButton.removeEventListener("click", pushSaveButton);
             saveButton.addEventListener("click", pushSaveButton);

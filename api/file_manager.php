@@ -103,7 +103,11 @@ function duplicateFile($userPath, $newPath){
         $serverPath = convertUserPath($userPath);
         $newServerPath = convertUserPath($newPath);
         while(file_exists($newServerPath)){
-            $newServerPath = explode(".", $newServerPath)[0] . "_" . "." . explode(".", $newServerPath)[1];
+            $dir = dirname($newServerPath);
+            $filename = explode(".", basename($newServerPath))[0];
+            $arr = explode(".", basename($newServerPath));
+            $ext = end($arr);
+            $newServerPath = $dir . "/" . $filename . "_" . "." . $ext;
         }
         copy($serverPath, $newServerPath);
         return str_replace(getUserRoot(), "", $newServerPath);

@@ -404,6 +404,26 @@
 
         const FILEPAGEBASEURL = "/"
 
+        const EXT_LANG = [
+            {
+                ext: ["php"],
+                lang: "php"
+            },
+            {
+                ext: ["html", "htm"],
+                lang: "html"
+            },
+            {
+                ext: ["css"],
+                lang: "css"
+            },
+            {
+                ext: ["js"],
+                lang: "javascript"
+            }
+        ];
+
+
         var FILENAME;
         var NEWFILEDISABLED = false;
         var DELETEDIALOGDISABLED = false;
@@ -666,6 +686,18 @@
         }
 
 
+        function extToLang(ext){
+            lang = "";
+            EXT_LANG.forEach(extLang => {
+                if(extLang.ext.indexOf(ext) > -1){
+                    DEBUG && console.log(extLang.lang);
+                    lang = extLang.lang;
+                }
+            });
+            return lang;
+        }
+
+
         async function loadFile(path){
             if(FILENAME){
                 saveFile(FILENAME, editor.getValue());
@@ -691,6 +723,10 @@
                     return;
                 }
                 editor.setValue(data.content);
+                mode = "ace/mode/" + extToLang(path.split(".").pop());
+                DEBUG && console.log(path.split(".").pop());
+                DEBUG && console.log(mode);
+                editor.getSession().setMode(mode);
                 editor.setReadOnly(false);
                 editor.gotoLine(0);
                 DEBUG && console.log("File loaded");

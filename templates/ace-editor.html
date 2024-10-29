@@ -67,6 +67,12 @@
             flex-direction: column;
         }
 
+        #explorer {
+            display: flex;
+            flex-direction: column;
+            height: 100%
+        }
+
         #explorer-menu {
             padding: 0;
             margin: 0;
@@ -110,6 +116,9 @@
         }
 
 
+        #explorer-content {
+            overflow-y: auto;
+        }
         
 
         .file {
@@ -140,9 +149,10 @@
         .file-control {
             cursor: pointer;
             margin: 0;
+            margin-right: .4em;
             margin-left: auto;
-            padding-left: .1em;
-            padding-right: .1em;
+            padding-left: .2em;
+            padding-right: .2em;
             pointer-events: painted;
             border-radius: 20%;
         }
@@ -399,11 +409,13 @@
         var DUPLICATEDIALOGDISABLED = false;
 
         function removeMenu() {
+            let explorerContent = document.getElementById("explorer-content");
             oldMenues = document.getElementsByClassName("file-menu");
             for(let i = 0; i < oldMenues.length; i++){
                 oldMenues[i].remove();
                 window.removeEventListener("click", removeMenu);
             }
+            explorerContent.style.overflowY = "auto";
         }
 
 
@@ -426,11 +438,17 @@
         function fileMenu(parent, path){
             removeMenu();
 
+            // ファイルメニュー表示中はエクスプローラーをスクロールできなくする
+            let explorerContent = document.getElementById("explorer-content");
+            explorerContent.style.overflowY = "hidden";
+
             window.addEventListener("click", removeMenu);
 
             let menu = document.createElement("div");
             menu.classList.add("file-menu");
-            menu.style.top = parent.offsetTop + "px";
+            let rect = parent.getBoundingClientRect();
+            //let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            menu.style.top = (rect.top) + "px";
             menu.style.left = parent.offsetLeft + parent.offsetWidth + "px";
             menu.addEventListener("click", (e) => {
                 e.stopPropagation();
@@ -474,6 +492,10 @@
             });
 
             menu.appendChild(deleteButton);
+
+            if(menu.getBoundingClientRect().bottom > document.documentElement.clientHeight){
+                menu.style.top = document.documentElement.clientHeight - menu.clientHeight;
+            }
         }
 
 

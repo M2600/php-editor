@@ -2,9 +2,10 @@
 <?php
 header('Content-Type: application/json');
 
-$iniConf = parse_ini_file("../config.ini");
+//$iniConf = parse_ini_file("../config.ini");
 
-$DATA_PATH = $iniConf["user_data"];
+$userRoot = posix_getpwuid(posix_getuid())["dir"];
+$DATA_PATH = $userRoot . "/data/php_editor/user.csv";
 
 
 

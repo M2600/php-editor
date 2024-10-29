@@ -7,10 +7,13 @@ if(!isset($_SESSION["id"])){
     exit();
 }
 
-$iniConf = parse_ini_file("../config.ini");
-error_log(print_r($iniConf, true));
+//$iniConf = parse_ini_file("../config.ini");
+//error_log(print_r($iniConf, true));
 
-$FILE_ROOT = $iniConf["file_root"];
+$userRoot = $user = posix_getpwuid(posix_getuid())["dir"];
+
+$FILE_ROOT = $userRoot . "/data/php_editor/sandbox/";
+//error_log($FILE_ROOT);
 
 // make safe file name
 function safePath($path){

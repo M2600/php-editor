@@ -30,7 +30,6 @@ function checkPassword($id, $pw){
 if($_SERVER["REQUEST_METHOD"] == "POST"){
 	session_start();
     $params = json_decode(file_get_contents('php://input'), true);
-	error_log(print_r($params, true));
 	$id = $params["id"];
 	$pw = $params["pw"];
 

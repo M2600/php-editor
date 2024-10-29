@@ -518,8 +518,12 @@
                 }
                 dialog.remove();
                 RENAMEDIALOGDISABLED = false;
-                renameFile(path, newName);
-                loadExplorer();
+                renameFile(path, newName).then(newPath => {
+                    loadExplorer().then(() => {
+                        FILENAME = NULL;
+                        loadFile(newPath);
+                    });
+                });
             }
 
             let newName = document.createElement("input");
@@ -757,8 +761,9 @@
                     return;
                 }
                 DEBUG && console.log("File renamed");
-                newPath = data.newPath;
+                localnewPath = data.newPath;
             })
+            return localnewPath;
         }
 
         async function duplicateFile(path){

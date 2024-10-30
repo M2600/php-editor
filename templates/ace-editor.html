@@ -432,6 +432,7 @@
 
 
         var FILENAME;
+        var USERID;
         var NEWFILEDISABLED = false;
         var DELETEDIALOGDISABLED = false;
         var RENAMEDIALOGDISABLED = false;
@@ -740,7 +741,7 @@
             });
             FILENAME = path;
             fileName.innerHTML = FILENAME;
-            filePageUrl.href = FILEPAGEBASEURL + FILENAME;
+                filePageUrl.href = FILEPAGEBASEURL + USERID + "/" + FILENAME;
             filePageUrl.innerHTML = "File page";
             saveButton.removeEventListener("click", pushSaveButton);
             saveButton.addEventListener("click", pushSaveButton);

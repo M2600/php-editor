@@ -550,7 +550,7 @@
                 RENAMEDIALOGDISABLED = false;
                 renameFile(path, newName).then(newPath => {
                     loadExplorer().then(() => {
-                        FILENAME = NULL;
+                        FILENAME = false;
                         loadFile(newPath);
                     });
                 });
@@ -620,6 +620,7 @@
                 console.log("delete");
                 dialog.remove();
                 DELETEDIALOGDISABLED = false;
+                FILENAME = false;
                 await deleteFile(path);
                 loadExplorer();
             });
@@ -658,8 +659,8 @@
                     window.location.href = "/login.php";
                     return;
                 }
-                userId = data.id;
-                explorerTitle.innerHTML = userId + "/";
+                USERID = data.id;
+                explorerTitle.innerHTML = USERID + "/";
                 explorerContent.innerHTML = "";
                 let files = data.files;
                 files.forEach(file => {
@@ -737,16 +738,19 @@
                 editor.getSession().setMode(mode);
                 editor.setReadOnly(false);
                 editor.gotoLine(0);
-                DEBUG && console.log("File loaded");
-            });
-            FILENAME = path;
-            fileName.innerHTML = FILENAME;
+
+                FILENAME = path;
+                fileName.innerHTML = FILENAME;
                 filePageUrl.href = FILEPAGEBASEURL + USERID + "/" + FILENAME;
-            filePageUrl.innerHTML = "File page";
-            saveButton.removeEventListener("click", pushSaveButton);
-            saveButton.addEventListener("click", pushSaveButton);
-            runButton.removeEventListener("click", pushRunButton);
-            runButton.addEventListener("click", pushRunButton);
+                filePageUrl.innerHTML = "File page";
+                saveButton.removeEventListener("click", pushSaveButton);
+                saveButton.addEventListener("click", pushSaveButton);
+                runButton.removeEventListener("click", pushRunButton);
+                runButton.addEventListener("click", pushRunButton);
+                DEBUG && console.log("File loaded");
+
+            });
+            
             oldSelectedFile = document.getElementsByClassName("selected-file");
             for(let i = 0; i < oldSelectedFile.length; i++){
                 oldSelectedFile[i].classList.remove("selected-file");
@@ -755,12 +759,18 @@
         }
 
         async function pushSaveButton(){
+            if(!FILENAME){
+                return;
+            }
             let content = editor.getValue();
             saveFile(FILENAME, content);
             phpSyntaxCheck(FILENAME);
         }
 
         async function pushRunButton(){
+            if(!FILENAME){
+                return;
+            }
             saveFile(FILENAME, editor.getValue());
             runFile(FILENAME);
         }

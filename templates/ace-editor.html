@@ -38,6 +38,11 @@
             color: var(--color-link-alt);
         }
 
+        i {
+            margin-right: .4em;
+            margin-left: .4em;
+        }
+
         #user-menu {
             margin-left: auto;
             padding: .5em;
@@ -105,7 +110,8 @@
         .explorer-control-item, .explorer-control-item button {
             background-color: var(--color-bg-alt);
             color: var(--color-text-alt);
-            border: solid 1px #666;
+            /*border: solid 1px #666;*/
+            border: none;
             padding: .1em;
             margin: 0;
             cursor: pointer;
@@ -344,7 +350,7 @@
     <header>
         <h1>PHP Editor</h1>
         <div id="user-menu">
-            <a href="/logout.php">ログアウト</a>
+            <a href="/logout.php"><i class="fa-solid fa-right-from-bracket"></i>ログアウト</a>
         </div>
     </header>
     <main>
@@ -354,7 +360,7 @@
                 <div id="explorer-menu">
                     <div id="explorer-title" class="explorer-menu-item">/</div>
                     <div id="explorer-controls" class="explorer-menu-item">
-                        <button id="newFile" class="explorer-control-item">新規</button>
+                        <button id="newFile" class="explorer-control-item"><i class="fa-solid fa-file-circle-plus"></i></button>
                     </div>
                 </div>
                 <div id="explorer-content"></div>
@@ -363,8 +369,8 @@
 
         <div id="main-container" class="window">
             <div id="main-top-bar">
-                <button id="save-button" class="top-bar-button">保存</button>
-                <button id="run-button" class="top-bar-button">実行</button>
+                <button id="save-button" class="top-bar-button"><i class="fa-regular fa-floppy-disk"></i>保存</button>
+                <button id="run-button" class="top-bar-button"><i class="fa-solid fa-play"></i>実行</button>
                 <p class="top-bar-text" id="file-name"></p>
                 <a id="filePageUrl" class="top-bar-text" href="" target="_blank"></a>
             </div>
@@ -379,6 +385,7 @@
     </main>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/ace.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/ext-language_tools.js"></script>
+    <script src="https://kit.fontawesome.com/e59db79247.js" crossorigin="anonymous"></script>
     <script>
         var editor = ace.edit("editor");
         editor.setTheme("ace/theme/monokai");
@@ -480,7 +487,7 @@
 
             let duplicateButton = document.createElement("button");
             duplicateButton.classList.add("file-menu-item");
-            duplicateButton.innerHTML = "複製";
+            duplicateButton.innerHTML = "<i class=\"fa-solid fa-copy\"></i>複製";
             duplicateButton.addEventListener("click", (e) => {
                 e.stopPropagation();
                 console.log("Duplicate");
@@ -492,7 +499,7 @@
 
             let renameButton = document.createElement("button");
             renameButton.classList.add("file-menu-item");
-            renameButton.innerHTML = "名前変更";
+            renameButton.innerHTML = "<i class=\"fa-solid fa-pen\"></i>名前変更";
             renameButton.addEventListener("click", (e) => {
                 e.stopPropagation();
                 console.log("rename");
@@ -505,7 +512,7 @@
             let deleteButton = document.createElement("button");
             deleteButton.classList.add("file-menu-item");
             deleteButton.style.color = "red";
-            deleteButton.innerHTML = "削除";
+            deleteButton.innerHTML = "<i class=\"fa-solid fa-trash\"></i>削除";
             deleteButton.addEventListener("click", (e) => {
                 e.stopPropagation();
                 console.log("delete");

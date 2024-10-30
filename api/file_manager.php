@@ -203,10 +203,13 @@ function phpSyntaxError($userPath){
 function phpRunError($userPath){
     try{
         $serverPath = convertUserPath($userPath);
+        //error_log(getUserRoot());
         chdir(getUserRoot());
-        exec("php '" . $serverPath . "' 2>&1", $output, $return);
+        $fileName = str_replace(getUserRoot(), "", $serverPath);
+        $phpCode = file_get_contents($serverPath);
+        exec("echo '" . $phpCode . "' | php 2>&1", $output, $return);
         for($i = 0; $i < count($output); $i++){
-            $output[$i] = str_replace($serverPath, str_replace(getUserRoot(), "", $serverPath), $output[$i]);
+            $output[$i] = str_replace(getUserRoot(), "", $output[$i]);
             $output[$i] = htmlspecialchars($output[$i]);
         }
         if($return != 0){
@@ -215,7 +218,9 @@ function phpRunError($userPath){
         return array("status" => false, "message" => $output);
     }
     catch(Exception $e){
-        echo json_encode(array("status" => "error", "error" => $e->getMessage()));
+        $eMes = $e->getMessage();
+        error_log(print_r($eMes, true));
+        echo json_encode(array("status" => "error", "error" => $eMes));
         exit();
     }
 }

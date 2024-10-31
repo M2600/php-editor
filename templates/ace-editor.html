@@ -438,6 +438,13 @@
         var RENAMEDIALOGDISABLED = false;
         var DUPLICATEDIALOGDISABLED = false;
 
+
+        function sessionError(){
+            console.error("Session error");
+            window.location.href = "/login.php";
+        }
+
+
         function removeMenu() {
             let explorerContent = document.getElementById("explorer-content");
             oldMenues = document.getElementsByClassName("file-menu");
@@ -655,8 +662,7 @@
             .then(data => {
                 DEBUG && console.log(data);
                 if(data.status == "session_error"){
-                    console.error(data.error);
-                    window.location.href = "/login.php";
+                    sessionError();
                     return;
                 }
                 USERID = data.id;
@@ -731,6 +737,10 @@
                     console.error(data.error);
                     return;
                 }
+                if(data.status == "session_error"){
+                    sessionError();
+                    return;
+                }
                 editor.setValue(data.content);
                 mode = "ace/mode/" + extToLang(path.split(".").pop());
                 DEBUG && console.log(path.split(".").pop());
@@ -794,6 +804,10 @@
                     console.error(data.error);
                     return;
                 }
+                if(data.status == "session_error"){
+                    sessionError();
+                    return;
+                }
                 DEBUG && console.log("File saved");
             })
         }
@@ -814,6 +828,10 @@
                 DEBUG && console.log(data);
                 if(data.status == "error"){
                     console.error(data.error);
+                    return;
+                }
+                if(data.status == "session_error"){
+                    sessionError();
                     return;
                 }
                 DEBUG && console.log("File renamed");
@@ -838,6 +856,10 @@
                     console.error(data.error);
                     return;
                 }
+                if(data.status == "session_error"){
+                    sessionError();
+                    return;
+                }
                 DEBUG && console.log("File duplicated");
                 newPath = data.newPath;
             })
@@ -860,6 +882,10 @@
                     console.error(data.error);
                     return;
                 }
+                if(data.status == "session_error"){
+                    sessionError();
+                    return;
+                }
                 DEBUG && console.log("File deleted");
             })
         }
@@ -880,6 +906,10 @@
                 DEBUG && console.log(data);
                 if(data.status == "error"){
                     console.error(data.error);
+                    return;
+                }
+                if(data.status == "session_error"){
+                    sessionError();
                     return;
                 }
                 DEBUG && console.log("File run");
@@ -925,6 +955,10 @@
                 DEBUG && console.log(data);
                 if(data.status == "error"){
                     console.error(data.error);
+                    return;
+                }
+                if(data.status == "session_error"){
+                    sessionError();
                     return;
                 }
                 DEBUG && console.log("File created");
@@ -1032,6 +1066,10 @@
                 DEBUG && console.log(data);
                 if(data.status == "error"){
                     console.error(data.error);
+                    return;
+                }
+                if(data.status == "session_error"){
+                    sessionError();
                     return;
                 }
 

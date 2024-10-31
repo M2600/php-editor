@@ -567,6 +567,7 @@
             newName.type = "text";
             newName.id = "new-file-name";
             newName.placeholder = "New name";
+            newName.value = path;
             newName.addEventListener("change", () => {
                 if(!fileNameCheck(newName.value)){
                     newName.style.borderColor = "red";

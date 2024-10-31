@@ -715,18 +715,19 @@
             return lang;
         }
 
-        function openInOtherWindow(){
+        async function openInOtherWindow(){
             if(!FILENAME){
                 return;
             }
-            saveFile(FILENAME, editor.getValue());
-            if(!RUNBROWSERTAB){
-                RUNBROWSERTAB = window.open(FILEPAGEBASEURL + USERID + "/" + FILENAME);
-            }
-            else{
-                RUNBROWSERTAB.location.href = FILEPAGEBASEURL + USERID + "/" + FILENAME;
-                RUNBROWSERTAB.focus();
-            }
+            await saveFile(FILENAME, editor.getValue()).then(() => {
+                if(!RUNBROWSERTAB){
+                    RUNBROWSERTAB = window.open(FILEPAGEBASEURL + USERID + "/" + FILENAME);
+                }
+                else{
+                    RUNBROWSERTAB.location.href = FILEPAGEBASEURL + USERID + "/" + FILENAME;
+                    RUNBROWSERTAB.focus();
+                }
+            });
         }
 
         async function loadFile(path){

@@ -372,7 +372,7 @@
                 <button id="save-button" class="top-bar-button"><i class="fa-regular fa-floppy-disk"></i>保存</button>
                 <button id="run-button" class="top-bar-button"><i class="fa-solid fa-play"></i>実行</button>
                 <p class="top-bar-text" id="file-name"></p>
-                <a id="filePageUrl" class="top-bar-text" href="" target="_blank"></a>
+                <button id="open-other-window" class="top-bar-button" style="display: none;"></button>
             </div>
             <div id="main-body">
                 <div id="editor"></div>
@@ -437,6 +437,8 @@
         var DELETEDIALOGDISABLED = false;
         var RENAMEDIALOGDISABLED = false;
         var DUPLICATEDIALOGDISABLED = false;
+
+        var RUNBROWSERTAB = false;
 
 
         function sessionError(){
@@ -713,6 +715,19 @@
             return lang;
         }
 
+        function openInOtherWindow(){
+            if(!FILENAME){
+                return;
+            }
+            saveFile(FILENAME, editor.getValue());
+            if(!RUNBROWSERTAB){
+                RUNBROWSERTAB = window.open(FILEPAGEBASEURL + USERID + "/" + FILENAME);
+            }
+            else{
+                RUNBROWSERTAB.location.href = FILEPAGEBASEURL + USERID + "/" + FILENAME;
+                RUNBROWSERTAB.focus();
+            }
+        }
 
         async function loadFile(path){
             if(FILENAME){
@@ -722,7 +737,7 @@
             let saveButton = document.getElementById("save-button");
             let runButton = document.getElementById("run-button");
             let fileName = document.getElementById("file-name");
-            let filePageUrl = document.getElementById("filePageUrl");
+            let openOtherWindow = document.getElementById("open-other-window");
             await fetch("/api/file_manager.php", {
                 method: "POST",
                 headers: {
@@ -752,8 +767,10 @@
 
                 FILENAME = path;
                 fileName.innerHTML = FILENAME;
-                filePageUrl.href = FILEPAGEBASEURL + USERID + "/" + FILENAME;
-                filePageUrl.innerHTML = "別ページで表示";
+                openOtherWindow.innerHTML = "別ページで表示";
+                openOtherWindow.style.display = "";
+                openOtherWindow.removeEventListener("click", openInOtherWindow);
+                openOtherWindow.addEventListener("click", openInOtherWindow);
                 saveButton.removeEventListener("click", pushSaveButton);
                 saveButton.addEventListener("click", pushSaveButton);
                 runButton.removeEventListener("click", pushRunButton);

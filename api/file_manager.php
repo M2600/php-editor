@@ -60,7 +60,7 @@ function saveFile($userPath, $file){
         if(!file_exists($serverDir)){
             mkdir($serverDir, 0777, true);
         }
-        $convert = mb_convert_encoding($content, "utf-8", "utf-8");
+        $convert = mb_convert_encoding($file, "utf-8", "utf-8");
         file_put_contents($serverPath, $convert, LOCK_EX);
     }
     catch(Exception $e){

@@ -70,6 +70,14 @@
         editor.getSession().setTabSize(4);
         editor.setValue("");
 
+
+        document.getElementById("main-body").addEventListener("click", (e) => {
+            if(e.target != e.currentTarget){
+                return;
+            }
+            editor.focus();
+            //editor.moveCursorTo(editor.session.getLength(), editor.session.getLine(editor.session.getLength()).length);
+        })
     </script>
 
     <script>

@@ -720,7 +720,8 @@
                 return;
             }
             await saveFile(FILENAME, editor.getValue()).then(() => {
-                if(!RUNBROWSERTAB){
+                console.log(RUNBROWSERTAB);
+                if(!RUNBROWSERTAB || RUNBROWSERTAB.closed){
                     RUNBROWSERTAB = window.open(FILEPAGEBASEURL + USERID + "/" + FILENAME);
                 }
                 else{

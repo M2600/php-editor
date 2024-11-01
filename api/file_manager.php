@@ -154,12 +154,12 @@ function deleteFile($userPath){
 function fileList($userPath){
     try{
         $serverPath = convertUserPath($userPath);
-        $pathes = scandir($serverPath);
-        if($pathes === false){
-            $pathes = array();
+        $paths = scandir($serverPath);
+        if($paths === false){
+            $paths = array();
         }
         $files = array();
-        foreach($pathes as $path){
+        foreach($paths as $path){
             // skip . and ..
             if($path == "." || $path == "..") continue;
             $fullPath = $serverPath . "/" . $path;

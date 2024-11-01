@@ -166,7 +166,7 @@ function fileList($userPath){
             $fullPath = $serverPath . "/" . $path;
             // skip directories
             if(is_dir($fullPath)) continue;
-            $htmlSafePath = htmlspecialchars($path);
+            $htmlSafePath = htmlspecialchars($path, ENT_QUOTES);
             $files[] = $htmlSafePath;
         }
         return $files;
@@ -187,7 +187,7 @@ function phpSyntaxError($userPath){
         exec("php -l '" . $serverPath . "' 2>&1", $output, $return);
         for($i = 0; $i < count($output); $i++){
             $output[$i] = str_replace($serverPath, basename($serverPath), $output[$i]);
-            $output[$i] = htmlspecialchars($output[$i]);
+            $output[$i] = htmlspecialchars($output[$i], ENT_QUOTES);
         }
         if($return != 0){
             return array("status" => true, "message" => $output);
@@ -208,7 +208,7 @@ function phpRunError($userPath){
         exec("php '" . $serverPath . "' 2>&1", $output, $return);
         for($i = 0; $i < count($output); $i++){
             $output[$i] = str_replace($serverPath, str_replace(getUserRoot(), "", $serverPath), $output[$i]);
-            $output[$i] = htmlspecialchars($output[$i]);
+            $output[$i] = htmlspecialchars($output[$i], ENT_QUOTES);
         }
         if($return != 0){
             return array("status" => true, "message" => $output);
@@ -279,7 +279,7 @@ if(!$_SERVER["REQUEST_METHOD"] == "POST"){
 $params = json_decode(file_get_contents('php://input'), true);
 error_log(print_r($params, true));
 $action = $params["action"];
-$path = htmlspecialchars_decode($params["path"]);
+$path = htmlspecialchars_decode($params["path"], ENT_QUOTES);
 
 if($action == "get"){
     $file = getFile($path);

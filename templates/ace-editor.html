@@ -467,16 +467,18 @@
                 return;
             }
             let content = editor.getValue();
-            saveFile(FILENAME, content);
+            saveFile(FILENAME, content).then(() => {
             phpSyntaxCheck(FILENAME);
+            });
         }
 
         async function pushRunButton(){
             if(!FILENAME){
                 return;
             }
-            saveFile(FILENAME, editor.getValue());
+            saveFile(FILENAME, editor.getValue()).then(() => {
             runFile(FILENAME);
+            });
         }
 
         

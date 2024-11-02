@@ -264,12 +264,12 @@
             dialog.appendChild(controls);
 
             let renameButton = document.createElement("button");
-            renameButton.innerHTML = "Rename";
+            renameButton.innerHTML = "<i class=\"fa-solid fa-check\"></i>Rename";
             renameButton.addEventListener("click", func);
             controls.appendChild(renameButton);
             
             let cancelButton = document.createElement("button");
-            cancelButton.innerHTML = "Cancel";
+            cancelButton.innerHTML = "<i class=\"fa-solid fa-ban\"></i>Cancel";
             cancelButton.addEventListener("click", () => {
                 dialog.remove();
                 RENAMEDIALOGDISABLED = false;
@@ -299,7 +299,7 @@
             dialog.appendChild(controls);
 
             let deleteButton = document.createElement("button");
-            deleteButton.innerHTML = "削除";
+            deleteButton.innerHTML = "<i class=\"fa-solid fa-check\"></i>削除";
             deleteButton.addEventListener("click", async () => {
                 console.log("delete");
                 dialog.remove();
@@ -311,7 +311,7 @@
             controls.appendChild(deleteButton);
 
             let cancelButton = document.createElement("button");
-            cancelButton.innerHTML = "キャンセル";
+            cancelButton.innerHTML = "<i class=\"fa-solid fa-ban\"></i>キャンセル";
             cancelButton.addEventListener("click", () => {
                 dialog.remove();
                 DELETEDIALOGDISABLED = false;
@@ -733,12 +733,12 @@
 
             let createButton = document.createElement("button");
             createButton.id = "create-file";
-            createButton.innerHTML = "Create";
+            createButton.innerHTML = "<i class=\"fa-solid fa-check\"></i>作成";
             createButton.addEventListener("click", func);
             controls.appendChild(createButton);
 
             let cancelButton = document.createElement("button");
-            cancelButton.innerHTML = "Cancel";
+            cancelButton.innerHTML = "<i class=\"fa-solid fa-ban\"></i>キャンセル";
             cancelButton.addEventListener("click", () => {
                 dialog.remove();
                 NEWFILEDISABLED = false;

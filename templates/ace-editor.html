@@ -463,6 +463,8 @@
         }
 
         async function pushSaveButton(){
+            let logOutput = document.getElementById("log-output");
+            logOutput.innerHTML = "";
             if(!FILENAME){
                 return;
             }
@@ -473,6 +475,8 @@
         }
 
         async function pushRunButton(){
+            let logOutput = document.getElementById("log-output");
+            logOutput.innerHTML = "";
             if(!FILENAME){
                 return;
             }
@@ -484,6 +488,7 @@
         
 
         async function saveFile(path, content){
+            let logOutput = document.getElementById("log-output");
             await fetch("/api/file_manager.php", {
                 method: "POST",
                 headere: {
@@ -505,6 +510,7 @@
                     return;
                 }
                 DEBUG && console.log("File saved");
+                logOutput.innerHTML += "<span class=\"success\">File saved</span><br>";
             })
         }
 
@@ -609,7 +615,6 @@
                     return;
                 }
                 DEBUG && console.log("File run");
-                logOutput.innerHTML = "";
 
                 if(data.result){
                     console.log("run error: " + data.message);
@@ -770,7 +775,6 @@
                     return;
                 }
 
-                logOutput.innerHTML = "";
                 if(data.result){
                     console.log("syntax error: " + data.message);
                     data.message.forEach(message => {
@@ -788,7 +792,7 @@
                 }
                 else{
                     console.log("syntax ok");
-                    logOutput.innerHTML = "<span class=\"success\">No syntax error occurred</span>";
+                    logOutput.innerHTML += "<span class=\"success\">No syntax error occurred</span><br>";
                 }
                 
                 logOutput.scrollTop = logOutput.scrollHeight;

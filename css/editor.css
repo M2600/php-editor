@@ -200,8 +200,29 @@ i {
     padding: 0;
     margin: 0;
     border-bottom: solid 1px #666;
+    display: flex;
 }
 
+.main-top-bar-item {
+    padding: 0;
+    margin: 0;
+    display: flex;
+}
+
+#main-top-bar-left {
+
+}
+#main-top-bar-right {
+    margin-left: auto;
+}
+
+#main-top-bar-left button{
+    margin-right: .3em;
+}
+
+#main-top-bar-right button{
+    margin-left: .3em;
+}
 .top-bar-text {
     margin: 0;
     padding: 0;
@@ -214,7 +235,7 @@ i {
     color: var(--color-text-alt);
     border: solid 1px #666;
     padding: .5em;
-    margin: 0;
+    margin-bottom: .2em;
     cursor: pointer;
 }
 .top-bar-button:hover {

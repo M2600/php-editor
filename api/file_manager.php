@@ -13,6 +13,7 @@ if(!isset($_SESSION["id"])){
 $userRoot = $user = posix_getpwuid(posix_getuid())["dir"];
 
 $FILE_ROOT = $userRoot . "/data/php_editor/sandbox/";
+$USER_SCRIPT_PHP_INI = $userRoot . "/data/php_editor/sandbox/php.ini";
 //error_log($FILE_ROOT);
 
 // make safe file name
@@ -204,7 +205,14 @@ function phpRunError($userPath){
     try{
         $serverPath = convertUserPath($userPath);
         chdir(getUserRoot());
-        exec("php '" . $serverPath . "' 2>&1", $output, $return);
+        $command = "php ";
+        global $USER_SCRIPT_PHP_INI;
+        if(file_exists($USER_SCRIPT_PHP_INI)){
+            $command .= "-c " . $USER_SCRIPT_PHP_INI . " ";
+        }
+        $command .= "'" . $serverPath . "' ";
+        $command .= "2>&1";
+        exec($command, $output, $return);
         for($i = 0; $i < count($output); $i++){
             $output[$i] = str_replace($serverPath, str_replace(getUserRoot(), "", $serverPath), $output[$i]);
             $output[$i] = htmlspecialchars($output[$i], ENT_QUOTES);

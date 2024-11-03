@@ -7,17 +7,38 @@
     <style>
         @import url("css/colors.css");
 
-        #login-container {
+        body{
+            margin: 0;
             height: 100vh;
             display: flex;
+            justify-content: center;
             align-items: center;
+            background-color: #222;
+            color: #ccc;
+
+            font-family: "sans-serif";
+        }
+
+        #login-container {
+            padding: 2em;
+            width: 300px;
+            display: flex;
+            align-items: center;
+            border-radius: 10px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
+            background-color: #333;
         }
 
         #login-form {
-            min-width: 200px;
-            max-width: 200px;
+            padding: 10px;
+            width: 100%;
             margin-left: auto;
             margin-right: auto;
+        }
+        
+        #title {
+            text-align: center;
+            margin-bottom: 1em;
         }
 
         #id-block {
@@ -27,45 +48,61 @@
             width: 100%;
         }
 
-        #error-message {
-            color: var(--color-reject);
+        #message {
             width: 100%;
+            margin-bottom: 1em;
         }
 
         .login-id, .login-pw {
             width: 100%;
             height: 2.5em;
-            margin-bottom: .5em;
+            margin-bottom: 1em;
             box-sizing: border-box;
+            border: none;
+            border-radius: 5px;
+            background-color: #444;
+            color: #ccc;
+            padding: 0 0.5em;
         }
         .login-submit {
             width: 100%;
             height: 2.5em;
-            background-color: var(--color-accept);
-            color: var(--color-text-alt);
+            background-color: #555;
+            color: #ccc;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
         }
+        .login-submit:hover {
+            background-color: #666;
+        }
+        
     </style>
 </head>
 <body>
     <div id="login-container">
         <div id="login-form">
+            <div id="title">
+                <h2>PHP editor Login</h2>
+            </div>
+
             <div id="id-block">
                 <input id="id" class="login-id" type="text" placeholder="ID" required>
             </div>
             <div id="password-block">
                 <input id="pw" class="login-pw" type="password" placeholder="パスワード" required>
             </div>
-            <div id="error-message"></div>
+            <div id="message"></div>
             <button id="submit" class="login-submit">ログイン</button>
         </div>
     </div>
     <script>
         async function loginRequest(){
-            let error = document.getElementById("error-message");
+            let message = document.getElementById("message");
             let id = document.getElementById("id").value;
             let pw = document.getElementById("pw").value;
             if(id == "" || pw == ""){
-                error.innerHTML = "IDまたはパスワードが入力されていません";
+                message.innerHTML = "IDまたはパスワードが入力されていません";
                 return;
             }
 
@@ -78,12 +115,16 @@
                     id: id,
                     pw: pw,
                 })
-            }).then(response => response.json()).then((data) => {
+            }).then(response => response.json()).then(async (data) => {
                 console.log(data);
                 if(data.status == "success"){
+                    message.style.color = "green";
+                    message.innerHTML = data.message;
+                    //await new Promise(resolve => setTimeout(resolve, 2000));
                     window.location.href = "index.php";
                 } else {
-                    error.innerHTML = data.message;
+                    message.style.color = "red";
+                    message.innerHTML = data.message;
                 }
             });
             

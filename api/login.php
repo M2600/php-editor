@@ -14,6 +14,20 @@ ini_set('session.use_only_cookies', 1);
 ini_set('session.cookie_secure', 1);
 
 
+$comments = array(
+	// "Welcome back! Your code runs perfectly… somewhere in an alternate universe.",
+	// "^C^C^C... How do I exit vim?",
+	// "^Z... Yes! I made it!!!",
+	"log in successful",
+);
+
+function getRandomComment(){
+	global $comments;
+	$index = rand(0, count($comments)-1);
+	return $comments[$index];
+}
+
+
 function checkPassword($id, $pw){
     global $DATA_PATH;
 	$lines = file($DATA_PATH);
@@ -39,7 +53,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
 	if($verified){
 		$_SESSION["id"] = $id;
 		// redirect to main page
-		echo json_encode(array("status" => "success"));
+		echo json_encode(array("status" => "success", "message" => getRandomComment()));
 	}
 	else{
 		// redirect to login page

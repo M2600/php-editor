@@ -35,10 +35,14 @@
 
         <div id="main-container" class="window">
             <div id="main-top-bar">
+                <div id="main-top-bar-left" class="main-top-bar-item">
                 <button id="save-button" class="top-bar-button"><i class="fa-regular fa-floppy-disk"></i>保存</button>
-                <button id="run-button" class="top-bar-button"><i class="fa-solid fa-play"></i>実行</button>
-                <p class="top-bar-text" id="file-name"></p>
-                <button id="open-other-window" class="top-bar-button" style="display: none;"></button>
+                    <button id="open-other-window" class="top-bar-button"><i class="fa-solid fa-play"></i>実行</button>
+                    <p class="top-bar-text" id="file-name" style="display: none;"></p>
+                </div>
+                <div id="main-top-bar-right" class="main-top-bar-item">
+                    <button id="run-button" class="top-bar-button" ><i class="fa-solid fa-bug"></i>エラーチェック</button>
+                </div>
             </div>
             <div id="main-body">
                 <div id="editor"></div>
@@ -443,8 +447,6 @@
 
                 FILENAME = path;
                 fileName.innerHTML = FILENAME;
-                openOtherWindow.innerHTML = "別ページで表示";
-                openOtherWindow.style.display = "";
                 openOtherWindow.removeEventListener("click", openInOtherWindow);
                 openOtherWindow.addEventListener("click", openInOtherWindow);
                 saveButton.removeEventListener("click", pushSaveButton);

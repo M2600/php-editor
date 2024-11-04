@@ -168,6 +168,7 @@ i {
     padding-bottom: .4rem;
     border-radius: .2rem;
     z-index: 1000;
+    box-shadow: 0 0 10px 0 rgba(0,0,0,0.5);
 }
 
 .file-menu-item {
@@ -334,6 +335,7 @@ i {
     z-index: 2000;
     top: 50%;
     left: 50%;
+    box-shadow: 0 0 10px 0 rgba(0,0,0,0.5);
 }
 .duplicate-dialog-controls{
     display: flex;
@@ -351,6 +353,7 @@ i {
     z-index: 2000;
     top: 50%;
     left: 50%;
+    box-shadow: 0 0 10px 0 rgba(0,0,0,0.5);
 }
 .rename-dialog-controls{
     display: flex;
@@ -368,6 +371,7 @@ i {
     z-index: 2000;
     top: 50%;
     left: 50%;
+    box-shadow: 0 0 10px 0 rgba(0,0,0,0.5);
 }
 .delete-dialog-controls{
     display: flex;
@@ -375,7 +379,7 @@ i {
     margin-top: .2rem;
 }
 
-#upload-dialog {
+.upload-dialog {
     position: absolute;
     transform: translate(-50%, -50%);
     background-color: var(--color-bg-alt);
@@ -387,12 +391,18 @@ i {
     left: 50%;
     width: fit-content;
     height: fit-content;
+    box-shadow: 0 0 10px 0 rgba(0,0,0,0.5);
 }
-#upload-dialog input {
+.upload-dialog input {
     width: 50vw;
     height: 40vh;
     text-align: center;
     padding-top: auto;
     padding-bottom: auto;
     border: 1px solid #666;
+}
+.upload-dialog-controls{
+    display: flex;
+    flex-direction: row-reverse;
+    margin-top: .2rem;
 }

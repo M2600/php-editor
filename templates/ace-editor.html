@@ -191,11 +191,12 @@
             let duplicateButton = document.createElement("button");
             duplicateButton.classList.add("file-menu-item");
             duplicateButton.innerHTML = "<i class=\"fa-solid fa-copy\"></i>複製";
-            duplicateButton.addEventListener("click", (e) => {
+            duplicateButton.addEventListener("click", async (e) => {
                 e.stopPropagation();
                 console.log("Duplicate");
-                newPath = duplicateFile(path);
-                loadExplorer();
+                newPath = await duplicateFile(path);
+                await loadExplorer();
+                await loadFile(newPath);
             });
 
             menu.appendChild(duplicateButton);

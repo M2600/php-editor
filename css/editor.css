@@ -56,7 +56,7 @@ i {
 #left-side-bar {
     padding: 0;
     margin: 0;
-    width: 15%;
+    width: 20%;
     resize: horizontal;
     display: flex;
     flex-direction: column;

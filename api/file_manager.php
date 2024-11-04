@@ -24,8 +24,8 @@ $action = $params["action"];
 $path = htmlspecialchars_decode($params["path"], ENT_QUOTES);
 
 if($action == "get"){
-    $file = getFile($path);
-    echo json_encode(array("status" => "success", "content" => $file));
+    $ret = getFile($path);
+    echo json_encode(array("status" => "success", "content" => $ret["file"], "fileType" => $ret["fileType"]));
     exit();
 }
 

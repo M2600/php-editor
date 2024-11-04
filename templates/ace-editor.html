@@ -27,6 +27,7 @@
                     <div id="explorer-title" class="explorer-menu-item">/</div>
                     <div id="explorer-controls" class="explorer-menu-item">
                         <button id="newFile" class="explorer-control-item"><i class="fa-solid fa-file-circle-plus"></i></button>
+                        <button id="uploadFile" class="explorer-control-item"><i class="fa-solid fa-upload"></i></button>
                     </div>
                 </div>
                 <div id="explorer-content"></div>
@@ -82,6 +83,8 @@
             editor.focus();
             //editor.moveCursorTo(editor.session.getLength(), editor.session.getLine(editor.session.getLength()).length);
         })
+
+        document.getElementById("editor").style.display = "none";
     </script>
 
     <script>
@@ -110,6 +113,7 @@
 
 
         var FILENAME = false;
+        var READONLY = false;
         var USERID = false;
         var NEWFILEDISABLED = false;
         var DELETEDIALOGDISABLED = false;
@@ -397,7 +401,9 @@
             if(!FILENAME){
                 return;
             }
-            await saveFile(FILENAME, editor.getValue()).then(() => {
+            if(!READONLY){
+                await saveFile(FILENAME, editor.getValue());
+            }
                 console.log(RUNBROWSERTAB);
                 if(!RUNBROWSERTAB || RUNBROWSERTAB.closed){
                     RUNBROWSERTAB = window.open(FILEPAGEBASEURL + USERID + "/" + FILENAME);
@@ -406,11 +412,45 @@
                     RUNBROWSERTAB.location.href = FILEPAGEBASEURL + USERID + "/" + FILENAME;
                     RUNBROWSERTAB.focus();
                 }
-            });
         }
 
+        function editorBlockMessage(message){
+            let mainBody = document.getElementById("main-body");
+            
+            let messageContainer = document.createElement("div");
+            messageContainer.id = "editor-block-message";
+            messageContainer.classList.add("editor-block-message");
+
+            let messageText = document.createElement("p");
+            messageText.innerHTML = message;
+            messageContainer.appendChild(messageText);
+
+            mainBody.appendChild(messageContainer);
+        }
+
+        async function previewImage(imageBase64){
+            let editorElm = document.getElementById("editor");
+            editorElm.style.display = "none";
+
+            let imgContainer = document.createElement("div");
+            imgContainer.id = "preview-image-container";
+            imgContainer.classList.add("preview-image-container");
+
+
+            let img = document.createElement("img");
+            img.id = "preview-image";
+            img.classList.add("preview-image");
+            img.src = "data:image/png;base64," + imageBase64;
+            imgContainer.appendChild(img);
+
+            let mainBody = document.getElementById("main-body");
+            mainBody.appendChild(imgContainer);
+            READONLY = true;
+        }
+
+
         async function loadFile(path){
-            if(FILENAME){
+            if(FILENAME && !READONLY){
                 saveFile(FILENAME, editor.getValue());
             }
             let fileElement = document.getElementById(path);
@@ -418,6 +458,12 @@
             let runButton = document.getElementById("run-button");
             let fileName = document.getElementById("file-name");
             let openOtherWindow = document.getElementById("open-other-window");
+
+            openOtherWindow.removeEventListener("click", openInOtherWindow);
+            saveButton.removeEventListener("click", pushSaveButton);
+            runButton.removeEventListener("click", pushRunButton);
+
+
             await fetch("/api/file_manager.php", {
                 method: "POST",
                 headers: {
@@ -437,6 +483,17 @@
                     sessionError();
                     return;
                 }
+                let editorElm = document.getElementById("editor");
+                let mainBody = document.getElementById("main-body");
+                oldElms = mainBody.children;
+                for(let i = 0; i < oldElms.length; i++){
+                    if(oldElms[i].id != "editor"){
+                        oldElms[i].remove();
+                    }
+                }
+                if(data.fileType == "text"){
+                    READONLY = false;
+                    editorElm.style.display = "block";
                 editor.setValue(data.content);
                 mode = "ace/mode/" + extToLang(path.split(".").pop());
                 DEBUG && console.log(path.split(".").pop());
@@ -444,14 +501,21 @@
                 editor.getSession().setMode(mode);
                 editor.setReadOnly(false);
                 editor.gotoLine(0);
+                }
+                else if(data.fileType == "image"){
+                    previewImage(data.content);
+                }
+                else{
+                    editorElm.style.display = "none";
+                    READONLY = true;
+                    editorBlockMessage("このファイルは表示できません。");
+                    console.error("Invalid file type");
+                }
 
                 FILENAME = path;
                 fileName.innerHTML = FILENAME;
-                openOtherWindow.removeEventListener("click", openInOtherWindow);
                 openOtherWindow.addEventListener("click", openInOtherWindow);
-                saveButton.removeEventListener("click", pushSaveButton);
                 saveButton.addEventListener("click", pushSaveButton);
-                runButton.removeEventListener("click", pushRunButton);
                 runButton.addEventListener("click", pushRunButton);
                 DEBUG && console.log("File loaded");
 
@@ -467,7 +531,7 @@
         async function pushSaveButton(){
             let logOutput = document.getElementById("log-output");
             logOutput.innerHTML = "";
-            if(!FILENAME){
+            if(!FILENAME || READONLY){
                 return;
             }
             let content = editor.getValue();
@@ -479,7 +543,7 @@
         async function pushRunButton(){
             let logOutput = document.getElementById("log-output");
             logOutput.innerHTML = "";
-            if(!FILENAME){
+            if(!FILENAME || READONLY){
                 return;
             }
             saveFile(FILENAME, editor.getValue()).then(() => {
@@ -513,6 +577,7 @@
                 }
                 DEBUG && console.log("File saved");
                 logOutput.innerHTML += "<span class=\"success\">File saved</span><br>";
+                logOutput.scrollTop = logOutput.scrollHeight;
             })
         }
 
@@ -755,6 +820,74 @@
             
         }
 
+
+
+        async function uploadFiles(){
+            let input = document.getElementById("file-input");
+            files = input.files;
+            const fd = new FormData();
+            fd.append("action", "upload");
+            for(let i = 0; i < files.length; i++){
+                fd.append(i, files[i]);
+            }
+            await fetch("/api/file_upload.php", {
+                method: "POST",
+                body: fd,
+            }).then(response => response.json()).then(data => {
+                DEBUG && console.log(data);
+                if(data.status == "error"){
+                    console.error(data.error);
+                    return;
+                }
+                if(data.status == "session_error"){
+                    sessionError();
+                    return;
+                }
+                ret = data.paths;
+                DEBUG && console.log("Files uploaded");
+            }).then(() => {
+                loadExplorer();
+            });
+            return ret;
+        }
+
+
+
+        async function fileUploadDialog(){
+
+            upload = () => {
+                uploadFiles();
+            }
+
+            let dialog = document.createElement("dic");
+            dialog.classList.add("upload-dialog");
+
+            let fileInput = document.createElement("input");
+            fileInput.type = "file";
+            fileInput.multiple = true;
+            fileInput.id = "file-input";
+            dialog.appendChild(fileInput);
+
+            let controls = document.createElement("div");
+            controls.classList.add("upload-dialog-controls");
+            
+            let uploadButton = document.createElement("button");
+            uploadButton.innerHTML = "<i class=\"fa-solid fa-upload\"></i>アップロード";
+            uploadButton.addEventListener("click", upload);
+            controls.appendChild(uploadButton);
+
+            let cancelButton = document.createElement("button");
+            cancelButton.innerHTML = "<i class=\"fa-solid fa-ban\"></i>キャンセル";
+            cancelButton.addEventListener("click", () => {
+                dialog.remove();
+            });
+            controls.appendChild(cancelButton);
+
+            dialog.appendChild(controls);
+
+            document.body.appendChild(dialog);
+        }
+
         async function phpSyntaxCheck(path){
             let logOutput = document.getElementById("log-output");
             await fetch("/api/file_manager.php", {
@@ -806,6 +939,7 @@
 
 
         document.getElementById("newFile").addEventListener("click", newFileDialog);
+        document.getElementById("uploadFile").addEventListener("click", fileUploadDialog);
 
         loadExplorer();
     </script>

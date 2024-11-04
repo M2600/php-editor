@@ -104,6 +104,7 @@ i {
     border: none;
     padding: .1em;
     margin: 0;
+    margin-right: .2em;
     cursor: pointer;
     border-radius: .3em;
 }

@@ -37,7 +37,7 @@
         <div id="main-container" class="window">
             <div id="main-top-bar">
                 <div id="main-top-bar-left" class="main-top-bar-item">
-                <button id="save-button" class="top-bar-button"><i class="fa-regular fa-floppy-disk"></i>保存</button>
+                    <button id="save-button" class="top-bar-button"><i class="fa-regular fa-floppy-disk"></i>保存</button>
                     <button id="open-other-window" class="top-bar-button"><i class="fa-solid fa-play"></i>実行</button>
                     <p class="top-bar-text" id="file-name" style="display: none;"></p>
                 </div>
@@ -404,14 +404,14 @@
             if(!READONLY){
                 await saveFile(FILENAME, editor.getValue());
             }
-                console.log(RUNBROWSERTAB);
-                if(!RUNBROWSERTAB || RUNBROWSERTAB.closed){
-                    RUNBROWSERTAB = window.open(FILEPAGEBASEURL + USERID + "/" + FILENAME);
-                }
-                else{
-                    RUNBROWSERTAB.location.href = FILEPAGEBASEURL + USERID + "/" + FILENAME;
-                    RUNBROWSERTAB.focus();
-                }
+            console.log(RUNBROWSERTAB);
+            if(!RUNBROWSERTAB || RUNBROWSERTAB.closed){
+                RUNBROWSERTAB = window.open(FILEPAGEBASEURL + USERID + "/" + FILENAME);
+            }
+            else{
+                RUNBROWSERTAB.location.href = FILEPAGEBASEURL + USERID + "/" + FILENAME;
+                RUNBROWSERTAB.focus();
+            }
         }
 
         function editorBlockMessage(message){
@@ -494,13 +494,13 @@
                 if(data.fileType == "text"){
                     READONLY = false;
                     editorElm.style.display = "block";
-                editor.setValue(data.content);
-                mode = "ace/mode/" + extToLang(path.split(".").pop());
-                DEBUG && console.log(path.split(".").pop());
-                DEBUG && console.log(mode);
-                editor.getSession().setMode(mode);
-                editor.setReadOnly(false);
-                editor.gotoLine(0);
+                    editor.setValue(data.content);
+                    mode = "ace/mode/" + extToLang(path.split(".").pop());
+                    DEBUG && console.log(path.split(".").pop());
+                    DEBUG && console.log(mode);
+                    editor.getSession().setMode(mode);
+                    editor.setReadOnly(false);
+                    editor.gotoLine(0);
                 }
                 else if(data.fileType == "image"){
                     previewImage(data.content);
@@ -536,7 +536,7 @@
             }
             let content = editor.getValue();
             saveFile(FILENAME, content).then(() => {
-            phpSyntaxCheck(FILENAME);
+                phpSyntaxCheck(FILENAME);
             });
         }
 
@@ -547,7 +547,7 @@
                 return;
             }
             saveFile(FILENAME, editor.getValue()).then(() => {
-            runFile(FILENAME);
+                runFile(FILENAME);
             });
         }
 
@@ -735,7 +735,7 @@
             return ret;
         }
 
-
+        
 
 
         async function newFileDialog(){

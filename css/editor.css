@@ -56,7 +56,7 @@ i {
 #left-side-bar {
     padding: 0;
     margin: 0;
-    width: 20%;
+    width: max(18em, 20%);
     resize: horizontal;
     display: flex;
     flex-direction: column;
@@ -220,10 +220,12 @@ i {
 
 #main-top-bar-left button{
     margin-right: .3em;
+    white-space: nowrap;
 }
 
 #main-top-bar-right button{
     margin-left: .3em;
+    white-space: nowrap;
 }
 .top-bar-text {
     margin: 0;

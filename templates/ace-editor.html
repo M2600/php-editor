@@ -26,8 +26,8 @@
                 <div id="explorer-menu">
                     <div id="explorer-title" class="explorer-menu-item">/</div>
                     <div id="explorer-controls" class="explorer-menu-item">
-                        <button id="newFile" class="explorer-control-item"><i class="fa-solid fa-file-circle-plus"></i>新規</button>
-                        <button id="uploadFile" class="explorer-control-item"><i class="fa-solid fa-upload"></i>アップロード</button>
+                        <button id="newFile" class="explorer-control-item" title="新たなファイルを作成"><i class="fa-solid fa-file-circle-plus"></i>新規</button>
+                        <button id="uploadFile" class="explorer-control-item" title="コンピュータからファイルをアップロードする"><i class="fa-solid fa-upload"></i>アップロード</button>
                     </div>
                 </div>
                 <div id="explorer-content"></div>
@@ -37,12 +37,12 @@
         <div id="main-container" class="window">
             <div id="main-top-bar">
                 <div id="main-top-bar-left" class="main-top-bar-item">
-                    <button id="save-button" class="top-bar-button"><i class="fa-regular fa-floppy-disk"></i>保存</button>
-                    <button id="open-other-window" class="top-bar-button"><i class="fa-solid fa-play"></i>実行</button>
+                    <button id="save-button" class="top-bar-button" title="ファイルを保存し、phpの構文チェックを行います"><i class="fa-regular fa-floppy-disk"></i>保存</button>
+                    <button id="open-other-window" class="top-bar-button" title="ファイルを保存し、別ページで表示します"><i class="fa-solid fa-play"></i>実行</button>
                     <p class="top-bar-text" id="file-name" style="display: none;"></p>
                 </div>
                 <div id="main-top-bar-right" class="main-top-bar-item">
-                    <button id="run-button" class="top-bar-button" ><i class="fa-solid fa-bug"></i>エラーチェック</button>
+                    <button id="run-button" class="top-bar-button" title="phpファイルを実行し、結果をコンソールに表示します"><i class="fa-solid fa-bug"></i>エラーチェック</button>
                 </div>
             </div>
             <div id="main-body">

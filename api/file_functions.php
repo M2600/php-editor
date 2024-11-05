@@ -40,6 +40,9 @@ function getFileType($serverPath){
     $finfo = finfo_open(FILEINFO_MIME);
     $mime = finfo_file($finfo, $serverPath);
     finfo_close($finfo);
+    if(filesize($serverPath) == 0){
+        return "text";
+    }
     if(strpos($mime, "text") !== false){
         return "text";
     }

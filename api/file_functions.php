@@ -31,6 +31,10 @@ function convertUserPath($path){
     return $userPath;
 }
 
+function shellEscape($str){
+    return escapeshellarg($str);
+}
+
 // get file type text | image | other
 function getFileType($serverPath){
     $finfo = finfo_open(FILEINFO_MIME);
@@ -206,7 +210,7 @@ function fileList($userPath){
 function phpSyntaxError($userPath){
     try{
         $serverPath = convertUserPath($userPath);
-        exec("php -l '" . $serverPath . "' 2>&1", $output, $return);
+        exec("php -l " . shellEscape($serverPath) . " 2>&1", $output, $return);
         for($i = 0; $i < count($output); $i++){
             $output[$i] = str_replace($serverPath, basename($serverPath), $output[$i]);
             $output[$i] = htmlspecialchars($output[$i], ENT_QUOTES);
@@ -230,9 +234,9 @@ function phpRunError($userPath){
         $command = "php ";
         global $USER_SCRIPT_PHP_INI;
         if(file_exists($USER_SCRIPT_PHP_INI)){
-            $command .= "-c " . $USER_SCRIPT_PHP_INI . " ";
+            $command .= "-c " . shellEscape($USER_SCRIPT_PHP_INI) . " ";
         }
-        $command .= "'" . $serverPath . "' ";
+        $command .= shellEscape($serverPath) . " ";
         $command .= "2>&1";
         exec($command, $output, $return);
         for($i = 0; $i < count($output); $i++){

@@ -40,7 +40,14 @@ function getFileType($serverPath){
     $finfo = finfo_open(FILEINFO_MIME);
     $mime = finfo_file($finfo, $serverPath);
     finfo_close($finfo);
-    if(filesize($serverPath) == 0){
+    error_log($mime);
+    // 空ファイルの場合はtextとして扱う
+    if(strpos($mime, "x-empty") !== false){
+        return "text";
+    }
+    // ファイルmimeがoctet-streamの場合はtextとして扱う
+    // テキストファイルでも容量が小さすぎると(?)octet-stream判定になる
+    if(strpos($mime, "octet-stream") !== false){
         return "text";
     }
     if(strpos($mime, "text") !== false){

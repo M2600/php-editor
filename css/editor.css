@@ -100,8 +100,8 @@ i {
 .explorer-control-item, .explorer-control-item button {
     background-color: var(--color-bg-alt);
     color: var(--color-text-alt);
-    /*border: solid 1px #666;*/
-    border: none;
+    border: solid 1px #666;
+
     padding: .1em;
     margin: 0;
     margin-right: .2em;
@@ -241,6 +241,7 @@ i {
     padding: .5em;
     margin-bottom: .2em;
     cursor: pointer;
+    border-radius: .3em;
 }
 .top-bar-button:hover {
     background-color: var(--color-bg-active-alt);

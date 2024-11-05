@@ -266,6 +266,41 @@ function phpRunError($userPath){
 
 
 
+function phpCgiRun($userPath, $printHttpHeaders=false, $GETParams=array()){
+    try{
+        $serverPath = convertUserPath($userPath);
+        chdir(getUserRoot());
+        global $USER_SCRIPT_PHP_INI;
+        $command = "php-cgi ";
+        if($printHttpHeaders){
+            $command .= "-q ";
+        }
+        if(file_exists($USER_SCRIPT_PHP_INI)){
+            $command .= "-c " . shellEscape($USER_SCRIPT_PHP_INI) . " ";
+        }
+        $command .= shellEscape($serverPath) . " ";
+        foreach($GETParams as $key => $value){
+            $command .= shellEscape($key . "=" . $value) . " ";
+        }
+        $command .= "2>&1";
+        exec($command, $output, $return);
+        for($i = 0; $i < count($output); $i++){
+            $output[$i] = str_replace($serverPath, str_replace(getUserRoot(), "", $serverPath), $output[$i]);
+            $output[$i] = htmlspecialchars($output[$i], ENT_QUOTES);
+        }
+        if($return != 0){
+            return array("status" => true, "message" => $output);
+        }
+        return array("status" => false, "message" => $output);
+    }
+    catch (Exception $e){
+        echo json_encode(array("status" => "error", "error" => $e->getMessage()));
+        exit();
+    }
+}
+
+
+
 function safePHP($phpString){
     $safePHPStr = phpRemoveSystemFunctions($phpString);
     error_log($safePHPStr);

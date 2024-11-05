@@ -89,6 +89,12 @@ if($action == "run"){
     exit();
 }
 
+if($action == "cgi_run"){
+    $GETParams = $params["GETParams"];
+    $result = phpCgiRun($path, $GETParams=$GETParams);
+    echo json_encode(array("status" => "success", "result" => $result["status"], "message" => $result["message"]));
+    exit();
+}
 
 
 

@@ -241,12 +241,13 @@ function phpRunError($userPath){
     try{
         $serverPath = convertUserPath($userPath);
         chdir(getUserRoot());
+        $filePath = str_replace(getUserRoot(), "", $serverPath);
         $command = "php ";
         global $USER_SCRIPT_PHP_INI;
         if(file_exists($USER_SCRIPT_PHP_INI)){
             $command .= "-c " . shellEscape($USER_SCRIPT_PHP_INI) . " ";
         }
-        $command .= shellEscape($serverPath) . " ";
+        $command .= shellEscape($filePath) . " ";
         $command .= "2>&1";
         exec($command, $output, $return);
         for($i = 0; $i < count($output); $i++){
@@ -270,6 +271,7 @@ function phpCgiRun($userPath, $printHttpHeaders=false, $GETParams=array()){
     try{
         $serverPath = convertUserPath($userPath);
         chdir(getUserRoot());
+        $filePath = str_replace(getUserRoot(), "", $serverPath);
         global $USER_SCRIPT_PHP_INI;
         $command = "php-cgi ";
         if($printHttpHeaders){
@@ -278,7 +280,7 @@ function phpCgiRun($userPath, $printHttpHeaders=false, $GETParams=array()){
         if(file_exists($USER_SCRIPT_PHP_INI)){
             $command .= "-c " . shellEscape($USER_SCRIPT_PHP_INI) . " ";
         }
-        $command .= shellEscape($serverPath) . " ";
+        $command .= shellEscape($filePath) . " ";
         foreach($GETParams as $key => $value){
             $command .= shellEscape($key . "=" . $value) . " ";
         }

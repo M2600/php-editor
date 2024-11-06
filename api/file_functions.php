@@ -21,13 +21,15 @@ function safePath($path){
 
 function getUserRoot(){
     global $FILE_ROOT;
-    return $FILE_ROOT . basename($_SESSION["id"]) . "/";
+    $userRoot = $FILE_ROOT . basename($_SESSION["id"]) . "/";
+    error_log("userroot: ". $userRoot);
+    return $userRoot;
 }
 
 // convert user path to server path
 function convertUserPath($path){
     $userPath = getUserRoot() . safePath($path);
-    error_log($userPath);
+    error_log("userpath: ".$userPath);
     return $userPath;
 }
 

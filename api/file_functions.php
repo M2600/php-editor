@@ -6,9 +6,27 @@
 
 $userRoot = $user = posix_getpwuid(posix_getuid())["dir"];
 
+
+$LOG_DIR = $userRoot . "/data/php_editor/log/";
+if(!file_exists($LOG_DIR)){
+    mkdir($LOG_DIR, 0777, true);
+}
+$LOG_PATH = $LOG_DIR . "php_editor.log";
+
+
 $FILE_ROOT = $userRoot . "/data/php_editor/sandbox/";
 $USER_SCRIPT_PHP_INI = $userRoot . "/data/php_editor/sandbox/php.ini";
 //error_log($FILE_ROOT);
+
+
+
+function myLog($message){
+    global $LOG_PATH;
+    $date = date("Y-m-d H:i:s");
+    $log = $date . " " . $message . "\n";
+    file_put_contents($LOG_PATH, $log, FILE_APPEND);
+}
+
 
 // make safe file name
 function safePath($path){
@@ -99,6 +117,7 @@ function saveFile($userPath, $file){
         if(!file_exists($serverDir)){
             mkdir($serverDir, 0777, true);
         }
+        myLog("action: saveFile, user: ".$_SESSION["id"].", path: ".$serverPath.", content: ".$file);
         file_put_contents($serverPath, $file, LOCK_EX);
     }
     catch(Exception $e){

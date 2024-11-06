@@ -222,7 +222,7 @@ function phpSyntaxError($userPath){
         $serverPath = convertUserPath($userPath);
         exec("php -l " . shellEscape($serverPath) . " 2>&1", $output, $return);
         for($i = 0; $i < count($output); $i++){
-            $output[$i] = str_replace($serverPath, basename($serverPath), $output[$i]);
+            $output[$i] = str_replace(getUserRoot(), "", $output[$i]);
             $output[$i] = htmlspecialchars($output[$i], ENT_QUOTES);
         }
         if($return != 0){
@@ -250,7 +250,7 @@ function phpRunError($userPath){
         $command .= "2>&1";
         exec($command, $output, $return);
         for($i = 0; $i < count($output); $i++){
-            $output[$i] = str_replace($serverPath, str_replace(getUserRoot(), "", $serverPath), $output[$i]);
+            $output[$i] = str_replace(getUserRoot(), "", $output[$i]);
             $output[$i] = htmlspecialchars($output[$i], ENT_QUOTES);
         }
         if($return != 0){
@@ -285,7 +285,7 @@ function phpCgiRun($userPath, $printHttpHeaders=false, $GETParams=array()){
         $command .= "2>&1";
         exec($command, $output, $return);
         for($i = 0; $i < count($output); $i++){
-            $output[$i] = str_replace($serverPath, str_replace(getUserRoot(), "", $serverPath), $output[$i]);
+            $output[$i] = str_replace(getUserRoot(), "", $output[$i]);
             $output[$i] = htmlspecialchars($output[$i], ENT_QUOTES);
         }
         if($return != 0){

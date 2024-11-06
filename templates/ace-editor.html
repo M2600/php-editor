@@ -56,6 +56,10 @@
     </main>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/ace.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/ext-language_tools.js"></script>
+    <!--emmet-->
+    <script src="https://cloud9ide.github.io/emmet-core/emmet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/ext-emmet.js"></script>
+    <!--fontawesome-->
     <script src="https://kit.fontawesome.com/e87421e015.js" crossorigin="anonymous"></script>
     <script>
         var editor = ace.edit("editor");
@@ -69,6 +73,7 @@
             enableSnippets: true,
             enableLiveAutocompletion: true,
             maxLines: Infinity,
+            enableEmmet: true,
         });
         editor.getSession().setMode("ace/mode/php");
         editor.getSession().setUseWrapMode(true);

@@ -54,15 +54,52 @@
         </div>
 
     </main>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/ace.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/ext-language_tools.js"></script>
-    <!--emmet-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ace.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/ace.js"></script-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-inline_autocomplete.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-settings_menu.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-language_tools.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-javascript.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-javascript.min.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-php.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-html.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/keybinding-vim.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-inline_autocomplete.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-snippets.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <!-- emmet-->
     <script src="https://cloud9ide.github.io/emmet-core/emmet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/ext-emmet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-emmet.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/ext-emmet.js"></script> -->
     <!--fontawesome-->
     <script src="https://kit.fontawesome.com/e87421e015.js" crossorigin="anonymous"></script>
     <script>
+
+        ace.require("ace/ext/language_tools");
+
+
         var editor = ace.edit("editor");
+        editor.$blockScrolling = Infinity;
         editor.setTheme("ace/theme/monokai");
         editor.setFontSize(14);
         editor.setShowPrintMargin(false);
@@ -72,7 +109,7 @@
             enableBasicAutocompletion: true,
             enableSnippets: true,
             enableLiveAutocompletion: true,
-            maxLines: Infinity,
+            //maxLines: Infinity,
             enableEmmet: true,
         });
         editor.getSession().setMode("ace/mode/php");
@@ -80,6 +117,7 @@
         editor.getSession().setTabSize(4);
         editor.setValue("");
 
+        //editor.setKeyboardHandler("ace/keyboard/vim");
 
         document.getElementById("main-body").addEventListener("click", (e) => {
             if(e.target != e.currentTarget){
@@ -88,6 +126,51 @@
             editor.focus();
             //editor.moveCursorTo(editor.session.getLength(), editor.session.getLine(editor.session.getLength()).length);
         })
+
+        // rmeove ctrl-p keybind for mac-emacs users
+        delete editor.keyBinding.$defaultHandler.commandKeyBinding["ctrl-p"];
+
+        // add save keybind
+        editor.commands.addCommand({
+            name: "save",
+            bindKey: {
+                win: "Ctrl-S",
+                mac: "Command-S"
+            },
+            exec: function (editor) {
+                console.log("save shortcut")
+                pushSaveButton();
+            }
+        });
+
+        editor.commands.addCommand({
+            name: "run",
+            bindKey: {
+                win: "F10",
+                mac: "",
+            },
+            exec: function (editor) {
+                console.log("run shortcut");
+                //pushRunButton();
+                openInOtherWindow();
+            }
+        })
+
+
+        // remove all keybindings except for ctrl-d
+        // for (key in editor.keyBinding.$defaultHandler.commandKeyBinding) {
+        //     if (key !== "ctrl-d" && key !== "command-d")
+        //         delete editor.keyBinding.$defaultHandler.commandKeyBinding[key]
+        // }
+
+        editor.selection.on('changeCursor', () => {
+            console.log("change cursor event");
+            const cursorPosition = editor.getCursorPosition().row;
+            //editor.scrollToLine(cursorPosition, true, true, function () {});
+        });
+
+
+        //editor.execCommand("showSettingsMenu") 
 
         document.getElementById("editor").style.display = "none";
     </script>
@@ -113,6 +196,10 @@
             {
                 ext: ["js"],
                 lang: "javascript"
+            },
+            {
+                ext: ["txt"],
+                lang: "text"
             }
         ];
 

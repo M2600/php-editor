@@ -256,6 +256,12 @@ i {
     resize: vertical;
 }
 
+
+.ace_editor > .ace_text-input{
+    font-family: "Noto Sans Mono", monospace;
+}
+
+
 .preview-image-container {
     display: flex;
     justify-content: center;

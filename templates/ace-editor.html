@@ -211,6 +211,7 @@
         ];
 
 
+        var FILELIST = [];
         var FILENAME = false;
         var READONLY = false;
         var USERID = false;
@@ -263,6 +264,19 @@
                 }
             }
             return true;
+        }
+
+        function fileNameExist(filename){
+            $exist = false;
+
+            $FILELIST.forEach(file => {
+                if(file == filename){
+                    $exist = true;
+                    return;
+                }
+            });
+
+            return $exist;
         }
 
 
@@ -348,6 +362,10 @@
                     console.error("Invalid file name");
                     return;
                 }
+                if(fileNameExist(newName)){
+                    console.error("File name already exists");
+                    return;
+                }
                 dialog.remove();
                 RENAMEDIALOGDISABLED = false;
                 renameFile(path, newName).then(newPath => {
@@ -366,6 +384,9 @@
             newName.addEventListener("change", () => {
                 if(!fileNameCheck(newName.value)){
                     newName.style.borderColor = "red";
+                }
+                else if(fileNameExist(newName.value)){
+                    newName.style.borderColor = "orange";
                 }
                 else{
                     newName.style.borderColor = "initial";
@@ -467,6 +488,7 @@
                 explorerTitle.innerHTML = USERID + "/";
                 explorerContent.innerHTML = "";
                 let files = data.files;
+                $FILELIST = files;
                 files.forEach(file => {
                     let fileElement = document.createElement("div");
                     fileElement.id = file;

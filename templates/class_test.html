@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>class test</title>
+    <style>
+        html, body{
+            margin: 10px;
+            width: 80vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="main"></div>
+    <!-- ace editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ace.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!-- Extensions -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-inline_autocomplete.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-settings_menu.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-language_tools.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-inline_autocomplete.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!-- Language scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-javascript.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-javascript.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-php.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-html.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <!-- Keybinds -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/keybinding-vim.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/keybinding-emacs.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/keybinding-vscode.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/keybinding-sublime.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <!-- Snippets -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-snippets.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!-- emmet-->
+    <script src="https://cloud9ide.github.io/emmet-core/emmet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-emmet.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!--fontawesome-->
+    <script src="https://kit.fontawesome.com/e87421e015.js" crossorigin="anonymous"></script>
+    
+    
+    <script src="/MEditor/MEditor.js"></script>
+    <script>
+        
+        function hideAllPreviewer(){
+            let viewers = document.querySelectorAll(".viewer");
+            viewers.forEach((viewer) => {
+                viewer.style.display = "none";
+            })
+        }
+        
+        const editor = new MEditor();
+
+        async function main(){
+            await editor.editor("main");
+
+            const explorer = editor.createExplorer(editor.page.main.left);
+            explorer.setFileClickAction((file) => {
+                hideAllPreviewer();
+                console.log(file);
+                if(file.type == "text"){
+                    if(file.aceObj == undefined || file.aceObj == null){
+                        let aceDOM = document.createElement("div");
+                        editor.page.main.mid.container.main.element.appendChild(aceDOM);
+                        aceDOM.id = "ace-" + file.name;
+                        aceDOM.classList.add("viewer");
+                        aceDOM.style.width = "100%";
+                        aceDOM.style.height = "100%";
+                        const ace = new AceWrapper(aceDOM.id);
+                        ace.loadMySettings();
+                        file.aceObj = ace;
+                        file.aceObj.setValue(file.name);
+                    }
+                    else{
+                        console.log("ace already exists");
+                    }
+
+                    file.aceObj.show();
+                    file.aceObj.focus();
+                }
+                else if(file.type == "image"){
+                    if(file.viewer == undefined || file.viewer == null){
+                        let imgContainer = document.createElement("div");
+                        imgContainer.id = "img-" + file.name;
+                        imgContainer.classList.add("viewer");
+                        imgContainer.style.width = "100%";
+                        imgContainer.style.height = "100%";
+                        editor.page.main.mid.container.main.element.appendChild(imgContainer);
+
+                        let img = document.createElement("img");
+                        imgContainer.appendChild(img);
+                        img.src = "";
+                        
+                        file.viewer = imgContainer;
+                    }
+                    else(
+                        console.log("image already exists")
+                    )
+
+                    file.viewer.style.display = "block";
+                }
+                
+            })
+
+            testFiles = {
+                name: "/",
+                type: "dir",
+                files: [
+                    {
+                        name: "index.php",
+                        type: "text",
+                    },
+                    {
+                        name: "index.html",
+                        type: "text",
+                    },
+                    {
+                        name: "images",
+                        type: "dir",
+                        files: [
+                            {
+                                name: "image.png",
+                                type: "image",
+                            },
+                            {
+                                name: "image2.png",
+                                type: "image",
+                            }
+                        ]
+                    },
+                    {
+                        name: "js",
+                        type: "dir",
+                        files: [
+                            {
+                                name: "script.js",
+                                type: "text",
+                            },
+                            {
+                                name: "modules",
+                                type: "dir",
+                                files: [
+                                    {
+                                        name: "module.js",
+                                        type: "text",
+                                    },
+                                    {
+                                        name: "module2.js",
+                                        type: "text",
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        name: "css",
+                        type: "dir",
+                        files: [
+                            {
+                                name: "style.css",
+                                type: "text",
+                            }
+                        ]
+                    }
+                ]
+            }
+
+            explorer.loadExplorer(testFiles);
+        }
+
+        main();
+    </script>
+</body>
+</html>

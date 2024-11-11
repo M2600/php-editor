@@ -1,7 +1,113 @@
-
+// Require: ace.js, ace/ext-language_tools.js
 
 ace.require("ace/ext/language_tools");
 
+class AceWrapper {
+    constructor(editorId) {
+        this.editorDOM = document.getElementById(editorId);
+        this.editor = ace.edit(editorId);
+    }
+
+    mySettings() {
+        this.editor.$blockScrolling = Infinity;
+        this.editor.setTheme("ace/theme/monokai");
+        this.editor.setFontSize(14);
+        this.editor.setShowPrintMargin(false);
+        this.editor.setOptions({
+            fontFamily: "monospace",
+            enableSnippets: true,
+            //enableBasicAutocompletion: true,
+            enableLiveAutocompletion: true,
+            enableEmmet: true,
+            scrollPastEnd: 0.2,
+            //maxLines: Infinity,
+        });
+        this.editor.getSession().setUseWrapMode(true);
+        this.editor.getSession().setTabSize(4);
+
+        //this.editor.setKeyboardHandler("ace/keyboard/vim");
+    }
+
+    myKeybindings() {
+        // remove ctrl-p keybind for mac-emacs users
+        delete this.editor.keyBinding.$defaultHandler.commandKeyBinding["ctrl-p"];
+
+        this.editor.commands.addCommand({
+            name: "save",
+            bindKey: {
+                win: "Ctrl-S",
+                mac: "Command-S"
+            },
+            exec: function (editor) {
+                console.log("save shortcut")
+                pushSaveButton();
+            }
+        });
+
+        this.editor.commands.addCommand({
+            name: "run",
+            bindKey: {
+                win: "F10",
+                mac: "",
+            },
+            exec: function (editor) {
+                console.log("run shortcut");
+                //pushRunButton();
+                openInOtherWindow();
+            }
+        })
+    }
+
+    myEvents() {
+        // this.editor.selection.on('changeCursor', () => {
+        //     console.log("change cursor event");
+        //     const cursorPosition = this.editor.getCursorPosition().row;
+        //     editor.scrollToLine(cursorPosition, true, true, function () {});
+        // });
+    }
+
+    hideEditor() {
+        this.editorDOMStyle = this.editorDOM.style.display;
+        this.editorDOM.style.display = "none";
+    }
+
+    showEditor() {
+        this.editorDOM.style.display = this.editorDOMStyle;
+    }
+
+}
+
+
+class MyEditor {
+
+    EDITORS;
+    FILE_NAME;
+    READONLY;
+    USER_ID;
+
+    NEW_FILE_DISABLED;
+    DELETE_DIALOG_DISABLED;
+    RENAME_DIALOG_DISABLED;
+    DUPLICATE_DIALOG_DISABLED;
+
+    runBrowserTab;
+
+    constructor() {
+        this.EDITORS = [];
+        this.FILE_NAME = false;
+        this.READONLY = false;
+        this.USER_ID = false;
+        this.NEW_FILE_DISABLED = false;
+        this.DELETE_DIALOG_DISABLED = false;
+        this.RENAME_DIALOG_DISABLED = false;
+        this.DUPLICATE_DIALOG_DISABLED = false;
+        this.runBrowserTab = false;
+    }
+
+    
+
+    
+}
 
 var editor = ace.edit("editor");
 editor.$blockScrolling = Infinity;
@@ -11,7 +117,7 @@ editor.setShowPrintMargin(false);
 editor.setReadOnly(true);
 editor.setOptions({
     fontFamily: "monospace",
-    enableBasicAutocompletion: true,
+    //enableBasicAutocompletion: true,
     enableSnippets: true,
     enableLiveAutocompletion: true,
     //maxLines: Infinity,
@@ -74,6 +180,15 @@ editor.selection.on('changeCursor', () => {
     const cursorPosition = editor.getCursorPosition().row;
     //editor.scrollToLine(cursorPosition, true, true, function () {});
 });
+
+
+
+
+
+
+
+
+
 
 
 //editor.execCommand("showSettingsMenu") 

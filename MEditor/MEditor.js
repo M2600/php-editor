@@ -49,7 +49,7 @@ class AceWrapper {
             },
             exec: function (editor) {
                 console.log("save shortcut")
-                pushSaveButton();
+                //pushSaveButton();
             }
         });
 
@@ -62,7 +62,7 @@ class AceWrapper {
             exec: function (editor) {
                 console.log("run shortcut");
                 //pushRunButton();
-                openInOtherWindow();
+                //openInOtherWindow();
             }
         })
     }
@@ -153,6 +153,8 @@ class MEditor {
 
         // page object basically access from inside of the class
         this.page = {
+            popupMenus: [],
+            popupMenuCloseAction: () => {},
             popupWindows: [],
         };
 
@@ -228,6 +230,9 @@ class MEditor {
                 mid.element.style.left = e.clientX - parentLeft + "px";
                 leftSash.element.style.left = e.clientX - parentLeft - this.pageSettings.splitSash.width/2 + "px";
             }
+            else{
+                this.adjustPage();
+            }
         }
         
         let leftSash = {};
@@ -288,6 +293,9 @@ class MEditor {
                 midBottom.element.style.top = e.clientY - midContainerTop + "px";
                 mainSash.element.style.top = e.clientY- midContainerTop - this.pageSettings.splitSash.width/2 + "px";
             }
+            else{
+                this.adjustPage();
+            }
         }
 
         let mainSash = {};
@@ -321,6 +329,9 @@ class MEditor {
                 mid.element.style.width = parentElement.clientWidth - left.element.clientWidth - right.element.clientWidth + "px";
                 right.element.style.width = rightWidth + "px";
                 rightSash.element.style.left = e.clientX - parentLeft - this.pageSettings.splitSash.width/2 + "px";
+            }
+            else{
+                this.adjustPage();
             }
         }
 
@@ -582,6 +593,15 @@ class MEditor {
         fileMenu.addTrigger("click", (e) => {
             e.stopPropagation();
             console.log("file menu clicked:", fileInfo);
+            this.popupMenu(fileMenu, [
+                {text: "rename", clickAction: (e) => {console.log("rename", fileInfo);}},
+                {text: "duplicate", clickAction: (e) => {console.log("duplicate", fileInfo);}},
+                {text: "delete", clickAction: (e) => {console.log("delete", fileInfo);}},
+            ]);
+            this.page.popupMenuCloseAction = () => {
+                this.explorer.content.element.style.overflowY = "auto";
+            }
+            this.explorer.content.element.style.overflowY = "hidden";
         });
 
         fileControl.menu = fileMenu;
@@ -593,11 +613,10 @@ class MEditor {
         let file = {};
         file.name = fileInfo.name;
         file.type = fileInfo.type;
-        file.element = document.createElement("div");
+        file.element = document.createElement("button");
         file.element.id = file.name;
         file.element.classList.add(this.CLASS_NAME_PREFIX + "file");
         file.element.addEventListener("click", function a(e) {
-            e.stopPropagation();
             this.explorer.fileClickAction(fileInfo);
         }.bind(this));
 
@@ -625,10 +644,9 @@ class MEditor {
         dir.element.classList.add(this.CLASS_NAME_PREFIX + "dir");
         
         let dirMenu = {};
-        dirMenu.element = document.createElement("div");
+        dirMenu.element = document.createElement("button");
         dirMenu.element.classList.add(this.CLASS_NAME_PREFIX + "dir-menu");
         dirMenu.element.addEventListener("click", (e) => {
-            e.stopPropagation();
             dirName.element.classList.toggle(this.CLASS_NAME_PREFIX + "dir-name-expanded");
             dirContent.element.classList.toggle(this.CLASS_NAME_PREFIX + "dir-content-show");
         });
@@ -655,7 +673,74 @@ class MEditor {
     }
 
 
+    removePopupMenus() {
+        for(let i=0; i<this.page.popupMenus.length; i++) {
+            this.page.popupMenus[i].element.remove();
+            window.removeEventListener("click", this.removePopupMenus.bind(this));
+        }
+        this.page.popupMenus = [];
+        this.page.popupMenuCloseAction();
+        this.page.popupMenuCloseAction = () => {};
+    }
 
+    popupMenu(
+        parentObj, 
+        contents=[{text: "Menu1", clickAction: (e) => {console.log("menu1");}}, {text: "Menu2", clickAction: (e) => {}}]
+    ) {
+
+        this.removePopupMenus();
+
+        let menu = {};
+        menu.element = document.createElement("div");
+        menu.element.classList.add(this.CLASS_NAME_PREFIX + "popup-menu");
+        this.page.element.appendChild(menu.element);
+
+        menu.contents = contents;
+
+        for(let i=0; i<menu.contents.length; i++) {
+            let content = {};
+            content.element = document.createElement("button");
+            content.element.classList.add(this.CLASS_NAME_PREFIX + "popup-menu-item");
+            content.element.innerHTML = contents[i].text;
+            content.element.addEventListener("click", contents[i].clickAction);
+            menu.element.appendChild(content.element);
+            menu.contents[i].element = content;
+        }
+
+        // let parentTop = parentObj.element.offsetTop;
+        
+        // let parentBoundingTop = parentObj.element.getBoundingClientRect().top;
+
+        // let gap = parentBoundingTop - parentTop;
+
+        // console.log("menu bottom out of page");
+        // console.log("parent offsetTop: " + parentObj.element.offsetTop);
+        // console.log("parent bounding top: " + parentObj.element.getBoundingClientRect().top);
+        // console.log("page top: " + this.page.top);
+        // console.log("page bounding top: " + this.page.element.getBoundingClientRect().bottom);
+        // console.log("menu clientHight: " + menu.element.clientHeight);
+        // console.log("gap: " + gap);
+        
+        // if(menu.element.getBoundingClientRect().bottom > this.page.element.getBoundingClientRect().bottom){
+        //     menu.element.style.top = this.page.element.getBoundingClientRect().bottom - menu.element.clientHeight - gap + "px";
+        // }
+        // else{
+        //     menu.element.style.top = parentObj.element.getBoundingClientRect().top - gap + "px";
+        // }
+        if(parentObj.element.getBoundingClientRect().bottom + menu.element.clientHeight > this.page.element.getBoundingClientRect().bottom){
+            menu.element.style.top = parentObj.element.getBoundingClientRect().bottom - menu.element.clientHeight + "px";
+        }
+        else{
+            menu.element.style.top = parentObj.element.getBoundingClientRect().top + window.scrollY + "px";
+        }
+        menu.element.style.left = parentObj.element.getBoundingClientRect().right + window.scrollX + "px";
+
+        window.addEventListener("click", this.removePopupMenus.bind(this));
+
+        this.page.popupMenus.push(menu);
+
+        return menu;
+    }
 
 
     popupWindow(parentObj, title) {

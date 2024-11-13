@@ -5,6 +5,18 @@ main {
     height: calc(100vh - 4em);
 }
 
+button {
+    font-size: 1em;
+	background: none;
+	border: none;
+	outline: none;
+    padding: 0;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+    box-sizing: border-box;
+}
+
 a {
     color: var(--color-link-alt);
 }
@@ -13,6 +25,32 @@ i {
     margin-right: .4em;
 }
 
+.meditor-popup-menu {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    left: calc(100%);
+    top: 0;
+    background-color: var(--me-color-bg-alt);
+    color: var(--me-color-text-alt);
+    border: 1px solid var(--me-color-border-alt);
+    border-radius: .3em;
+    padding: .5em 0;
+    z-index: 1000;
+    box-shadow: 0 0 10px 0 rgba(0,0,0,0.5);
+    min-width: 10em;
+}
+
+.meditor-popup-menu-item {
+    cursor: pointer;
+    padding-left: 2em;
+    text-align: left;
+    width: 100%;
+    color: var(--me-color-text-alt);
+}
+.meditor-popup-menu-item:hover {
+    background-color: var(--me-color-bg-active-alt);
+}
 
 .meditor-popup-window {
     position: absolute;
@@ -92,8 +130,13 @@ i {
 
 
 .meditor-split {
-    overflow: hidden;
+    display: flex;
     white-space: nowrap;
+}
+
+.meditor-split-v {
+    flex-direction: row;
+    max-width: 100%;
 }
 
 
@@ -145,6 +188,10 @@ i {
 
 
 .meditor-explorer {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .meditor-explorer-title {
@@ -155,6 +202,8 @@ i {
 
 .meditor-explorer-menu {
     display: flex;
+    overflow: hidden;
+    padding-bottom: .4em;
 }
 
 .meditor-explorer-menu-text {
@@ -170,13 +219,16 @@ i {
 
 
 .meditor-explorer-content {
-
+    overflow-y: auto;
+    padding-bottom: 1.2em;
 }
 
 .meditor-file {
     display: flex;
     cursor: pointer;
     padding-left: .5em;
+    width: 100%;
+    color: var(--me-color-text-alt);
 }
 .meditor-file:hover {
     background-color: var(--me-color-bg-active-alt);
@@ -195,6 +247,7 @@ i {
 .meditor-file-control {
     display: flex;
     margin-left: auto;
+    left: 0;
 }
 
 .meditor-file-menu {
@@ -210,12 +263,16 @@ i {
 
 
 .meditor-dir {
-    
+    width: 100%;
+    color: var(--me-color-text-alt);
+    display: flex;
+    flex-direction: column;
 }
 
 
 
 .meditor-dir-menu {
+    width: 100%;
     cursor: pointer;
 }
 .meditor-dir-menu:hover {
@@ -227,6 +284,8 @@ i {
     overflow: hidden;
     text-overflow: ellipsis;
     padding-left: .5em;
+    color: var(--me-color-text-alt);
+    text-align: left;
 }
 
 .meditor-dir-name::before {

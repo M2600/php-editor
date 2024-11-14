@@ -104,6 +104,10 @@ const EXT_LANG = [
     {
         ext: ["txt"],
         lang: "text"
+    },
+    {
+        ext: ["json"],
+        lang: "json"
     }
 ];
 

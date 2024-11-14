@@ -35,6 +35,17 @@ document.getElementById("main-body").addEventListener("click", (e) => {
 
 // rmeove ctrl-p keybind for mac-emacs users
 delete editor.keyBinding.$defaultHandler.commandKeyBinding["ctrl-p"];
+editor.commands.removeCommand("golineup");
+editor.commands.addCommand({
+    name: "golineup",
+    bindKey: { win: "Up", mac: "Up" },  // MacではCommand-Pにしたい場合
+    exec: function(editor) {
+        editor.navigateUp(1); // 1行上に移動するカスタム動作
+    },
+    readOnly: true // 読み取り専用の動作にする
+});
+
+
 
 // add save keybind
 editor.commands.addCommand({

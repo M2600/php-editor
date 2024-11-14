@@ -33,7 +33,7 @@ document.getElementById("main-body").addEventListener("click", (e) => {
     //editor.moveCursorTo(editor.session.getLength(), editor.session.getLine(editor.session.getLength()).length);
 })
 
-// rmeove ctrl-p keybind for mac-emacs users
+// remove ctrl-p keybind for mac-emacs users
 //delete editor.keyBinding.$defaultHandler.commandKeyBinding["ctrl-p"];
 editor.commands.removeCommand("jumptomatching");
 // editor.commands.addCommand({

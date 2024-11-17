@@ -404,7 +404,22 @@ class MEditor {
         leftWidth = parentElement.clientWidth - midWidth - right.element.clientWidth;
         
         
-        
+        let midMain = mid.container.main;
+        let midBottom = mid.container.bottom;
+
+        let midMainHeight = mid.element.clientHeight - midBottom.element.clientHeight;
+        let midBottomHeight = midBottom.element.clientHeight;
+
+        if(midMainHeight < this.pageSettings.split.minHeight){
+            midMain.element.style.height = this.pageSettings.split.minHeight + "px";
+            midMainHeight = this.pageSettings.split.minHeight;
+            midBottom.element.style.top = midMain.element.clientHeight + "px";
+            midBottomHeight = mid.element.clientHeight - midMainHeight;
+        }
+        else{
+            midMain.element.style.height = midMainHeight + "px";
+            midBottom.element.style.top = midMainHeight + "px";
+        }
     }
 
     adjustSash() {
@@ -416,6 +431,12 @@ class MEditor {
         left.sash.element.style.left = parentElement.clientLeft + left.element.clientWidth - this.pageSettings.splitSash.width / 2 + "px";
         mid.container.bottom.sash.element.style.top = mid.container.main.element.clientHeight - this.pageSettings.splitSash.width / 2 + "px";
         right.sash.element.style.left = parentElement.clientLeft + parentElement.clientWidth - right.element.clientWidth - this.pageSettings.splitSash.width / 2 + "px";
+
+        let midContainer = mid.container;
+        let midMain = midContainer.main;
+        let midBottom = midContainer.bottom;
+
+        midBottom.sash.element.style.top = midContainer.element.clientTop + midMain.element.clientHeight - this.pageSettings.splitSash.width / 2 + "px";
     }
 
     async pageLayout(parentObj) {

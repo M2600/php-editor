@@ -224,9 +224,10 @@ class MEditor {
         let leftSashMove = (e) => {
             let parentLeft = main.element.getBoundingClientRect().left;
             let leftWidth = e.clientX - parentLeft;
-            if(leftWidth >= this.pageSettings.split.minWidth){
+            let midWidth = parentElement.clientWidth - leftWidth - right.element.clientWidth;
+            if(leftWidth >= this.pageSettings.split.minWidth && midWidth >= this.pageSettings.split.minWidth){
                 left.element.style.width = leftWidth + "px";
-                mid.element.style.width = parentElement.clientWidth - left.element.clientWidth - right.element.clientWidth + "px";
+                mid.element.style.width = midWidth + "px";
                 mid.element.style.left = e.clientX - parentLeft + "px";
                 leftSash.element.style.left = e.clientX - parentLeft - this.pageSettings.splitSash.width/2 + "px";
             }
@@ -325,8 +326,9 @@ class MEditor {
             let parentLeft = parentElement.getBoundingClientRect().left;
             let parentRight = parentElement.getBoundingClientRect().right;
             let rightWidth = parentRight - e.clientX;
-            if(rightWidth >= this.pageSettings.split.minWidth){
-                mid.element.style.width = parentElement.clientWidth - left.element.clientWidth - right.element.clientWidth + "px";
+            let midWidth = parentElement.clientWidth - left.element.clientWidth - rightWidth;
+            if(rightWidth >= this.pageSettings.split.minWidth && midWidth >= this.pageSettings.split.minWidth){
+                mid.element.style.width = midWidth + "px";
                 right.element.style.width = rightWidth + "px";
                 rightSash.element.style.left = e.clientX - parentLeft - this.pageSettings.splitSash.width/2 + "px";
             }
@@ -362,12 +364,47 @@ class MEditor {
     }
 
     adjustSplit() {
+        this.page.element.style.minWidth = this.pageSettings.split.minWidth * 3 + "px";
         let parentElement = this.page.element;
         let left = this.page.main.left;
         let mid = this.page.main.mid;
         let right = this.page.main.right;
 
-        mid.element.style.width = parentElement.clientWidth - left.element.clientWidth - right.element.clientWidth + "px";
+        let leftWidth = parentElement.clientWidth - mid.element.clientWidth - right.element.clientWidth;
+        let midWidth = parentElement.clientWidth - left.element.clientWidth - right.element.clientWidth;
+        let rightWidth = parentElement.clientWidth - left.element.clientWidth - mid.element.clientWidth;
+
+        if(midWidth < this.pageSettings.split.minWidth){
+            mid.element.style.width = this.pageSettings.split.minWidth + "px";
+            //midWidth = this.pageSettings.split.minWidth;
+            mid.element.style.left = left.element.clientWidth + "px";
+
+            let delta = this.pageSettings.split.minWidth - midWidth;
+            if(leftWidth >= this.pageSettings.split.minWidth + delta/2 && rightWidth >= this.pageSettings.split.minWidth + delta/2){
+                leftWidth -= delta/2;
+                rightWidth -= delta/2;
+                left.element.style.width = leftWidth + "px";
+                mid.element.style.left = left.element.clientWidth + "px";
+                right.element.style.width = rightWidth + "px";
+            }
+            else if(leftWidth >= this.pageSettings.split.minWidth + delta){
+                leftWidth -= delta;
+                left.element.style.width = leftWidth + "px";
+                mid.element.style.left = left.element.clientWidth + "px";
+            }
+            else if(rightWidth >= this.pageSettings.split.minWidth + delta){
+                rightWidth -= delta;
+                right.element.style.width = rightWidth + "px";
+            }
+
+        }
+        else{
+            mid.element.style.width = midWidth + "px";
+        }
+        leftWidth = parentElement.clientWidth - midWidth - right.element.clientWidth;
+        
+        
+        
     }
 
     adjustSash() {

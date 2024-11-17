@@ -509,7 +509,7 @@ class MEditor {
     generateHeader (parentObj, title="Editor") {
         parentObj.header = {};
         parentObj.header.element = document.createElement("div");
-        parentObj.header.element.classList.add(this.CLASS_NAME_PREFIX + "header");
+        parentObj.header.element.classList.add(this.CLASS_NAME_PREFIX + "header-container");
 
         parentObj.header.title = {};
         parentObj.header.title.element = document.createElement("h1");

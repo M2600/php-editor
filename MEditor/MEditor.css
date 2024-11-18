@@ -313,6 +313,18 @@ i {
 
 
 
+.meditor-editor-menu {
+    display: flex;
+    width: 100%;
+}
+
+.meditor-editor-menu-left {
+    display: flex;
+}
+
+.meditor-editor-menu-right {
+    margin-left: auto;
+}
 
 
 

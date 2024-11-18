@@ -731,6 +731,46 @@ class MEditor {
     }
 
 
+
+    generateEditorMenu(parentObj) {
+        let menu = {};
+        menu.element = document.createElement("div");
+        menu.element.classList.add(this.CLASS_NAME_PREFIX + "editor-menu");
+        parentObj.element.appendChild(menu.element);
+        parentObj.menu = menu;
+
+        let menuLeft = {};
+        menuLeft.items = [];
+        menuLeft.element = document.createElement("div");
+        menuLeft.element.classList.add(this.CLASS_NAME_PREFIX + "editor-menu-left");
+        menu.element.appendChild(menuLeft.element);
+        menu.left = menuLeft;
+        
+
+        let menuRight = {};
+        menuRight.items = [];
+        menuRight.element = document.createElement("div");
+        menuRight.element.classList.add(this.CLASS_NAME_PREFIX + "editor-menu-right");
+        menu.element.appendChild(menuRight.element);
+        menu.right = menuRight;
+
+        return menu;
+    }
+
+    /**
+     * 
+     * @param {editorObject} parentObj 
+     */
+    editorMenu(parentObj) {
+        let menu = this.generateEditorMenu(parentObj);
+        return menu;
+    }
+
+
+    
+
+
+
     removePopupMenus() {
         for(let i=0; i<this.page.popupMenus.length; i++) {
             this.page.popupMenus[i].element.remove();

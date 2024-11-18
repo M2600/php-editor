@@ -63,9 +63,37 @@
         }
         
         const editor = new MEditor();
+        var editorMenu = null;
 
         async function main(){
             await editor.editor("main");
+
+            editorMenu = editor.editorMenu(editor.page.main.mid.container.main);
+
+            console.log(editorMenu);
+
+            editorMenu.left.items.push(editor.generateButton(
+                editorMenu.left,
+                "Save",
+                (e) => {
+                    console.log("Save: ");
+                }
+            ))
+            editorMenu.left.items.push(editor.generateButton(
+                editorMenu.left,
+                "Run",
+                (e) => {
+                    console.log("Run: ");
+                }
+            ))
+
+            editorMenu.right.items.push(editor.generateButton(
+                editorMenu.right,
+                "Debug",
+                (e) => {
+                    console.log("Debug: ");
+                },
+            ))
 
             const explorer = editor.createExplorer(editor.page.main.left);
             explorer.setFileClickAction((file) => {

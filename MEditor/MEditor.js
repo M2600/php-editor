@@ -129,7 +129,7 @@ class MEditor {
     EDITOR_NAME = "MEditor";
     CLASS_NAME_PREFIX = "meditor-";
 
-
+    DEBUG = false;
     
 
     constructor() {

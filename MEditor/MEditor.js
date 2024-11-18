@@ -623,14 +623,21 @@ class MEditor {
 
 
 
-    explorerRecursive(parentObj, dirInfo) {
+    explorerRecursive(parentObj, dirInfo, currentDir="") {
+        // build currentDir
+        let currentDirName = currentDir + dirInfo.name
+        if(!currentDirName.endsWith("/")) currentDirName += "/";
+
         for(let i=0; i<dirInfo.files.length; i++) {
             let fileInfo = dirInfo.files[i];
             if(fileInfo.type == "dir") {
                 let dir = this.explorerDir(parentObj, fileInfo);
-                this.explorerRecursive(dir, fileInfo);
+                this.explorerRecursive(dir, fileInfo, currentDirName);
             }
             else {
+                let filePath = currentDirName + fileInfo.name;
+                this.DEBUG && console.log(filePath);
+                fileInfo.path = filePath;
                 this.explorerFile(parentObj, fileInfo);
             }
         }

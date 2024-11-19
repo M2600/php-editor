@@ -238,6 +238,9 @@ i {
 .meditor-file:hover {
     background-color: var(--me-color-bg-active-alt);
 }
+.meditor-file-selected {
+    background-color: var(--me-color-bg-active-alt);
+}
 
 .meditor-file-name {
     white-space: nowrap;
@@ -313,6 +316,13 @@ i {
 
 
 
+.meditor-editor {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    flex-direction: column;
+}
+
 .meditor-editor-menu {
     display: flex;
     width: 100%;
@@ -321,9 +331,24 @@ i {
 .meditor-editor-menu-left {
     display: flex;
 }
+.meditor-editor-menu-left *{
+    padding: .5em;
+    margin: .2em 0 .2em .2em;
+}
 
 .meditor-editor-menu-right {
     margin-left: auto;
+}
+.meditor-editor-menu-right *{
+    padding: .5em;
+    margin: .2em .2em .2em 0;
+}
+
+
+.meditor-editor-content {
+    width: 100%;
+    height: 100%;
+    background-color: var(--me-color-editor-bg)
 }
 
 

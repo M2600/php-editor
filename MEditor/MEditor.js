@@ -484,7 +484,7 @@ class MEditor {
     }
 
 
-    generateButton(parentObj, text, clickAction, name="") {
+    generateButton(parentObj, text, clickAction) {
         let button = {};
         button.element = document.createElement("button");
         button.element.classList.add(this.CLASS_NAME_PREFIX + "button");
@@ -500,7 +500,7 @@ class MEditor {
         }
 
         parentObj.element.appendChild(button.element);
-        if(name) parentObj[name] = button;
+        //if(name) parentObj[name] = button;
         //else
         return button;
     }
@@ -533,8 +533,8 @@ class MEditor {
      * @param {editorObject} attachTo Editorを配置する親要素 Ex: this.page.main.left
      * @returns explorerObject
      */
-    createExplorer(attachTo = this.page.main.left) {
-        let explorer = this.generateExplorer(attachTo);
+    createExplorer(attachTo = this.page.main.left, opt={}) {
+        let explorer = this.generateExplorer(attachTo, opt);
 
         /**
          * 受け取ったオブジェクトをもとにエクスプローラーをロードする。
@@ -584,15 +584,27 @@ class MEditor {
         parentObj.explorer.menu.element.appendChild(parentObj.explorer.menu.control.element);
 
         parentObj.explorer.menu.control.items = [];
-        parentObj.explorer.menu.control.items.push(this.generateButton(parentObj.explorer.menu.control, "New File", () => {
-            console.log("New File");
-        }));
-        parentObj.explorer.menu.control.items.push(this.generateButton(parentObj.explorer.menu.control, "New Folder", () => {
-            console.log("New Folder");
-        }));
-        parentObj.explorer.menu.control.items.push(this.generateButton(parentObj.explorer.menu.control, "⋮", () => {
-            console.log("Menu");
-        }));
+        let newFileButton = this.generateButton(parentObj.explorer.menu.control, "New File", (e) => {parentObj.explorer.newFileClickAction();});
+        
+        parentObj.explorer.menu.control.items.push(newFileButton);
+        //parentObj.explorer.menu.control.items.push(this.generateButton(parentObj.explorer.menu.control, "New Folder", this.EXPLORER_NEW_DIR_ACTION));
+        let otherButton = this.generateButton(
+            parentObj.explorer.menu.control,
+            "⋮",
+        );
+        otherButton.addTrigger("click", (e) => {
+            e.stopPropagation();
+            console.log("menu clicked");
+
+            this.popupMenu(otherButton, [
+                {text: "New Folder", clickAction: (e) => {parentObj.explorer.newDirClickAction();}},
+            ]);
+            this.page.popupMenuCloseAction = () => {
+                //parentObj.explorer.content.element.style.overflowY = "auto";
+            }
+            //parentObj.explorer.content.element.style.overflowY = "hidden";
+        });
+        parentObj.explorer.menu.control.items.push(otherButton);
 
 
         parentObj.explorer.content = {};
@@ -609,6 +621,44 @@ class MEditor {
         parentObj.explorer.setFileClickAction = (func) => {
             parentObj.explorer.fileClickAction = func;
         }
+
+
+        parentObj.explorer.newFileClickAction = (fileInfo) => {
+            console.log("new file: ", fileInfo);
+        }
+        parentObj.explorer.setNewFileClickAction = (func) => {
+            parentObj.explorer.newFileClickAction = func;
+        }
+
+        parentObj.explorer.newDirClickAction = (fileInfo) => {
+            console.log("new dir: ", fileInfo);
+        }
+        parentObj.explorer.setNewDirClickAction = (func) => {
+            parentObj.explorer.newDirClickAction = func;
+        }
+
+        parentObj.explorer.renameClickAction = (fileInfo) => {
+            console.log("rename: ", fileInfo);
+        }
+        parentObj.explorer.setRenameClickAction = (func) => {
+            parentObj.explorer.renameClickAction = func;
+        }
+
+        parentObj.explorer.duplicateClickAction = (fileInfo) => {
+            console.log("duplicate: ", fileInfo);
+        }
+        parentObj.explorer.setDuplicateClickAction = (func) => {
+            parentObj.explorer.duplicateClickAction = func;
+        }
+
+        parentObj.explorer.deleteClickAction = (fileInfo) => {
+            console.log("delete: ", fileInfo);
+        }
+        parentObj.explorer.setDeleteClickAction = (func) => {
+            parentObj.explorer.deleteClickAction = func;
+        }
+
+
 
         parentObj.explorer.setTitle = (title) => {
             parentObj.explorer.title.element.innerHTML = title;
@@ -659,9 +709,9 @@ class MEditor {
             e.stopPropagation();
             console.log("file menu clicked:", fileInfo);
             this.popupMenu(fileMenu, [
-                {text: "rename", clickAction: (e) => {console.log("rename", fileInfo);}},
-                {text: "duplicate", clickAction: (e) => {console.log("duplicate", fileInfo);}},
-                {text: "delete", clickAction: (e) => {console.log("delete", fileInfo);}},
+                {text: "rename", clickAction: (e) => {this.explorer.renameClickAction(fileInfo);}},
+                {text: "duplicate", clickAction: (e) => {this.explorer.duplicateClickAction(fileInfo);}},
+                {text: "delete", clickAction: (e) => {this.explorer.deleteClickAction(fileInfo);}},
             ]);
             this.page.popupMenuCloseAction = () => {
                 this.explorer.content.element.style.overflowY = "auto";
@@ -681,6 +731,14 @@ class MEditor {
         file.element = document.createElement("button");
         file.element.id = file.name;
         file.element.classList.add(this.CLASS_NAME_PREFIX + "file");
+        // highlight selected file
+        file.element.addEventListener("click", (e) => {
+            let old = document.getElementsByClassName(this.CLASS_NAME_PREFIX + "file-selected");
+            for(let i=0; i<old.length; i++) {
+                old[i].classList.remove(this.CLASS_NAME_PREFIX + "file-selected");
+            }
+            file.element.classList.toggle(this.CLASS_NAME_PREFIX + "file-selected");
+        });
         file.element.addEventListener("click", function a(e) {
             this.explorer.fileClickAction(fileInfo);
         }.bind(this));
@@ -775,6 +833,27 @@ class MEditor {
 
 
     
+
+    workPlace(parentObj) {
+        let workPlace = {};
+        workPlace.element = document.createElement("div");
+        workPlace.element.classList.add(this.CLASS_NAME_PREFIX + "editor");
+        parentObj.element.appendChild(workPlace.element);
+        parentObj.workPlace = workPlace;
+
+        this.workPlace = workPlace;
+
+        let workPlaceMenu = this.editorMenu(workPlace);
+        workPlace.menu = workPlaceMenu;
+
+        let content = {};
+        content.element = document.createElement("div");
+        content.element.classList.add(this.CLASS_NAME_PREFIX + "editor-content");
+        workPlace.element.appendChild(content.element);
+        workPlace.content = content;
+
+        return workPlace;
+    }
 
 
 

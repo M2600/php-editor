@@ -550,11 +550,27 @@ class MEditor {
             this.explorerRecursive(explorerContent, explorerContents);
         }
 
+
+
+        explorer.setTitle = (title) => {
+            explorer.title.element.innerHTML = title;
+        }
+
+        explorer.setMenuTitle = (menuTitle) => {
+            explorer.menu.text.element.innerHTML = menuTitle;
+        }
+
         return explorer;
     }
 
 
-    generateExplorer(parentObj) {
+    generateExplorer(parentObj, opt={}) {
+        let defaultOpt = {
+            title: "Explorer",
+            menuTitle: "/"
+        }
+        opt = Object.assign(defaultOpt, opt);
+
         parentObj.explorer = {};
         parentObj.explorer.element = document.createElement("div");
         parentObj.explorer.element.classList.add(this.CLASS_NAME_PREFIX + "explorer");
@@ -562,9 +578,9 @@ class MEditor {
         parentObj.element.appendChild(parentObj.explorer.element);
 
         parentObj.explorer.title = {};
-        parentObj.explorer.title.element = document.createElement("h2");
+        parentObj.explorer.title.element = document.createElement("h3");
         parentObj.explorer.title.element.classList.add(this.CLASS_NAME_PREFIX + "explorer-title");
-        parentObj.explorer.title.element.innerHTML = "Explorer";
+        parentObj.explorer.title.element.innerHTML = opt.title;
         parentObj.explorer.element.appendChild(parentObj.explorer.title.element);
 
         parentObj.explorer.menu = {};
@@ -575,7 +591,7 @@ class MEditor {
         parentObj.explorer.menu.text = {};
         parentObj.explorer.menu.text.element = document.createElement("div");
         parentObj.explorer.menu.text.element.classList.add(this.CLASS_NAME_PREFIX + "explorer-menu-text");
-        parentObj.explorer.menu.text.element.innerHTML = "Menu";
+        parentObj.explorer.menu.text.element.innerHTML = opt.menuTitle;
         parentObj.explorer.menu.element.appendChild(parentObj.explorer.menu.text.element);
 
         parentObj.explorer.menu.control = {};

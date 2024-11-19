@@ -61,6 +61,8 @@
                 viewer.style.display = "none";
             })
         }
+
+        var USER_ID = "user_id";
         
         const editor = new MEditor();
         editor.DEBUG = true;
@@ -69,41 +71,41 @@
         async function main(){
             await editor.editor("main");
 
-            editorMenu = editor.editorMenu(editor.page.main.mid.container.main);
+            const editorEditor = editor.workPlace(editor.page.main.mid.container.main);
 
-            console.log(editorMenu);
-
-            editorMenu.left.items.push(editor.generateButton(
-                editorMenu.left,
+            editorEditor.menu.left.items.push(editor.generateButton(
+                editorEditor.menu.left,
                 "Save",
                 (e) => {
                     console.log("Save: ");
                 }
             ))
-            editorMenu.left.items.push(editor.generateButton(
-                editorMenu.left,
+            editorEditor.menu.left.items.push(editor.generateButton(
+                editorEditor.menu.left,
                 "Run",
                 (e) => {
                     console.log("Run: ");
                 }
             ))
 
-            editorMenu.right.items.push(editor.generateButton(
-                editorMenu.right,
+            editorEditor.menu.right.items.push(editor.generateButton(
+                editorEditor.menu.right,
                 "Debug",
                 (e) => {
                     console.log("Debug: ");
                 },
             ))
 
-            const explorer = editor.createExplorer(editor.page.main.left);
+            const explorer = editor.createExplorer(editor.page.main.left, opt={
+                title: "エクスプローラー",
+            });
             explorer.setFileClickAction((file) => {
                 hideAllPreviewer();
                 console.log(file);
                 if(file.type == "text"){
                     if(file.aceObj == undefined || file.aceObj == null){
                         let aceDOM = document.createElement("div");
-                        editor.page.main.mid.container.main.element.appendChild(aceDOM);
+                        editorEditor.content.element.appendChild(aceDOM);
                         aceDOM.id = "ace-" + file.name;
                         aceDOM.classList.add("viewer");
                         aceDOM.style.width = "100%";
@@ -142,6 +144,26 @@
                     file.viewer.style.display = "block";
                 }
                 
+            })
+
+            explorer.setNewFileClickAction(() => {
+                console.log("re: New file: ");
+            })
+
+            explorer.setNewDirClickAction(() => {
+                console.log("re: New dir: ");
+            })
+
+            explorer.setRenameClickAction((file) => {
+                console.log("re: Rename: ", file);
+            })
+
+            explorer.setDuplicateClickAction((file) => {
+                console.log("re: Duplicate: ", file);
+            })
+
+            explorer.setDeleteClickAction((file) => {
+                console.log("re: Delete: ", file);
             })
 
             testFiles = {
@@ -319,6 +341,7 @@
                 ]
             }
 
+            explorer.setMenuTitle(USER_ID + "/");
             explorer.loadExplorer(testFiles);
         }
 

@@ -87,6 +87,11 @@ editor.selection.on('changeCursor', () => {
 });
 
 
+editor.getSession().on('change', () => {
+    FILECHANGED = true;
+});
+
+
 //editor.execCommand("showSettingsMenu") 
 
 document.getElementById("editor").style.display = "none";
@@ -126,6 +131,7 @@ const EXT_LANG = [
 var FILELIST = [];
 var FILENAME = false;
 var READONLY = false;
+var FILECHANGED = false;
 var USERID = false;
 var NEWFILEDISABLED = false;
 var DELETEDIALOGDISABLED = false;
@@ -497,7 +503,7 @@ async function previewImage(imageBase64) {
 
 
 async function loadFile(path) {
-    if (FILENAME && !READONLY) {
+    if (FILENAME && !READONLY && FILECHANGED) {
         saveFile(FILENAME, editor.getValue());
     }
     let fileElement = document.getElementById(path);
@@ -554,6 +560,7 @@ async function loadFile(path) {
         }
 
         FILENAME = path;
+        FILECHANGED = false;
         fileName.innerHTML = FILENAME;
         openOtherWindow.addEventListener("click", openInOtherWindow);
         saveButton.addEventListener("click", pushSaveButton);

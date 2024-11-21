@@ -274,7 +274,7 @@ async function renameDialog(path) {
     let dialog = document.createElement("div");
     dialog.classList.add("rename-dialog");
 
-    let func = () => {
+    let func = async () => {
         let newName = document.getElementById("new-file-name").value;
         if (!fileNameCheck(newName)) {
             console.error("Invalid file name");
@@ -286,6 +286,9 @@ async function renameDialog(path) {
         }
         dialog.remove();
         RENAMEDIALOGDISABLED = false;
+        if(FILENAME && !READONLY && FILECHANGED) {
+            await saveFile(FILENAME, editor.getValue());
+        }
         renameFile(path, newName).then(newPath => {
             loadExplorer().then(() => {
                 FILENAME = false;
@@ -659,6 +662,9 @@ async function renameFile(path, newPath) {
 }
 
 async function duplicateFile(path) {
+    if(FILENAME && !READONLY && FILECHANGED) {
+        await saveFile(FILENAME, editor.getValue());
+    }
     await fetch("/api/file_manager.php", {
         method: "POST",
         headers: {

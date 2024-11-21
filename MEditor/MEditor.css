@@ -209,6 +209,7 @@ i {
     display: flex;
     overflow: hidden;
     padding-bottom: .4em;
+    height: fit-content;
 }
 
 .meditor-explorer-menu-text {
@@ -216,6 +217,7 @@ i {
     overflow: hidden;
     text-overflow: ellipsis;
     padding-left: .3em;
+    height: fit-content;
 }
 
 .meditor-explorer-menu-control {

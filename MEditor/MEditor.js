@@ -146,6 +146,7 @@ class MEditor {
         this.DELETE_DIALOG_DISABLED = false;
         this.RENAME_DIALOG_DISABLED = false;
         this.DUPLICATE_DIALOG_DISABLED = false;
+        this.THEME = "dark"; // dark | light
         this.runBrowserTab = false;
 
         //this.explorer = {};
@@ -167,6 +168,17 @@ class MEditor {
         await this.pageLayout(this.page);
         return;
     }
+
+
+
+    changeThemeAction = (theme) => {
+        console.log("Theme changed to: " + theme);
+    };
+
+    setChangeThemeAction = (func) => {
+        this.changeThemeAction = func;
+    }
+
 
 
     pageSettings = {
@@ -519,6 +531,21 @@ class MEditor {
         parentObj.header.menu = {};
         parentObj.header.menu.element = document.createElement("div");
         parentObj.header.menu.element.classList.add(this.CLASS_NAME_PREFIX + "header-menu");
+
+        parentObj.header.menu.items = [];
+        let ThemeButton = this.generateButton(parentObj.header.menu, "Theme", (e) => {
+            console.log("theme clicked");
+            if(document.body.getAttribute("theme") == "dark"){
+                document.body.setAttribute("theme", "light");
+                this.THEME = "light";
+            }
+            else{
+                document.body.setAttribute("theme", "dark");
+                this.THEME = "dark";
+            }
+            this.changeThemeAction(this.THEME);
+        });
+        parentObj.header.menu.items.push(ThemeButton);
 
         parentObj.header.element.appendChild(parentObj.header.title.element);
         parentObj.header.element.appendChild(parentObj.header.menu.element);

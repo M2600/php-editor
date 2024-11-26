@@ -6,12 +6,26 @@ function hideAllPreviewer(){
 }
 
 var USER_ID = "user_id";
+var CURRENT_FILE = false;
 
 const editor = new MEditor();
 editor.DEBUG = true;
 
 async function main(){
     await editor.editor("main");
+
+    editor.setChangeThemeAction((theme) => {
+        console.log("Theme: ", theme);
+        if(CURRENT_FILE.aceObj != undefined){
+            if(theme == "dark"){
+                CURRENT_FILE.aceObj.editor.setTheme("ace/theme/monokai");
+            }
+            else{
+                CURRENT_FILE.aceObj.editor.setTheme("ace/theme/chrome");
+            }
+        }
+    });
+
 
     const editorEditor = editor.workPlace(editor.page.main.mid.container.main);
 
@@ -61,6 +75,14 @@ async function main(){
                 console.log("ace already exists");
             }
 
+            // set theme
+            if(editor.THEME == "dark") {
+                file.aceObj.editor.setTheme("ace/theme/monokai");
+            }
+            else{
+                file.aceObj.editor.setTheme("ace/theme/chrome");
+            }
+
             file.aceObj.show();
             file.aceObj.focus();
         }
@@ -85,6 +107,7 @@ async function main(){
 
             file.viewer.style.display = "block";
         }
+        CURRENT_FILE = file;
         
     })
 

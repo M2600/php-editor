@@ -1,24 +1,33 @@
 
 :root{
+	--me-color-link: #007bff;
 
+	--me-color-accept: #5cb85c;
+	--me-color-reject: #fd231f;
+	
+}
+
+body[theme="dark"] {
+
+	--me-color-text: #fff;
+	--me-color-bg: #333;
+	--me-color-bg-active: #666;
+	--me-color-bg-active-active: #999;
+	--me-color-border: #666;
+
+	--me-color-sash: rgb(255, 255, 255, 0.2);
+
+	--me-color-editor-bg: #272822;
+}
+
+body[theme="light"] {
 	--me-color-text: #333;
 	--me-color-bg: #f8f9fa;
 	--me-color-bg-active: #ccc;
 	--me-color-bg-active-active: #eee;
 	--me-color-border: #ccc;
 
-	--me-color-text-alt: #fff;
-	--me-color-bg-alt: #333;
-	--me-color-bg-active-alt: #666;
-	--me-color-bg-active-active-alt: #999;
-	--me-color-border-alt: #666;
+	--me-color-sash: rgb(0, 0, 0, 0.2);
 
-	--me-color-link: #007bff;
-
-	--me-color-editor-bg: #272822;
-
-	--me-color-accept: #5cb85c;
-	--me-color-reject: #fd231f;
-	
-	
+	--me-color-editor-bg: #f8f9fa;
 }

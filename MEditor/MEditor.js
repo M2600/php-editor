@@ -419,13 +419,13 @@ class MEditor {
         let midMain = mid.container.main;
         let midBottom = mid.container.bottom;
 
-        let midMainHeight = mid.element.clientHeight - midBottom.element.clientHeight;
-        let midBottomHeight = midBottom.element.clientHeight;
+        let midMainHeight = mid.element.offsetHeight - midBottom.element.offsetHeight;
+        let midBottomHeight = midBottom.element.offsetHeight;
 
         if(midMainHeight < this.pageSettings.split.minHeight){
             midMain.element.style.height = this.pageSettings.split.minHeight + "px";
             midMainHeight = this.pageSettings.split.minHeight;
-            midBottom.element.style.top = midMain.element.clientHeight + "px";
+            midBottom.element.style.top = this.pageSettings.split.minHeight + "px";
             midBottomHeight = mid.element.clientHeight - midMainHeight;
         }
         else{

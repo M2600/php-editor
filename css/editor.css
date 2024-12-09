@@ -49,6 +49,7 @@ i {
 .window-title {
     font-size: 1em;
     margin: .1em;
+    min-height: 1.5em;
     white-space: nowrap;
     overflow: hidden;
 }

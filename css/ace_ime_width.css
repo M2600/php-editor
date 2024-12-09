@@ -1,0 +1,8 @@
+.ace_text-input {
+    ime-mode: active; /* IMEを正しく動作させるための推奨設定 */
+}
+
+.ace_composition {
+    min-width: 200px; /* ポップアップの最小幅を指定 */
+    white-space: nowrap; /* テキストの折り返しを防止 */
+}

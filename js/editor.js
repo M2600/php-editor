@@ -134,6 +134,7 @@ var READONLY = false;
 var FILECHANGED = false;
 var USERID = false;
 var NEWFILEDISABLED = false;
+var UPLOADDISABLED = false;
 var DELETEDIALOGDISABLED = false;
 var RENAMEDIALOGDISABLED = false;
 var DUPLICATEDIALOGDISABLED = false;
@@ -871,8 +872,16 @@ async function newFileDialog() {
     dialog.appendChild(controls);
 
     document.body.appendChild(dialog);
-    newFileName.focus();
 
+    document.addEventListener("keydown", function a(e){
+        if (e.key == "Escape") {
+            dialog.remove();
+            NEWFILEDISABLED = false;
+        }
+        document.removeEventListener("keydown", (e) => a);
+    });
+
+    newFileName.focus();
 }
 
 
@@ -909,6 +918,10 @@ async function uploadFiles() {
 
 
 async function fileUploadDialog() {
+    if (UPLOADDISABLED) {
+        return;
+    }
+    UPLOADDISABLED = true;
 
     upload = () => {
         uploadFiles();
@@ -936,12 +949,21 @@ async function fileUploadDialog() {
     cancelButton.innerHTML = "<i class=\"fa-solid fa-ban\"></i>キャンセル";
     cancelButton.addEventListener("click", () => {
         dialog.remove();
+        UPLOADDISABLED = false;
     });
     controls.appendChild(cancelButton);
 
     dialog.appendChild(controls);
 
     document.body.appendChild(dialog);
+    
+    document.addEventListener("keydown", function a(e){
+        if (e.key == "Escape") {
+            dialog.remove();
+            UPLOADDISABLED = false;
+        }
+        document.removeEventListener("keydown", (e) => a);
+    });
 }
 
 async function phpSyntaxCheck(path) {

@@ -926,6 +926,7 @@ async function fileUploadDialog() {
     upload = () => {
         uploadFiles();
         dialog.remove();
+        UPLOADDISABLED = false;
     }
 
     let dialog = document.createElement("dic");

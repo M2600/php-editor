@@ -975,11 +975,15 @@ class MEditor {
         parentElm.appendChild(pWindow.element);
     }
 
-    popupWindow(title) {
+    popupWindow(title, contents) {
         let pWindow = {};
         pWindow.element = document.createElement("div");
         pWindow.element.addEventListener("click", function a(e) {
             this.activatePopupWindow(pWindow);
+            //console.log(e);
+            if(e.target.tagName == "INPUT" || e.target.tagName == "TEXTAREA"){
+                e.target.focus();
+            }
         }.bind(this));
         pWindow.element.classList.add(this.CLASS_NAME_PREFIX + "popup-window");
 
@@ -987,21 +991,21 @@ class MEditor {
         pWindowTitleBar.element = document.createElement("div");
         pWindowTitleBar.element.classList.add(this.CLASS_NAME_PREFIX + "popup-window-title-bar");
         pWindowTitleBar.element.addEventListener("mousedown", function a(e){
-            console.log("window title bar clicked");
+            //console.log("window title bar clicked");
             this.activatePopupWindow(pWindow);
             if(e.target != e.currentTarget){
                 return;
             }
             
             let startCursor = {x: e.clientX, y: e.clientY};
-            console.log("start cursor:", startCursor);
+            //console.log("start cursor:", startCursor);
 
             function movement(e) {
                 let dx = e.clientX - startCursor.x;
                 let dy = e.clientY - startCursor.y;
                 let l = pWindow.element.getBoundingClientRect().left + dx;
                 let t = pWindow.element.getBoundingClientRect().top + dy;
-                console.log("mouse move:", e.clientX, e.clientY, dx, dy, l, t);
+                //console.log("mouse move:", e.clientX, e.clientY, dx, dy, l, t);
                 pWindow.element.style.transform = "translate(0, 0)";
                 pWindow.element.style.left = l + "px";
                 pWindow.element.style.top = t + "px";
@@ -1038,6 +1042,30 @@ class MEditor {
             this.popupWindows = this.popupWindows.filter((item) => item != pWindow);
         });
         pWindowTitleBarControl.element.appendChild(pWindowCloseButton.element);
+
+
+        let pWindowContent = {};
+        pWindowContent.element = document.createElement("div");
+        pWindowContent.element.classList.add(this.CLASS_NAME_PREFIX + "popup-window-content");
+        pWindow.element.appendChild(pWindowContent.element);
+
+        // add contents
+        if(Array.isArray(contents)){
+            for(let i=0; i<contents.length; i++) {
+                if(contents[i] instanceof HTMLElement){
+                    pWindowContent.element.appendChild(contents[i]);
+                }
+                else{
+                    console.error("contents must be an array of HTMLElement");
+                }
+            }
+        }
+        else if(contents instanceof HTMLElement){
+            pWindowContent.element.appendChild(contents);
+        }
+        else{
+            console.error("contents must be an array or HTMLElement");
+        }
 
         this.page.element.appendChild(pWindow.element);
 

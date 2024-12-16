@@ -113,7 +113,25 @@ async function main(){
 
     explorer.setNewFileClickAction(() => {
         console.log("re: New file: ");
-        editor.popupWindow("New file");
+        let contents = document.createElement("div");
+        let input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = "File name";
+        contents.appendChild(input);
+        let controls = document.createElement("div");
+        controls.style.display = "flex";
+        controls.style.flexDirection = "row-reverse";
+        controls.style.marginTop = ".3rem";
+        contents.appendChild(controls);
+        let createButton = document.createElement("button");
+        createButton.innerHTML = "Create";
+        createButton.classList.add("meditor-button");
+        createButton.addEventListener("click", () => {
+            console.log("Create: ", input.value);
+        });
+        controls.appendChild(createButton);
+
+        editor.popupWindow("New file", contents);
     })
 
     explorer.setNewDirClickAction(() => {

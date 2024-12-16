@@ -63,14 +63,18 @@ i {
     color: var(--me-color-text);
     box-shadow: 0 0 10px 0 rgba(0,0,0,0.5);
     z-index: 1000;
-    min-width: 20em;
-    min-height: 10em;
+    /*min-width: 20em;*/
+    /*min-height: 10em;*/
+    display: flex;
+    flex-direction: column;
 }
 
 .meditor-popup-window-title-bar {
     display: flex;
     padding: .2em;
     border-bottom: 1px solid var(--me-color-border);
+    height: fit-content;
+
 }
 
 .meditor-popup-window-title-bar-controls {
@@ -88,6 +92,10 @@ i {
 }
 .meditor-popup-window-close-button:hover {
     background-color: var(--me-color-bg-active);
+}
+
+.meditor-popup-window-content {
+    padding: .5em;
 }
 
 

@@ -234,7 +234,36 @@ function fileList($userPath){
     }
 }
 
+function fileRecursive($path){
+    $object = array();
+    $paths = scandir($path);
+    foreach($paths as $p){
+        if($p == "." || $p == "..") continue;
+        $fullPath = $path . "/" . $p;
+        $htmlSafePath = htmlspecialchars($p, ENT_QUOTES);
+        if(is_dir($fullPath)){
+            $object[] = array("name" => $htmlSafePath, "type" => "dir", "files" => fileRecursive($fullPath));
+        }
+        else{
+            $object[] = array("name" => $htmlSafePath, "type" => getFileType($fullPath));
+        }
+    }
+    return $object;
+}
 
+function fileObject($userPath){
+    try{
+        $serverPath = convertUserPath($userPath);
+        $object["name"] = "/";
+        $object["type"] = "dir";
+        $object["files"] = fileRecursive($serverPath);
+        return $object;
+    }
+    catch(Exception $e){
+        echo json_encode(array("status" => "error", "error" => $e->getMessage()));
+        exit();
+    }
+}
 
 
 

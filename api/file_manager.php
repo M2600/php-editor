@@ -75,6 +75,11 @@ if($action == "list"){
     exit();
 }
 
+if($action == "list-object"){
+    $files = fileObject($path);
+    echo json_encode(array("status" => "success", "id" => $_SESSION["id"], "files" => $files));
+    exit();
+}
 
 if($action == "syntax_check"){
     $result = phpSyntaxError($path);

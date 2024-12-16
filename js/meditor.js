@@ -325,49 +325,51 @@ async function main(){
         ]
     }
 
-    explorer.setMenuTitle(USER_ID + "/");
-    explorer.loadExplorer(testFiles);
+    // explorer.setMenuTitle(USER_ID + "/");
+    // explorer.loadExplorer(testFiles);
+
+    await loadExplorer();
 }
 
 main();
 
 
 
-// //editor.execCommand("showSettingsMenu") 
+//editor.execCommand("showSettingsMenu") 
 
 
-// const DEBUG = true;
+const DEBUG = true;
 
-// const FILEPAGEBASEURL = "/user-programs/";
+const FILEPAGEBASEURL = "/user-programs/";
 
-// const EXT_LANG = [
-//     {
-//         ext: ["php"],
-//         lang: "php"
-//     },
-//     {
-//         ext: ["html", "htm"],
-//         lang: "html"
-//     },
-//     {
-//         ext: ["css"],
-//         lang: "css"
-//     },
-//     {
-//         ext: ["js"],
-//         lang: "javascript"
-//     },
-//     {
-//         ext: ["txt"],
-//         lang: "text"
-//     }
-// ];
+const EXT_LANG = [
+    {
+        ext: ["php"],
+        lang: "php"
+    },
+    {
+        ext: ["html", "htm"],
+        lang: "html"
+    },
+    {
+        ext: ["css"],
+        lang: "css"
+    },
+    {
+        ext: ["js"],
+        lang: "javascript"
+    },
+    {
+        ext: ["txt"],
+        lang: "text"
+    }
+];
 
 
 // var FILELIST = [];
 // var FILENAME = false;
 // var READONLY = false;
-// var USERID = false;
+var USERID = false;
 // var NEWFILEDISABLED = false;
 // var DELETEDIALOGDISABLED = false;
 // var RENAMEDIALOGDISABLED = false;
@@ -376,10 +378,10 @@ main();
 // var RUNBROWSERTAB = false;
 
 
-// function sessionError() {
-//     console.error("Session error");
-//     window.location.href = "/login.php";
-// }
+function sessionError() {
+    console.error("Session error");
+    window.location.href = "/login.php";
+}
 
 // function resetEditor() {
 //     let mainBody = document.getElementById("main-body");
@@ -404,20 +406,20 @@ main();
 // }
 
 
-// function fileNameCheck(fileName) {
-//     allowedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.";
+function fileNameCheck(fileName) {
+    allowedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.";
 
-//     if (fileName.length == 0) {
-//         return false;
-//     }
+    if (fileName.length == 0) {
+        return false;
+    }
 
-//     for (let i = 0; i < fileName.length; i++) {
-//         if (allowedChars.indexOf(fileName[i]) == -1) {
-//             return false;
-//         }
-//     }
-//     return true;
-// }
+    for (let i = 0; i < fileName.length; i++) {
+        if (allowedChars.indexOf(fileName[i]) == -1) {
+            return false;
+        }
+    }
+    return true;
+}
 
 // function fileNameExist(filename) {
 //     $exist = false;
@@ -617,6 +619,29 @@ main();
 // }
 
 
+async function loadExplorer() {
+    await fetch("/api/file_manager.php", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            action: "list-object",
+            path: ""
+        }),
+    }).then(response => response.json())
+    .then(data => {
+        DEBUG && console.log(data);
+        if (data.status == "session_error") {
+            sessionError();
+            return;
+        }
+        USERID = data.id;
+        editor.explorer.setMenuTitle(USERID + "/");
+        editor.explorer.loadExplorer(data.files);
+        DEBUG && console.log("Explorer loaded");
+    })
+}
 
 // async function loadExplorer() {
 //     let explorerContent = document.getElementById("explorer-content");

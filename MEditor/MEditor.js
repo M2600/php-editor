@@ -970,20 +970,74 @@ class MEditor {
     }
 
 
-    popupWindow(parentObj, title) {
-        let dialog = {};
-        dialog.element = document.createElement("div");
-        dialog.element.classList.add(this.CLASS_NAME_PREFIX + "popup-window");
 
-        let dialogTitle = {};
-        dialogTitle.element = document.createElement("div");
-        dialogTitle.element.classList.add(this.CLASS_NAME_PREFIX + "popup-window-title");
-        dialogTitle.element.innerHTML = title;
-        dialog.element.appendChild(dialogTitle.element);
+
+    popupWindow(title) {
+        let pWindow = {};
+        pWindow.element = document.createElement("div");
+        pWindow.element.classList.add(this.CLASS_NAME_PREFIX + "popup-window");
+
+        let pWindowTitleBar = {};
+        pWindowTitleBar.element = document.createElement("div");
+        pWindowTitleBar.element.classList.add(this.CLASS_NAME_PREFIX + "popup-window-title-bar");
+        pWindowTitleBar.element.addEventListener("mousedown", function a(e){
+            console.log("window title bar clicked");
+            if(e.target != e.currentTarget){
+                return;
+            }
+            
+            let startCursor = {x: e.clientX, y: e.clientY};
+            console.log("start cursor:", startCursor);
+
+            function movement(e) {
+                let dx = e.clientX - startCursor.x;
+                let dy = e.clientY - startCursor.y;
+                let l = pWindow.element.getBoundingClientRect().left + dx;
+                let t = pWindow.element.getBoundingClientRect().top + dy;
+                console.log("mouse move:", e.clientX, e.clientY, dx, dy, l, t);
+                pWindow.element.style.transform = "translate(0, 0)";
+                pWindow.element.style.left = l + "px";
+                pWindow.element.style.top = t + "px";
+                startCursor = {x: e.clientX, y: e.clientY};
+            }
+            window.addEventListener("mousemove", movement);
+
+            window.addEventListener("mouseup", (e) => {
+                window.removeEventListener("mousemove", movement);
+                window.removeEventListener("mouseup", a);
+            });
+        })
         
-        parentObj.element.appendChild(dialog.element);
-        parentObj.popupWindows.push(dialog);
-        return dialog;
+        pWindow.element.appendChild(pWindowTitleBar.element);
+
+        let pWindowTitle = {};
+        pWindowTitle.element = document.createElement("div");
+        pWindowTitle.element.classList.add(this.CLASS_NAME_PREFIX + "popup-window-title");
+        pWindowTitle.element.innerHTML = title;
+        pWindowTitleBar.element.appendChild(pWindowTitle.element);
+
+        let pWindowTitleBarControl = {};
+        pWindowTitleBarControl.element = document.createElement("div");
+        pWindowTitleBarControl.element.classList.add(this.CLASS_NAME_PREFIX + "popup-window-title-bar-controls");
+        pWindowTitleBar.element.appendChild(pWindowTitleBarControl.element);
+
+        let pWindowCloseButton = {};
+        pWindowCloseButton.element = document.createElement("button");
+        pWindowCloseButton.element.classList.add(this.CLASS_NAME_PREFIX + "popup-window-close-button");
+        pWindowCloseButton.element.innerHTML = "×";
+        pWindowCloseButton.element.addEventListener("click", (e) => {
+            pWindow.element.remove();
+            this.popupWindows = this.popupWindows.filter((item) => item != pWindow);
+        });
+        pWindowTitleBarControl.element.appendChild(pWindowCloseButton.element);
+
+        this.page.element.appendChild(pWindow.element);
+
+        if(!this.popupWindows){
+            this.popupWindows = [];
+        }
+        this.popupWindows.push(pWindow);
+        return pWindow;
     }
 
     // =============== Public Methods ===============

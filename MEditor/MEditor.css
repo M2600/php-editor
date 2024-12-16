@@ -54,14 +54,41 @@ i {
 
 .meditor-popup-window {
     position: absolute;
+    top: 50%;
+    left: 50%;
     transform: translate(-50%, -50%);
     border: 1px solid var(--me-color-border);
+    border-radius: .3em;
     background-color: var(--me-color-bg);
     color: var(--me-color-text);
     box-shadow: 0 0 10px 0 rgba(0,0,0,0.5);
     z-index: 1000;
+    min-width: 20em;
+    min-height: 10em;
 }
 
+.meditor-popup-window-title-bar {
+    display: flex;
+    padding: .2em;
+    border-bottom: 1px solid var(--me-color-border);
+}
+
+.meditor-popup-window-title-bar-controls {
+    margin-left: auto;
+    display: flex;
+}
+
+.meditor-popup-window-close-button {
+    cursor: pointer;
+    padding: 0 .25em;
+    /*border: .5px solid var(--me-color-border);*/
+    background-color: var(--me-color-bg);
+    color: var(--me-color-text);
+    border-radius: .3em;
+}
+.meditor-popup-window-close-button:hover {
+    background-color: var(--me-color-bg-active);
+}
 
 
 .meditor-page {

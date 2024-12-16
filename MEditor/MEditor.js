@@ -970,11 +970,17 @@ class MEditor {
     }
 
 
-
+    activatePopupWindow(pWindow) {
+        let parentElm = pWindow.element.parentElement;
+        parentElm.appendChild(pWindow.element);
+    }
 
     popupWindow(title) {
         let pWindow = {};
         pWindow.element = document.createElement("div");
+        pWindow.element.addEventListener("click", function a(e) {
+            this.activatePopupWindow(pWindow);
+        }.bind(this));
         pWindow.element.classList.add(this.CLASS_NAME_PREFIX + "popup-window");
 
         let pWindowTitleBar = {};
@@ -982,6 +988,7 @@ class MEditor {
         pWindowTitleBar.element.classList.add(this.CLASS_NAME_PREFIX + "popup-window-title-bar");
         pWindowTitleBar.element.addEventListener("mousedown", function a(e){
             console.log("window title bar clicked");
+            this.activatePopupWindow(pWindow);
             if(e.target != e.currentTarget){
                 return;
             }
@@ -1006,7 +1013,7 @@ class MEditor {
                 window.removeEventListener("mousemove", movement);
                 window.removeEventListener("mouseup", a);
             });
-        })
+        }.bind(this));
         
         pWindow.element.appendChild(pWindowTitleBar.element);
 
@@ -1026,6 +1033,7 @@ class MEditor {
         pWindowCloseButton.element.classList.add(this.CLASS_NAME_PREFIX + "popup-window-close-button");
         pWindowCloseButton.element.innerHTML = "×";
         pWindowCloseButton.element.addEventListener("click", (e) => {
+            e.stopPropagation();
             pWindow.element.remove();
             this.popupWindows = this.popupWindows.filter((item) => item != pWindow);
         });

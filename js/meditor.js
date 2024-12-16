@@ -113,6 +113,7 @@ async function main(){
 
     explorer.setNewFileClickAction(() => {
         console.log("re: New file: ");
+        editor.popupWindow("New file");
     })
 
     explorer.setNewDirClickAction(() => {

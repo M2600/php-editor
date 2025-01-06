@@ -781,6 +781,7 @@ class MEditor {
         file.element = document.createElement("button");
         file.element.id = file.name;
         file.element.classList.add(this.CLASS_NAME_PREFIX + "file");
+        file.element.title = fileInfo.path;
         // highlight selected file
         file.element.addEventListener("click", (e) => {
             let old = document.getElementsByClassName(this.CLASS_NAME_PREFIX + "file-selected");
@@ -819,6 +820,7 @@ class MEditor {
         let dirMenu = {};
         dirMenu.element = document.createElement("button");
         dirMenu.element.classList.add(this.CLASS_NAME_PREFIX + "dir-menu");
+        dirMenu.element.title = dirInfo.name;
         dirMenu.element.addEventListener("click", (e) => {
             dirName.element.classList.toggle(this.CLASS_NAME_PREFIX + "dir-name-expanded");
             dirContent.element.classList.toggle(this.CLASS_NAME_PREFIX + "dir-content-show");

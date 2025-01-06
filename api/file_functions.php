@@ -73,6 +73,9 @@ function getFileType($serverPath){
     if(strpos($mime, "text") !== false){
         return "text";
     }
+    if(strpos($mime, "json") !== false){
+        return "text";
+    }
     if(strpos($mime, "image") !== false){
         return "image";
     }

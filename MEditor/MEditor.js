@@ -884,6 +884,124 @@ class MEditor {
     }
 
 
+    imageViewer(parentObj, src) {
+        let imgViewer = {};
+        imgViewer.element = document.createElement("div");
+        imgViewer.element.classList.add(this.CLASS_NAME_PREFIX + "image-viewer-container");
+        parentObj.element.appendChild(imgViewer.element);
+        
+        let img = {};
+        img.element = document.createElement("img");
+        img.element.src = src;
+        img.element.classList.add(this.CLASS_NAME_PREFIX + "image-viewer");
+        imgViewer.element.appendChild(img.element);
+        imgViewer.img = img;
+
+        return imgViewer;
+    }
+
+    viewerMessage(parentObj, message) {
+        let msgContainer = {};
+        msgContainer.element = document.createElement("div");
+        msgContainer.element.classList.add(this.CLASS_NAME_PREFIX + "viewer-message-container");
+        parentObj.element.appendChild(msgContainer.element);
+
+        let msg = {};
+        msg.element = document.createElement("div");
+        msg.element.classList.add(this.CLASS_NAME_PREFIX + "viewer-message");
+        msg.element.innerHTML = message;
+        msgContainer.element.appendChild(msg.element);
+        msgContainer.msg = msg;
+
+        return msgContainer;
+    }
+
+
+    console(parentObj) {
+        let mConsole = {};
+        mConsole.element = document.createElement("div");
+        mConsole.element.classList.add(this.CLASS_NAME_PREFIX + "console");
+        parentObj.element.appendChild(mConsole.element);
+
+        let consoleMenu = {};
+        consoleMenu.element = document.createElement("div");
+        consoleMenu.element.classList.add(this.CLASS_NAME_PREFIX + "console-menu");
+        mConsole.element.appendChild(consoleMenu.element);
+        mConsole.menu = consoleMenu;
+
+        let consoleContent = {};
+        consoleContent.element = document.createElement("div");
+        consoleContent.element.classList.add(this.CLASS_NAME_PREFIX + "console-content");
+        mConsole.element.appendChild(consoleContent.element);
+        mConsole.content = consoleContent;
+
+        let consoleTextarea = {};
+        consoleTextarea.element = document.createElement("div");
+        consoleTextarea.element.classList.add(this.CLASS_NAME_PREFIX + "console-textarea");
+        consoleContent.element.appendChild(consoleTextarea.element);
+        mConsole.textarea = consoleTextarea;
+
+        
+        // variables
+        mConsole.autoScroll = true;
+
+        
+        // methods
+        /**
+         * clear console history
+         */
+        mConsole.clear = () => {
+            consoleTextarea.element.innerHTML = "";
+        }
+
+        /**
+         * set auto scroll
+         */
+        mConsole.setAutoScroll = (bool) => {
+            mConsole.autoScroll = bool;
+        }
+
+        /**
+         * print text to console
+         * @param {string} text
+         * @param {"info" | "accept" | "warning" | "error"} mode
+         */
+        mConsole.print = (text, mode = "info") => {
+            this.DEBUG && console.log("console out: ", text);
+            let out = consoleTextarea.element;
+            if (typeof text != "string") {
+                text = text.toString();
+            }
+            text.replaceAll("\n", "<br>");
+
+            let line = document.createElement("span");
+            line.innerHTML = text;
+            line.classList.add(this.CLASS_NAME_PREFIX + "console-line");
+            if(mode == "info") {
+                line.classList.add(this.CLASS_NAME_PREFIX + "console-line-info");
+            }
+            else if(mode == "accept") {
+                line.classList.add(this.CLASS_NAME_PREFIX + "console-line-accept");
+            }
+            else if(mode == "warning") {
+                line.classList.add(this.CLASS_NAME_PREFIX + "console-line-warning");
+            }
+            else if(mode == "error") {
+                line.classList.add(this.CLASS_NAME_PREFIX + "console-line-error");
+            }
+            out.appendChild(line);
+            out.appendChild(document.createElement("br"));
+
+            if(mConsole.autoScroll) {
+                out.scrollTop = out.scrollHeight;
+            }
+        }
+
+
+
+
+        return mConsole;
+    }
     
 
     workPlace(parentObj) {

@@ -389,6 +389,7 @@ i {
 .meditor-editor-menu {
     display: flex;
     width: 100%;
+    height: 3em;
 }
 
 .meditor-editor-menu-left {
@@ -410,7 +411,8 @@ i {
 
 .meditor-editor-content {
     width: 100%;
-    height: 100%;
+    height: calc(100% - 3em);
+    flex: 1;
     background-color: var(--me-color-editor-bg)
 }
 

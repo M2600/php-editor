@@ -97,6 +97,13 @@ class AceWrapper {
         this.editor.setValue(value);
     }
 
+    /**
+     * set editor mode
+     */
+    setMode(mode) {
+        let aceMode = "ace/mode/" + mode;
+        this.editor.getSession().setMode(aceMode);
+    }
 
     /**
      * hide editor

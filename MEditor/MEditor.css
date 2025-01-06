@@ -418,6 +418,91 @@ i {
 
 
 
+.meditor-image-viewer-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+.meditor-image-viewer {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+
+.meditor-viewer-message-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+.meditor-viewer-message {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+
+.meditor-console {
+    width: 100%;
+    height: 100%;
+    color: var(--me-color-text);
+    background-color: var(--me-color-bg);
+    display: flex;
+    flex-direction: column;
+}
+
+.meditor-console-menu {
+    display: flex;
+    width: 100%;
+    height: 1.5em;
+}
+
+.meditor-console-content {
+    width: 100%;
+    height: calc(100% - 1.5em);
+    overflow-y: auto;
+    display: flex;
+}
+
+.meditor-console-textarea {
+    width: 100%;
+    height: 100%;
+    color: var(--me-color-text);
+    background-color: var(--me-color-bg);
+}
+
+.meditor-console-line {
+    white-space: pre-wrap;
+    word-break: break-all;
+    padding-left: .5em;
+}
+
+.meditor-console-line-info {
+    color: var(--me-color-text);
+}
+
+.meditor-console-line-accept {
+    color: var(--me-color-accept);
+}
+
+.meditor-console-line-warning {
+    color: var(--me-color-warning);
+}
+
+.meditor-console-line-error {
+    color: var(--me-color-reject);
+}
+
 
 
 #user-menu {

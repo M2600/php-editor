@@ -30,9 +30,9 @@ function myLog($message){
 
 // make safe file name
 function safePath($path){
-    //$safe = str_replace("../", "", $path);
+    $safe = str_replace("../", "./", $path);
     //$safe = str_replace("/", "", $safe);
-    $safe = basename($path);
+    //$safe = basename($path);
 
     return $safe;
 }

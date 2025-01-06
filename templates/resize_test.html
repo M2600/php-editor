@@ -5,26 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <style>
-        body {
+        html {
             height: 100vh;
             width: 100vw;
+            margin: 0;
+        }
+        body {
+            width: 100%;
+            height: 100%;
             margin: 0;
         }
         #container {
             height: 100%;
             width: 100%;
             display: flex;
+            flex-direction: column;
         }
-        #box1 {
-            width: 50%;
-            height: 100%;
-            overflow: hidden;
-            resize: horizontal;
-            background-color: green;
+        #menu {
+            flex: 0 0 1.5em;
+            background-color: lightblue;
         }
-        #box2 {
+        #box {
             flex: 1;
-            background-color: red;
+            height: calc(100% - 1.5em);
+            background-color: lightpink;
+        }
+        #img {
+            max-height: 100%; /* 親要素の高さに収まるように制限 */
+            max-width: 100%;
         }
 
         
@@ -33,8 +41,10 @@
 </head>
 <body>
     <main id="container">
-        <div id="box1"></div>
-        <div id="box2"></div>
+        <div id="menu"><button>a</button></div>
+        <div id="box">
+            <img id="img" src="../media/castle.jpeg" alt="icon">
+        </div>
     </main>
 </body>
 </html>

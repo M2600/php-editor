@@ -40,31 +40,6 @@ class AceWrapper {
         //         delete editor.keyBinding.$defaultHandler.commandKeyBinding[key]
         //}
 
-
-        this.editor.commands.addCommand({
-            name: "save",
-            bindKey: {
-                win: "Ctrl-S",
-                mac: "Command-S"
-            },
-            exec: function (editor) {
-                console.log("save shortcut")
-                //pushSaveButton();
-            }
-        });
-
-        this.editor.commands.addCommand({
-            name: "run",
-            bindKey: {
-                win: "F10",
-                mac: "",
-            },
-            exec: function (editor) {
-                console.log("run shortcut");
-                //pushRunButton();
-                //openInOtherWindow();
-            }
-        })
     }
 
     myEvents() {

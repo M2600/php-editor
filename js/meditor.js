@@ -69,7 +69,7 @@ async function main(){
                 const ace = new AceWrapper(aceDOM.id);
                 ace.loadMySettings();
                 file.aceObj = ace;
-                file.aceObj.setValue(file.name);
+                aceKeybinds(file.aceObj.editor);
             }
             else{
                 console.log("ace already exists");
@@ -338,10 +338,38 @@ main();
 //editor.execCommand("showSettingsMenu") 
 
 
-const DEBUG = true;
+function aceKeybinds(ace){
+    ace.commands.addCommand({
+        name: "save",
+        bindKey: {
+            win: "Ctrl-S",
+            mac: "Command-S"
+        },
+        exec: function (editor) {
+            console.log("save shortcut")
+            pushSaveButton();
+        }
+    });
 
-const FILEPAGEBASEURL = "/user-programs/";
+    ace.commands.addCommand({
+        name: "run",
+        bindKey: {
+            win: "F10",
+            mac: "",
+        },
+        exec: function (editor) {
+            console.log("run shortcut");
+            //pushRunButton();
+            openInOtherWindow();
+        }
+    })
+}
 
+
+
+
+
+// If extension not same as editor language mode, set here
 const EXT_LANG = [
     {
         ext: ["php"],

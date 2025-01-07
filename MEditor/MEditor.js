@@ -1107,6 +1107,9 @@ class MEditor {
 
     popupWindow(title, contents) {
         let pWindow = {};
+        pWindow.title = title;
+
+
         pWindow.element = document.createElement("div");
         pWindow.element.addEventListener("click", function a(e) {
             this.activatePopupWindow(pWindow);

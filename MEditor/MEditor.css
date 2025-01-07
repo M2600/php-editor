@@ -470,7 +470,6 @@ i {
 .meditor-console-content {
     width: 100%;
     height: calc(100% - 1.5em);
-    overflow-y: auto;
     display: flex;
 }
 
@@ -479,6 +478,7 @@ i {
     height: 100%;
     color: var(--me-color-text);
     background-color: var(--me-color-bg);
+    overflow-y: auto;
 }
 
 .meditor-console-line {

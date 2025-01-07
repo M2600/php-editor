@@ -1172,7 +1172,7 @@ class MEditor {
         pWindowCloseButton.element.addEventListener("click", (e) => {
             e.stopPropagation();
             pWindow.element.remove();
-            this.popupWindows = this.popupWindows.filter((item) => item != pWindow);
+            this.page.popupWindows = this.page.popupWindows.filter((item) => item != pWindow);
         });
         pWindowTitleBarControl.element.appendChild(pWindowCloseButton.element);
 
@@ -1202,10 +1202,10 @@ class MEditor {
 
         this.page.element.appendChild(pWindow.element);
 
-        if(!this.popupWindows){
-            this.popupWindows = [];
+        if(!this.page.popupWindows){
+            this.page.popupWindows = [];
         }
-        this.popupWindows.push(pWindow);
+        this.page.popupWindows.push(pWindow);
         return pWindow;
     }
 

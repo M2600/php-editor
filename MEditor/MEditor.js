@@ -579,6 +579,8 @@ class MEditor {
         explorer.loadExplorer = (explorerContents) => {
 
             let explorerContent = this.explorer;
+            // clear old contents
+            explorerContent.content.element.innerHTML = "";
             console.log(this.explorer);
 
             this.explorerRecursive(explorerContent, explorerContents);

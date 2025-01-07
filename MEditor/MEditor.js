@@ -966,7 +966,7 @@ class MEditor {
         /**
          * print text to console
          * @param {string} text
-         * @param {"info" | "accept" | "warning" | "error"} mode
+         * @param {"info" | "success" | "warning" | "error"} mode
          */
         mConsole.print = (text, mode = "info") => {
             this.DEBUG && console.log("console out: ", text);
@@ -982,7 +982,7 @@ class MEditor {
             if(mode == "info") {
                 line.classList.add(this.CLASS_NAME_PREFIX + "console-line-info");
             }
-            else if(mode == "accept") {
+            else if(mode == "success") {
                 line.classList.add(this.CLASS_NAME_PREFIX + "console-line-accept");
             }
             else if(mode == "warning") {
@@ -995,6 +995,7 @@ class MEditor {
             out.appendChild(document.createElement("br"));
 
             if(mConsole.autoScroll) {
+                DEBUG && console.log("scrolling", out);
                 out.scrollTop = out.scrollHeight;
             }
         }

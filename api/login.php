@@ -29,8 +29,11 @@ function getRandomComment(){
 
 
 function checkPassword($id, $pw){
+	if (empty($id) || empty($pw)) {
+		return false;
+	}
     global $DATA_PATH;
-	$lines = file($DATA_PATH);
+	$lines = file($DATA_PATH, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach($lines as $line){
         $line = trim($line);
         $line = explode(",", $line);
@@ -38,6 +41,7 @@ function checkPassword($id, $pw){
             return true;
         }
     }
+	return false;
 }
 
 

@@ -19,7 +19,7 @@ if(!$_SERVER["REQUEST_METHOD"] == "POST"){
 }
 
 $params = json_decode(file_get_contents('php://input'), true);
-#(print_r($params, true));
+#error_log(print_r($params, true));
 $action = $params["action"];
 $path = htmlspecialchars_decode($params["path"], ENT_QUOTES);
 

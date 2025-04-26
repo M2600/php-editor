@@ -358,7 +358,7 @@ function phpCgiRun($userPath, $printHttpHeaders=false, $GETParams=array()){
 
 function safePHP($phpString){
     $safePHPStr = phpRemoveSystemFunctions($phpString);
-    error_log($safePHPStr);
+    //error_log($safePHPStr);
 }
 
 function phpRemoveSystemFunctions($phpString){
@@ -403,12 +403,12 @@ function phpRemoveSystemFunctions($phpString){
     //     $formatted .= $line;
     // }
     $formatted = $phpString;
-    error_log($formatted);
+    //error_log($formatted);
     foreach($functions as $func){
         $offset = 0;
         while(strpos($formatted, $func, $offset) != false){
             $pos = strpos($formatted, $func, $offset);
-            error_log($pos);
+            //error_log($pos);
             //これじゃだめコード中の禁止ワードの１文字前だけを判定してもダメ
             if($formatted[$pos - 1] !== "$"){
                 $formatted = substr($formatted, 0, $pos) . "/*" . $func . "*/" . substr($formatted, $pos + strlen($func));

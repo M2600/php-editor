@@ -40,14 +40,14 @@ function safePath($path){
 function getUserRoot(){
     global $FILE_ROOT;
     $userRoot = $FILE_ROOT . basename($_SESSION["id"]) . "/";
-    error_log("userroot: ". $userRoot);
+    //error_log("userroot: ". $userRoot);
     return $userRoot;
 }
 
 // convert user path to server path
 function convertUserPath($path){
     $userPath = getUserRoot() . safePath($path);
-    error_log("userpath: ".$userPath);
+    //error_log("userpath: ".$userPath);
     return $userPath;
 }
 
@@ -60,7 +60,7 @@ function getFileType($serverPath){
     $finfo = finfo_open(FILEINFO_MIME);
     $mime = finfo_file($finfo, $serverPath);
     finfo_close($finfo);
-    error_log($mime);
+    //error_log($mime);
     // 空ファイルの場合はtextとして扱う
     if(strpos($mime, "x-empty") !== false){
         return "text";

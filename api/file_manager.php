@@ -42,6 +42,13 @@ if($action == "touch"){
     exit();
 }
 
+if($action == "mkdir"){
+    $newPath = $params["newPath"];
+    $newPath = makeDirectory($path, $newPath);
+    echo json_encode(array("status" => "success", "newPath" => $newPath));
+    exit();
+}
+
 if($action == "rename"){
     $newPath = $params["newPath"];
     $newPath = renameFile($path, $newPath);

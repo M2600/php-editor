@@ -158,8 +158,8 @@ async function main(){
         newFileDialog(dir);
     })
 
-    explorer.setNewDirClickAction(() => {
-        console.log("re: New dir: ");
+    explorer.setNewDirClickAction((dir) => {
+        newDirDialog(dir);
     })
 
     explorer.setRenameClickAction((file) => {
@@ -948,88 +948,84 @@ function newFileDialog(dir){
 }
 
 
-// async function newFileDialog() {
-//     if (NEWFILEDISABLED) {
-//         return;
-//     }
-//     NEWFILEDISABLED = true;
+async function createDir(path) {
+    let ret;
 
-//     let dialog = document.createElement("div");
-//     dialog.style.position = "absolute";
-//     dialog.style.padding = ".5rem";
-//     dialog.style.backgroundColor = "var(--color-bg-alt)";
-//     dialog.style.color = "var(--color-text-alt)";
-//     dialog.style.border = "1px solid #666";
-//     dialog.style.top = "50%";
-//     dialog.style.left = "50%";
-//     dialog.style.zIndex = "1000";
-//     dialog.style.transform = "translate(-50%, -50%)";
+    let body = {
+        action: "mkdir",
+        path: path,
+    };
+    let status = await api("/api/file_manager.php", body=body)
+    .then(data => {
+        if (data.status === "error") {
+            console.error(data.error);
+            return 1;
+        }
+        if (data.status === "session_error") {
+            sessionError();
+            return 0;
+        }
+        ret = data.path;
+    });
+    if(status == 1){
+        mConsole.print("Directory create error: " + path + "<br>Can not create a fire or directory having same name.", "error");
+        return false;
+    }
+    return ret;
+}
 
+function newDirDialog(dir) {
+    let windowName = "New folder";
 
-//     func = () => {
-//         let fileName = document.getElementById("new-file-name").value;
-//         if (!fileNameCheck(fileName)) {
-//             console.error("Invalid file name");
-//             return;
-//         }
-//         dialog.remove();
-//         NEWFILEDISABLED = false;
-//         createFile(fileName).then(path => {
-//             DEBUG && console.log(path);
-//             loadExplorer().then(() => {
-//                 loadFile(path);
-//             })
-//         });
-//         loadExplorer();
-//     }
+    // Check if window already exists
+    let windowExists = false;
+    DEBUG && console.log("popup windows: ", editor.page.popupWindows);
+    editor.page.popupWindows.forEach((popup) => {
+        if (popup.title == windowName) {
+            DEBUG && console.log("popup window already exists");
+            windowExists = true;
+            return;
+        }
+    });
+    if (windowExists) {
+        return;
+    }
 
-//     let newFileName = document.createElement("input");
-//     newFileName.type = "text";
-//     newFileName.id = "new-file-name";
-//     newFileName.placeholder = "File name";
-//     newFileName.addEventListener("change", () => {
-//         if (!fileNameCheck(newFileName.value)) {
-//             newFileName.style.borderColor = "red";
-//         }
-//         else {
-//             newFileName.style.borderColor = "initial";
-//         }
-//     })
-//     newFileName.addEventListener("keydown", async (e) => {
-//         if (e.key == "Enter") {
-//             func();
-//         }
-//     })
-//     dialog.appendChild(newFileName);
+    if(!dir){
+        var currentDir = getCurrentPath();
+    }
+    else{
+        var currentDir = dir.path;
+        if(currentDir[currentDir.length - 1] != "/"){
+            currentDir += "/";
+        }
+    }
+    console.log("New folder: " + currentDir);
+    let contents = document.createElement("div");
+    let input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = "Folder name";
+    contents.appendChild(input);
+    let controls = document.createElement("div");
+    controls.style.display = "flex";
+    controls.style.flexDirection = "row-reverse";
+    controls.style.marginTop = ".3rem";
+    contents.appendChild(controls);
+    let createButton = document.createElement("button");
+    createButton.innerHTML = "Create";
+    createButton.classList.add("meditor-button");
+    createButton.addEventListener("click", async () => {
+        console.log("Create: ", currentDir + input.value);
+        DEBUG && console.log("popup window: ", popupWindow);
+        popupWindow.remove();
+        await createDir(currentDir + input.value);
+        await loadExplorer();
+    });
+    controls.appendChild(createButton);
+    let popupWindow = editor.popupWindow(windowName, contents);
+}
 
-
-//     let controls = document.createElement("div");
-//     controls.style.display = "flex";
-//     controls.style.flexDirection = "row-reverse";
-//     controls.style.marginTop = ".2rem";
-
-//     let createButton = document.createElement("button");
-//     createButton.id = "create-file";
-//     createButton.innerHTML = "<i class=\"fa-solid fa-check\"></i>作成";
-//     createButton.addEventListener("click", func);
-//     controls.appendChild(createButton);
-
-//     let cancelButton = document.createElement("button");
-//     cancelButton.innerHTML = "<i class=\"fa-solid fa-ban\"></i>キャンセル";
-//     cancelButton.addEventListener("click", () => {
-//         dialog.remove();
-//         NEWFILEDISABLED = false;
-//     });
-//     controls.appendChild(cancelButton);
-
-
-//     dialog.appendChild(controls);
-
-//     document.body.appendChild(dialog);
-//     newFileName.focus();
-
-// }
-
+    
 
 
 // async function uploadFiles() {

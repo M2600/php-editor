@@ -146,6 +146,26 @@ function touchFile($userPath){
     
 }
 
+function makeDirectory($userPath){
+    try{
+        $serverPath = convertUserPath($userPath);
+        $serverDir = dirname($serverPath);
+        if(!file_exists($serverDir)){
+            mkdir($serverDir, 0777, true);
+        }
+        $result = mkdir($serverPath);
+        if($result === false){
+            echo json_encode(array("status" => "error", "error" => "Directory already exists"));
+            exit();
+        }
+        return str_replace(getUserRoot(), "", $serverPath);
+    }
+    catch(Exception $e){
+        echo json_encode(array("status" => "error", "error" => $e->getMessage()));
+        exit();
+    }
+}
+
 function renameFile($userPath, $newPath){
     try{
         $serverPath = convertUserPath($userPath);

@@ -815,7 +815,10 @@ class MEditor {
                     console.log("new file: ", dirInfo);
                     this.explorer.newFileClickAction(dirInfo);
                 }},
-                {text: "new folder", clickAction: (e) => {console.log("new folder: ", dirInfo);}},
+                {text: "new folder", clickAction: (e) => {
+                    console.log("new folder: ", dirInfo);
+                    this.explorer.newDirClickAction(dirInfo);
+                }},
                 {text: "delete", clickAction: (e) => {
                     console.log("delete: ", dirInfo);
                 }}

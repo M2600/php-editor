@@ -5,17 +5,40 @@ function hideAllPreviewer(){
     })
 }
 
+
+function pathFromDir(path){
+    let dir = path.replace(/\+$/, "");
+    return dir;
+}
+
+
+
+
+
+
+
+
+
+
 var USER_ID = "user_id";
 var CURRENT_FILE = false;
+var FILE_LIST = {};
+var RUN_BROWSER_TAB = undefined;
+
+const DEBUG = true;
 
 const editor = new MEditor();
 editor.DEBUG = true;
+
+const FILE_PAGE_BASE_URL = "/user-programs/";
+
+var mConsole;
 
 async function main(){
     await editor.editor("main");
 
     editor.setChangeThemeAction((theme) => {
-        console.log("Theme: ", theme);
+        DEBUG && console.log("Theme: ", theme);
         if(CURRENT_FILE.aceObj != undefined){
             if(theme == "dark"){
                 CURRENT_FILE.aceObj.editor.setTheme("ace/theme/monokai");
@@ -27,20 +50,26 @@ async function main(){
     });
 
 
+    mConsole = editor.console(editor.page.main.mid.container.bottom);
+
+
     const editorEditor = editor.workPlace(editor.page.main.mid.container.main);
 
     editorEditor.menu.left.items.push(editor.generateButton(
         editorEditor.menu.left,
         "Save",
         (e) => {
-            console.log("Save: ");
+            console.log("Save: " + CURRENT_FILE.path);
+            //mConsole.print("Save: "+CURRENT_FILE.path);
+            pushSaveButton();
         }
     ))
     editorEditor.menu.left.items.push(editor.generateButton(
         editorEditor.menu.left,
         "Run",
         (e) => {
-            console.log("Run: ");
+            console.log("Run: " + CURRENT_FILE.path);
+            openInOtherWindow();
         }
     ))
 
@@ -55,21 +84,27 @@ async function main(){
     const explorer = editor.createExplorer(editor.page.main.left, opt={
         title: "エクスプローラー",
     });
-    explorer.setFileClickAction((file) => {
+    explorer.setFileClickAction(async function (file) {
+        DEBUG && console.log("fileInfo", file);
+        apiRet = await loadFile(file.path);
         hideAllPreviewer();
-        console.log(file);
         if(file.type == "text"){
+            file.readonly = false;
             if(file.aceObj == undefined || file.aceObj == null){
                 let aceDOM = document.createElement("div");
                 editorEditor.content.element.appendChild(aceDOM);
-                aceDOM.id = "ace-" + file.name;
+                aceDOM.id = "ace-" + file.path;
                 aceDOM.classList.add("viewer");
                 aceDOM.style.width = "100%";
                 aceDOM.style.height = "100%";
                 const ace = new AceWrapper(aceDOM.id);
                 ace.loadMySettings();
+                let mode = extToLang(file.path.split(".").pop());
+                ace.setMode(mode);
                 file.aceObj = ace;
                 aceKeybinds(file.aceObj.editor);
+                file.aceObj.setValue(apiRet.content);
+                file.aceObj.editor.gotoLine(0);
             }
             else{
                 console.log("ace already exists");
@@ -87,51 +122,40 @@ async function main(){
             file.aceObj.focus();
         }
         else if(file.type == "image"){
+            file.readonly = true;
             if(file.viewer == undefined || file.viewer == null){
-                let imgContainer = document.createElement("div");
-                imgContainer.id = "img-" + file.name;
-                imgContainer.classList.add("viewer");
-                imgContainer.style.width = "100%";
-                imgContainer.style.height = "100%";
-                editor.page.main.mid.container.main.element.appendChild(imgContainer);
 
-                let img = document.createElement("img");
-                imgContainer.appendChild(img);
-                img.src = "";
-                
-                file.viewer = imgContainer;
+                let src = "data:image/png;base64," + apiRet.content;
+                let img = editor.imageViewer(editorEditor.content, src);
+                img.element.classList.add("viewer");
+
+                file.viewer = img;
             }
             else(
                 console.log("image already exists")
             )
 
-            file.viewer.style.display = "block";
+            file.viewer.element.style.display = "flex";
+        }
+        else {
+            file.readonly = true;
+            if(file.viewer == undefined || file.viewer == null){
+                console.log("Unknown file type: ", file.type);
+                msg = editor.viewerMessage(editorEditor.content, "このファイルはプレビューできません");
+                msg.element.classList.add("viewer");
+                file.viewer = msg;
+            }
+            else{
+                DEBUG && console.log("viewer message already exists");
+            }
+            file.viewer.element.style.display = "flex";
         }
         CURRENT_FILE = file;
         
     })
 
-    explorer.setNewFileClickAction(() => {
-        console.log("re: New file: ");
-        let contents = document.createElement("div");
-        let input = document.createElement("input");
-        input.type = "text";
-        input.placeholder = "File name";
-        contents.appendChild(input);
-        let controls = document.createElement("div");
-        controls.style.display = "flex";
-        controls.style.flexDirection = "row-reverse";
-        controls.style.marginTop = ".3rem";
-        contents.appendChild(controls);
-        let createButton = document.createElement("button");
-        createButton.innerHTML = "Create";
-        createButton.classList.add("meditor-button");
-        createButton.addEventListener("click", () => {
-            console.log("Create: ", input.value);
-        });
-        controls.appendChild(createButton);
-
-        editor.popupWindow("New file", contents);
+    explorer.setNewFileClickAction((dir) => {
+        newFileDialog(dir);
     })
 
     explorer.setNewDirClickAction(() => {
@@ -372,16 +396,8 @@ function aceKeybinds(ace){
 // If extension not same as editor language mode, set here
 const EXT_LANG = [
     {
-        ext: ["php"],
-        lang: "php"
-    },
-    {
         ext: ["html", "htm"],
         lang: "html"
-    },
-    {
-        ext: ["css"],
-        lang: "css"
     },
     {
         ext: ["js"],
@@ -397,7 +413,7 @@ const EXT_LANG = [
 // var FILELIST = [];
 // var FILENAME = false;
 // var READONLY = false;
-var USERID = false;
+// var USERID = false;
 // var NEWFILEDISABLED = false;
 // var DELETEDIALOGDISABLED = false;
 // var RENAMEDIALOGDISABLED = false;
@@ -460,71 +476,6 @@ function fileNameCheck(fileName) {
 //     });
 
 //     return $exist;
-// }
-
-
-// function fileMenu(parent, path) {
-//     removeMenu();
-
-//     // ファイルメニュー表示中はエクスプローラーをスクロールできなくする
-//     let explorerContent = document.getElementById("explorer-content");
-//     explorerContent.style.overflowY = "hidden";
-
-//     window.addEventListener("click", removeMenu);
-
-//     let menu = document.createElement("div");
-//     menu.classList.add("file-menu");
-//     let rect = parent.getBoundingClientRect();
-//     //let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-//     menu.style.top = (rect.top) + "px";
-//     menu.style.left = parent.offsetLeft + parent.offsetWidth + "px";
-//     menu.addEventListener("click", (e) => {
-//         e.stopPropagation();
-//     });
-
-//     parent.appendChild(menu);
-
-//     let duplicateButton = document.createElement("button");
-//     duplicateButton.classList.add("file-menu-item");
-//     duplicateButton.innerHTML = "<i class=\"fa-solid fa-copy\"></i>複製";
-//     duplicateButton.addEventListener("click", async (e) => {
-//         e.stopPropagation();
-//         console.log("Duplicate");
-//         newPath = await duplicateFile(path);
-//         await loadExplorer();
-//         await loadFile(newPath);
-//     });
-
-//     menu.appendChild(duplicateButton);
-
-//     let renameButton = document.createElement("button");
-//     renameButton.classList.add("file-menu-item");
-//     renameButton.innerHTML = "<i class=\"fa-solid fa-pen\"></i>名前変更";
-//     renameButton.addEventListener("click", (e) => {
-//         e.stopPropagation();
-//         console.log("rename");
-//         renameDialog(path);
-//         removeMenu();
-//     });
-
-//     menu.appendChild(renameButton);
-
-//     let deleteButton = document.createElement("button");
-//     deleteButton.classList.add("file-menu-item");
-//     deleteButton.style.color = "red";
-//     deleteButton.innerHTML = "<i class=\"fa-solid fa-trash\"></i>削除";
-//     deleteButton.addEventListener("click", (e) => {
-//         e.stopPropagation();
-//         console.log("delete");
-//         deleteDialog(path);
-//         removeMenu();
-//     });
-
-//     menu.appendChild(deleteButton);
-
-//     if (menu.getBoundingClientRect().bottom > document.documentElement.clientHeight) {
-//         menu.style.top = document.documentElement.clientHeight - menu.clientHeight;
-//     }
 // }
 
 
@@ -648,233 +599,103 @@ function fileNameCheck(fileName) {
 
 
 async function loadExplorer() {
-    await fetch("/api/file_manager.php", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            action: "list-object",
-            path: ""
-        }),
-    }).then(response => response.json())
+    let body = {
+        action: "list-object",
+        path: ""
+    };
+    await api("/api/file_manager.php", body=body)
     .then(data => {
-        DEBUG && console.log(data);
-        if (data.status == "session_error") {
+        if (data.status === "session_error") {
             sessionError();
             return;
         }
         USERID = data.id;
+        FILE_LIST = data.files;
         editor.explorer.setMenuTitle(USERID + "/");
         editor.explorer.loadExplorer(data.files);
-        DEBUG && console.log("Explorer loaded");
-    })
+    });
 }
 
-// async function loadExplorer() {
-//     let explorerContent = document.getElementById("explorer-content");
-//     let explorerTitle = document.getElementById("explorer-title");
-//     await fetch("/api/file_manager.php", {
-//         method: "POST",
-//         headers: {
-//             "Content-Type": "application/json"
-//         },
-//         body: JSON.stringify({
-//             action: "list",
-//             path: ""
-//         }),
-//     }).then(response => response.json())
-//         .then(data => {
-//             DEBUG && console.log(data);
-//             if (data.status == "session_error") {
-//                 sessionError();
-//                 return;
-//             }
-//             USERID = data.id;
-//             explorerTitle.innerHTML = USERID + "/";
-//             explorerContent.innerHTML = "";
-//             let files = data.files;
-//             $FILELIST = files;
-//             files.forEach(file => {
-//                 let fileElement = document.createElement("div");
-//                 fileElement.id = file;
-//                 fileElement.classList.add("file");
-//                 fileElement.addEventListener("click", () => {
-//                     loadFile(file);
-//                 });
 
-//                 fileName = document.createElement("div");
-//                 fileName.classList.add("file-name");
-//                 fileName.innerHTML = file;
-//                 fileElement.appendChild(fileName);
+function extToLang(ext) {
+    lang = ext;
+    EXT_LANG.forEach(extLang => {
+        if (extLang.ext.indexOf(ext) > -1) {
+            DEBUG && console.log(extLang.lang);
+            lang = extLang.lang;
+        }
+    });
+    return lang;
+}
 
-//                 fileControl = document.createElement("div");
-//                 fileControl.classList.add("file-control");
-//                 fileControl.innerHTML = "⋮";
-//                 fileControl.addEventListener("click", (e) => {
-//                     e.stopPropagation();
-//                     fileMenu(fileElement, file);
-//                 });
-
-//                 fileElement.appendChild(fileControl);
+async function openInOtherWindow() {
+    if (!CURRENT_FILE) {
+        return;
+    }
+    if (!CURRENT_FILE.readonly) {
+        await saveFile(CURRENT_FILE.path, CURRENT_FILE.aceObj.editor.getValue());
+        mConsole.print("File saved: " + CURRENT_FILE.path, "success");
+    }
+    console.log(RUN_BROWSER_TAB);
+    let url = FILE_PAGE_BASE_URL + USERID;
+    if (CURRENT_FILE.path.startsWith("/")){
+        url += CURRENT_FILE.path;
+    }
+    else{
+        url += "/" + CURRENT_FILE.path;
+    }
+    if (!RUN_BROWSER_TAB || RUN_BROWSER_TAB.closed) {
+        RUN_BROWSER_TAB = window.open(url);
+    }
+    else {
+        RUN_BROWSER_TAB.location.href = url;
+        RUN_BROWSER_TAB.focus();
+    }
+}
 
 
-//                 explorerContent.appendChild(fileElement);
-//             });
-//             DEBUG && console.log("Explorer loaded");
-
-//         });
-// }
 
 
-// function extToLang(ext) {
-//     lang = "";
-//     EXT_LANG.forEach(extLang => {
-//         if (extLang.ext.indexOf(ext) > -1) {
-//             DEBUG && console.log(extLang.lang);
-//             lang = extLang.lang;
-//         }
-//     });
-//     return lang;
-// }
 
-// async function openInOtherWindow() {
-//     if (!FILENAME) {
-//         return;
-//     }
-//     if (!READONLY) {
-//         await saveFile(FILENAME, editor.getValue());
-//     }
-//     console.log(RUNBROWSERTAB);
-//     if (!RUNBROWSERTAB || RUNBROWSERTAB.closed) {
-//         RUNBROWSERTAB = window.open(FILEPAGEBASEURL + USERID + "/" + FILENAME);
-//     }
-//     else {
-//         RUNBROWSERTAB.location.href = FILEPAGEBASEURL + USERID + "/" + FILENAME;
-//         RUNBROWSERTAB.focus();
-//     }
-// }
-
-// function editorBlockMessage(message) {
-//     let mainBody = document.getElementById("main-body");
-
-//     let messageContainer = document.createElement("div");
-//     messageContainer.id = "editor-block-message";
-//     messageContainer.classList.add("editor-block-message");
-
-//     let messageText = document.createElement("p");
-//     messageText.innerHTML = message;
-//     messageContainer.appendChild(messageText);
-
-//     mainBody.appendChild(messageContainer);
-// }
-
-// async function previewImage(imageBase64) {
-//     let editorElm = document.getElementById("editor");
-//     editorElm.style.display = "none";
-
-//     let imgContainer = document.createElement("div");
-//     imgContainer.id = "preview-image-container";
-//     imgContainer.classList.add("preview-image-container");
+async function loadFile(path) {
+    let body = {
+        action: "get",
+        path: path
+    };
+    let ret;
+    await api("/api/file_manager.php", body=body)
+    .then(data => {
+        if (data.status === "error") {
+            console.error(data.error);
+            return;
+        }
+        if (data.status === "session_error") {
+            sessionError();
+            return;
+        }
+        ret = {
+            content: data.content,
+            fileType: data.fileType,
+        };
+    });
+    return ret;
+}
 
 
-//     let img = document.createElement("img");
-//     img.id = "preview-image";
-//     img.classList.add("preview-image");
-//     img.src = "data:image/png;base64," + imageBase64;
-//     imgContainer.appendChild(img);
-
-//     let mainBody = document.getElementById("main-body");
-//     mainBody.appendChild(imgContainer);
-//     READONLY = true;
-// }
-
-
-// async function loadFile(path) {
-//     if (FILENAME && !READONLY) {
-//         saveFile(FILENAME, editor.getValue());
-//     }
-//     let fileElement = document.getElementById(path);
-//     let saveButton = document.getElementById("save-button");
-//     let runButton = document.getElementById("run-button");
-//     let fileName = document.getElementById("file-name");
-//     let openOtherWindow = document.getElementById("open-other-window");
-
-//     openOtherWindow.removeEventListener("click", openInOtherWindow);
-//     saveButton.removeEventListener("click", pushSaveButton);
-//     runButton.removeEventListener("click", pushRunButton);
-
-
-//     await fetch("/api/file_manager.php", {
-//         method: "POST",
-//         headers: {
-//             "Content-Type": "application/json"
-//         },
-//         body: JSON.stringify({
-//             action: "get",
-//             path: path
-//         })
-//     }).then(response => response.json()).then(data => {
-//         DEBUG && console.log(data);
-//         if (data.status == "error") {
-//             console.error(data.error);
-//             return;
-//         }
-//         if (data.status == "session_error") {
-//             sessionError();
-//             return;
-//         }
-//         let editorElm = document.getElementById("editor");
-//         resetEditor();
-//         if (data.fileType == "text") {
-//             READONLY = false;
-//             editorElm.style.display = "block";
-//             editor.setValue(data.content);
-//             mode = "ace/mode/" + extToLang(path.split(".").pop());
-//             DEBUG && console.log(path.split(".").pop());
-//             DEBUG && console.log(mode);
-//             editor.getSession().setMode(mode);
-//             editor.setReadOnly(false);
-//             editor.gotoLine(0);
-//         }
-//         else if (data.fileType == "image") {
-//             previewImage(data.content);
-//         }
-//         else {
-//             editorElm.style.display = "none";
-//             READONLY = true;
-//             editorBlockMessage("このファイルは表示できません。");
-//             console.error("Invalid file type");
-//         }
-
-//         FILENAME = path;
-//         fileName.innerHTML = FILENAME;
-//         openOtherWindow.addEventListener("click", openInOtherWindow);
-//         saveButton.addEventListener("click", pushSaveButton);
-//         runButton.addEventListener("click", pushRunButton);
-//         DEBUG && console.log("File loaded");
-
-//     });
-
-//     oldSelectedFile = document.getElementsByClassName("selected-file");
-//     for (let i = 0; i < oldSelectedFile.length; i++) {
-//         oldSelectedFile[i].classList.remove("selected-file");
-//     }
-//     fileElement.classList.add("selected-file");
-//     editor.focus();
-// }
-
-// async function pushSaveButton() {
-//     let logOutput = document.getElementById("log-output");
-//     logOutput.innerHTML = "";
-//     if (!FILENAME || READONLY) {
-//         return;
-//     }
-//     let content = editor.getValue();
-//     saveFile(FILENAME, content).then(() => {
-//         phpSyntaxCheck(FILENAME);
-//     });
-// }
+async function pushSaveButton() {
+    if (!CURRENT_FILE || CURRENT_FILE.readonly) {
+        return;
+    }
+    let content = CURRENT_FILE.aceObj.editor.getValue();
+    saveFile(CURRENT_FILE.path, content).then((status) => {
+        if(status == 1){
+            mConsole.print("File save error: " + CURRENT_FILE.path, "error");
+            return;
+        }
+        mConsole.print("File saved: " + CURRENT_FILE.path, "success");
+        //phpSyntaxCheck(FILENAME);
+    });
+}
 
 // async function pushRunButton() {
 //     let logOutput = document.getElementById("log-output");
@@ -888,34 +709,29 @@ async function loadExplorer() {
 // }
 
 
+async function saveFile(path, content) {
+    let body = {
+        action: "save",
+        path: path,
+        content: content
+    };
+    let ret = await api("/api/file_manager.php", body=body)
+    .then(data => {
+        if (data.status === "error") {
+            console.error(data.error);
+            return 1;
+        }
+        if (data.status === "session_error") {
+            sessionError();
+            return 0;
+        }
+        DEBUG && console.log("File saved");
+        // *console out 
+    })
+    return ret;
+}
 
-// async function saveFile(path, content) {
-//     let logOutput = document.getElementById("log-output");
-//     await fetch("/api/file_manager.php", {
-//         method: "POST",
-//         headere: {
-//             "Content-Type": "application/json"
-//         },
-//         body: JSON.stringify({
-//             action: "save",
-//             path: path,
-//             content: content
-//         })
-//     }).then(response => response.json()).then(data => {
-//         DEBUG && console.log(data);
-//         if (data.status == "error") {
-//             console.error(data.error);
-//             return;
-//         }
-//         if (data.status == "session_error") {
-//             sessionError();
-//             return;
-//         }
-//         DEBUG && console.log("File saved");
-//         logOutput.innerHTML += "<span class=\"success\">File saved</span><br>";
-//         logOutput.scrollTop = logOutput.scrollHeight;
-//     })
-// }
+
 
 
 // async function renameFile(path, newPath) {
@@ -1044,34 +860,92 @@ async function loadExplorer() {
 
 
 
-// async function createFile(path) {
-//     ret = "";
-//     await fetch("/api/file_manager.php", {
-//         method: "POST",
-//         headers: {
-//             "Content-Type": "application/json"
-//         },
-//         body: JSON.stringify({
-//             action: "touch",
-//             path: path
-//         })
-//     }).then(response => response.json()).then(data => {
-//         DEBUG && console.log(data);
-//         if (data.status == "error") {
-//             console.error(data.error);
-//             return;
-//         }
-//         if (data.status == "session_error") {
-//             sessionError();
-//             return;
-//         }
-//         DEBUG && console.log("File created");
-//         ret = data.createdFilePath;
-//     });
-//     return ret;
-// }
+async function createFile(path) {
+    let ret;
+    
+    let body = {
+        action: "touch",
+        path: path
+    };
+    let status = await api("/api/file_manager.php", body=body)
+    .then(data => {
+        if (data.status === "error") {
+            console.error(data.error);
+            return 1;
+        }
+        if (data.status === "session_error") {
+            sessionError();
+            return 0;
+        }
+        ret = data.path;
+    });
+    if(status == 1){
+        mConsole.print("File create error: " + path, "error");
+        return false;
+    }
 
+    return ret;
+}
 
+function getCurrentPath() {
+    if (!CURRENT_FILE){
+        return "/";
+    }
+    else{
+        return CURRENT_FILE.path.substring(0, CURRENT_FILE.path.lastIndexOf("/") + 1);
+    }
+}
+
+function newFileDialog(dir){
+    let windowName = "New file";
+
+    // Check if window already exists
+    let windowExists = false;
+    DEBUG && console.log("popup windows: ", editor.page.popupWindows);
+    editor.page.popupWindows.forEach((popup) => {
+        if (popup.title == windowName) {
+            DEBUG && console.log("popup window already exists");
+            windowExists = true;
+            return;
+        }
+    });
+    if (windowExists) {
+        return;
+    }
+    
+    if(!dir){
+        var currentDir = getCurrentPath();
+    }
+    else{
+        var currentDir = dir.path;
+        if(currentDir[currentDir.length - 1] != "/"){
+            currentDir += "/";
+        }
+    }
+    console.log("New file: " + currentDir);
+    let contents = document.createElement("div");
+    let input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = "File name";
+    contents.appendChild(input);
+    let controls = document.createElement("div");
+    controls.style.display = "flex";
+    controls.style.flexDirection = "row-reverse";
+    controls.style.marginTop = ".3rem";
+    contents.appendChild(controls);
+    let createButton = document.createElement("button");
+    createButton.innerHTML = "Create";
+    createButton.classList.add("meditor-button");
+    createButton.addEventListener("click", async () => {
+        console.log("Create: ", currentDir + input.value);
+        DEBUG && console.log("popup window: ", popupWindow);
+        popupWindow.remove();
+        await createFile(currentDir + input.value);
+        await loadExplorer();
+    });
+    controls.appendChild(createButton);
+    let popupWindow = editor.popupWindow(windowName, contents);
+}
 
 
 // async function newFileDialog() {

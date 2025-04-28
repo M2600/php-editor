@@ -1,3 +1,9 @@
+// general functions
+
+
+
+
+
 // Require: ace.js, ace/ext-language_tools.js
 
 ace.require("ace/ext/language_tools");
@@ -650,8 +656,8 @@ class MEditor {
         }
 
 
-        parentObj.explorer.newFileClickAction = (fileInfo) => {
-            console.log("new file: ", fileInfo);
+        parentObj.explorer.newFileClickAction = (dir) => {
+            console.log("new file: ", dir);
         }
         parentObj.explorer.setNewFileClickAction = (func) => {
             parentObj.explorer.newFileClickAction = func;
@@ -708,6 +714,10 @@ class MEditor {
         for(let i=0; i<dirInfo.files.length; i++) {
             let fileInfo = dirInfo.files[i];
             if(fileInfo.type == "dir") {
+                fileInfo.path = currentDirName + fileInfo.name;
+                if(!fileInfo.path.endsWith("/")){
+                    fileInfo.path += "/";
+                }
                 let dir = this.explorerDir(parentObj, fileInfo);
                 this.explorerRecursive(dir, fileInfo, currentDirName);
             }
@@ -785,10 +795,47 @@ class MEditor {
         parentObj.files.push(file);
     }
 
+    dirControl(parentObj, dirInfo){
+        let dirControl = {};
+        dirControl.element = document.createElement("div");
+        dirControl.element.classList.add(this.CLASS_NAME_PREFIX + "dir-control");
+
+        parentObj.control = dirControl;
+        parentObj.element.appendChild(dirControl.element);
+
+        let dirMenu = {};
+        dirMenu = this.generateButton(dirControl, "⋮");
+        dirMenu.element.classList.add(this.CLASS_NAME_PREFIX + "dir-menu-button");
+        dirMenu.addTrigger("click", (e) => {
+            e.stopPropagation();
+            console.log("dir menu clicked:", dirInfo);
+            this.popupMenu(dirMenu, [
+                {text: "rename", clickAction: (e) => {console.log("rename: ", dirInfo);}},
+                {text: "new file", clickAction: (e) => {
+                    console.log("new file: ", dirInfo);
+                    this.explorer.newFileClickAction(dirInfo);
+                }},
+                {text: "new folder", clickAction: (e) => {console.log("new folder: ", dirInfo);}},
+                {text: "delete", clickAction: (e) => {
+                    console.log("delete: ", dirInfo);
+                }}
+            ]);
+            this.page.popupMenuCloseAction = () => {
+                this.explorer.content.element.style.overflowY = "auto";
+            }
+            this.explorer.content.element.style.overflowY = "hidden";
+        })
+
+        dirControl.menu = dirMenu;
+
+        return dirControl;
+    }
+
     explorerDir(parentObj, dirInfo) {
         let dir = {};
         dir.name = dirInfo.name;
         dir.type = dirInfo.type;
+        dir.path = dirInfo.path;
         dir.files = [];
         dir.element = document.createElement("div");
         dir.element.id = dir.name;
@@ -818,6 +865,9 @@ class MEditor {
         dir.element.appendChild(dirContent.element);
         dir.content = dirContent;
 
+
+        let dirControl = this.dirControl(dirMenu, dirInfo);
+        dir.control = dirControl;
 
         parentObj.content.element.appendChild(dir.element);
         parentObj.files.push(dir);
@@ -1077,6 +1127,10 @@ class MEditor {
 
     activatePopupWindow(pWindow) {
         let parentElm = pWindow.element.parentElement;
+        if(parentElm == null){
+            console.log("popup window parent element is null");
+            return;
+        }
         parentElm.appendChild(pWindow.element);
     }
 
@@ -1181,6 +1235,17 @@ class MEditor {
             this.page.popupWindows = [];
         }
         this.page.popupWindows.push(pWindow);
+
+
+
+        // methods
+        pWindow.remove = () => {
+            pWindow.element.remove();
+            this.page.popupWindows = this.page.popupWindows.filter((item) => item != pWindow);
+        }
+
+
+
         return pWindow;
     }
 

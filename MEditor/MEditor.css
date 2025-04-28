@@ -345,6 +345,7 @@ i {
 .meditor-dir-menu {
     width: 100%;
     cursor: pointer;
+    display: flex;
 }
 .meditor-dir-menu:hover {
     background-color: var(--me-color-bg-active);
@@ -358,6 +359,22 @@ i {
     color: var(--me-color-text);
     text-align: left;
 }
+
+.meditor-dir-control {
+    margin-left: auto;
+    display: flex;
+}
+
+.meditor-dir-menu-button {
+    cursor: pointer;
+    border: none;
+    background: transparent;
+}
+.meditor-dir-menu-button:hover {
+    background-color: var(--me-color-bg-active-active);
+}
+
+
 
 .meditor-dir-name::before {
     font-size: 1em;
@@ -390,6 +407,7 @@ i {
     display: flex;
     width: 100%;
     height: 3em;
+    overflow-x: hidden;
 }
 
 .meditor-editor-menu-left {

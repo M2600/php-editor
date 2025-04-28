@@ -327,7 +327,7 @@ function phpCgiRun($userPath, $printHttpHeaders=false, $GETParams=array()){
         chdir(getUserRoot());
         global $USER_SCRIPT_PHP_INI;
         $command = "php-cgi ";
-        if($printHttpHeaders){
+        if(!$printHttpHeaders){
             $command .= "-q ";
         }
         if(file_exists($USER_SCRIPT_PHP_INI)){

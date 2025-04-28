@@ -10,7 +10,6 @@ var CURRENT_FILE = false;
 
 const editor = new MEditor();
 editor.DEBUG = true;
-DEBUG = true;
 
 async function main(){
     await editor.editor("main");
@@ -56,25 +55,9 @@ async function main(){
     const explorer = editor.createExplorer(editor.page.main.left, opt={
         title: "エクスプローラー",
     });
-    explorer.setFileClickAction(async (file) => {
+    explorer.setFileClickAction((file) => {
         hideAllPreviewer();
         console.log(file);
-
-        // API call
-        let res = await api("/api/file_manager.php", {
-            action: "get",
-            path: file.path,
-        })
-        if(res.status == "session_error"){
-            sessionError();
-            return;
-        }
-        if(res.status == "error"){
-            console.error(res.error);
-            return;
-        }
-        DEBUG && console.log(res);
-
         if(file.type == "text"){
             if(file.aceObj == undefined || file.aceObj == null){
                 let aceDOM = document.createElement("div");
@@ -85,7 +68,6 @@ async function main(){
                 aceDOM.style.height = "100%";
                 const ace = new AceWrapper(aceDOM.id);
                 ace.loadMySettings();
-                ace.setMode(extToLang(file.name.split(".").pop()));
                 file.aceObj = ace;
                 aceKeybinds(file.aceObj.editor);
             }
@@ -100,9 +82,6 @@ async function main(){
             else{
                 file.aceObj.editor.setTheme("ace/theme/chrome");
             }
-
-            //set ace content
-            file.aceObj.setValue(res.content);
 
             file.aceObj.show();
             file.aceObj.focus();
@@ -680,7 +659,7 @@ async function loadExplorer() {
         }),
     }).then(response => response.json())
     .then(data => {
-        editor.DEBUG && console.log(data);
+        DEBUG && console.log(data);
         if (data.status == "session_error") {
             sessionError();
             return;
@@ -688,7 +667,7 @@ async function loadExplorer() {
         USERID = data.id;
         editor.explorer.setMenuTitle(USERID + "/");
         editor.explorer.loadExplorer(data.files);
-        editor.DEBUG && console.log("Explorer loaded");
+        DEBUG && console.log("Explorer loaded");
     })
 }
 
@@ -748,16 +727,16 @@ async function loadExplorer() {
 // }
 
 
-function extToLang(ext) {
-    lang = "";
-    EXT_LANG.forEach(extLang => {
-        if (extLang.ext.indexOf(ext) > -1) {
-            DEBUG && console.log(extLang.lang);
-            lang = extLang.lang;
-        }
-    });
-    return lang;
-}
+// function extToLang(ext) {
+//     lang = "";
+//     EXT_LANG.forEach(extLang => {
+//         if (extLang.ext.indexOf(ext) > -1) {
+//             DEBUG && console.log(extLang.lang);
+//             lang = extLang.lang;
+//         }
+//     });
+//     return lang;
+// }
 
 // async function openInOtherWindow() {
 //     if (!FILENAME) {
@@ -811,6 +790,79 @@ function extToLang(ext) {
 // }
 
 
+// async function loadFile(path) {
+//     if (FILENAME && !READONLY) {
+//         saveFile(FILENAME, editor.getValue());
+//     }
+//     let fileElement = document.getElementById(path);
+//     let saveButton = document.getElementById("save-button");
+//     let runButton = document.getElementById("run-button");
+//     let fileName = document.getElementById("file-name");
+//     let openOtherWindow = document.getElementById("open-other-window");
+
+//     openOtherWindow.removeEventListener("click", openInOtherWindow);
+//     saveButton.removeEventListener("click", pushSaveButton);
+//     runButton.removeEventListener("click", pushRunButton);
+
+
+//     await fetch("/api/file_manager.php", {
+//         method: "POST",
+//         headers: {
+//             "Content-Type": "application/json"
+//         },
+//         body: JSON.stringify({
+//             action: "get",
+//             path: path
+//         })
+//     }).then(response => response.json()).then(data => {
+//         DEBUG && console.log(data);
+//         if (data.status == "error") {
+//             console.error(data.error);
+//             return;
+//         }
+//         if (data.status == "session_error") {
+//             sessionError();
+//             return;
+//         }
+//         let editorElm = document.getElementById("editor");
+//         resetEditor();
+//         if (data.fileType == "text") {
+//             READONLY = false;
+//             editorElm.style.display = "block";
+//             editor.setValue(data.content);
+//             mode = "ace/mode/" + extToLang(path.split(".").pop());
+//             DEBUG && console.log(path.split(".").pop());
+//             DEBUG && console.log(mode);
+//             editor.getSession().setMode(mode);
+//             editor.setReadOnly(false);
+//             editor.gotoLine(0);
+//         }
+//         else if (data.fileType == "image") {
+//             previewImage(data.content);
+//         }
+//         else {
+//             editorElm.style.display = "none";
+//             READONLY = true;
+//             editorBlockMessage("このファイルは表示できません。");
+//             console.error("Invalid file type");
+//         }
+
+//         FILENAME = path;
+//         fileName.innerHTML = FILENAME;
+//         openOtherWindow.addEventListener("click", openInOtherWindow);
+//         saveButton.addEventListener("click", pushSaveButton);
+//         runButton.addEventListener("click", pushRunButton);
+//         DEBUG && console.log("File loaded");
+
+//     });
+
+//     oldSelectedFile = document.getElementsByClassName("selected-file");
+//     for (let i = 0; i < oldSelectedFile.length; i++) {
+//         oldSelectedFile[i].classList.remove("selected-file");
+//     }
+//     fileElement.classList.add("selected-file");
+//     editor.focus();
+// }
 
 // async function pushSaveButton() {
 //     let logOutput = document.getElementById("log-output");

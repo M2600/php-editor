@@ -759,7 +759,7 @@ class MEditor {
         file.element.id = file.name;
         file.element.classList.add(this.CLASS_NAME_PREFIX + "file");
         file.element.title = fileInfo.path;
-        // 選択ファイルのハイライト用の設定
+        // highlight selected file
         file.element.addEventListener("click", (e) => {
             let old = document.getElementsByClassName(this.CLASS_NAME_PREFIX + "file-selected");
             for(let i=0; i<old.length; i++) {
@@ -767,7 +767,6 @@ class MEditor {
             }
             file.element.classList.toggle(this.CLASS_NAME_PREFIX + "file-selected");
         });
-        // メインの処理はこっちで
         file.element.addEventListener("click", function a(e) {
             this.explorer.fileClickAction(fileInfo);
         }.bind(this));

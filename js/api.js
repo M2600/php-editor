@@ -20,7 +20,7 @@ async function api(path, body={}) {
         body: JSON.stringify(body),
     }).then(response => response.json())
     .then(data => {
-        DEBUG && console.log(data);
+        //DEBUG && console.log(data);
         res = data;
     })
     return res;

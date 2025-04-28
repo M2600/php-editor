@@ -25,6 +25,10 @@ $path = htmlspecialchars_decode($params["path"], ENT_QUOTES);
 
 if($action == "get"){
     $ret = getFile($path);
+    if(!$ret){
+        echo json_encode(array("status" => "error", "error" => "File not found"));
+        exit();
+    }
     echo json_encode(array("status" => "success", "content" => $ret["file"], "fileType" => $ret["fileType"]));
     exit();
 }

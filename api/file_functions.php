@@ -87,7 +87,7 @@ function getFile($userPath){
     try{
         $serverPath = convertUserPath($userPath);
         if(!file_exists($serverPath)){
-            return "";
+            return false;
         }
 
         $fileType = getFileType($serverPath);

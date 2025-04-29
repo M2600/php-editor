@@ -563,8 +563,47 @@ class MEditor {
             // clear old contents
             explorerContent.content.element.innerHTML = "";
             console.log(this.explorer);
-
+            explorer.files = [];
             this.explorerRecursive(explorerContent, explorerContents);
+        }
+
+
+        /**
+         * エクスプローラーのディレクトリ」のエキスパンドをトグルする
+         * 
+         * @param {string} path path must be starts with "/" and ends with "/"
+         */
+        explorer.toggleExpand = (path) => {
+
+            let expandList = localStorage.getItem("explorerExpandedList");
+            if(expandList){
+                expandList = JSON.parse(expandList);
+            }
+            else{
+                expandList = [];
+            }
+
+            let dir = document.getElementById(path);
+            if(dir){
+                let dirName = dir.getElementsByClassName(this.CLASS_NAME_PREFIX + "dir-name")[0];
+                let dirContent = dir.getElementsByClassName(this.CLASS_NAME_PREFIX + "dir-content")[0];
+                dirName.classList.toggle(this.CLASS_NAME_PREFIX + "dir-name-expanded");
+                dirContent.classList.toggle(this.CLASS_NAME_PREFIX + "dir-content-show");
+                //console.log(dirName, dirContent);
+                if(dirName.classList.contains(this.CLASS_NAME_PREFIX + "dir-name-expanded")){
+                    expandList.push(path);
+                }
+                else{
+                    let index = expandList.indexOf(path);
+                    if(index > -1){
+                        expandList.splice(index, 1);
+                    }
+                }
+                localStorage.setItem("explorerExpandedList", JSON.stringify(expandList));
+                return true;
+            }
+            console.error("Directory not found: ", path);
+            return false;
         }
 
 
@@ -692,6 +731,22 @@ class MEditor {
         }
 
 
+        // dir actions
+        parentObj.explorer.renameDirClickAction = (dirInfo) => {
+            console.log("rename dir: ", dirInfo);
+        }
+        parentObj.explorer.setRenameDirClickAction = (func) => {
+            parentObj.explorer.renameDirClickAction = func;
+        }
+
+        parentObj.explorer.deleteDirClickAction = (dirInfo) => {
+            console.log("delete dir: ", dirInfo);
+        }
+        parentObj.explorer.setDeleteDirClickAction = (func) => {
+            parentObj.explorer.deleteDirClickAction = func;
+        }
+
+
 
         parentObj.explorer.setTitle = (title) => {
             parentObj.explorer.title.element.innerHTML = title;
@@ -765,8 +820,9 @@ class MEditor {
         let file = {};
         file.name = fileInfo.name;
         file.type = fileInfo.type;
+        file.path = fileInfo.path;
         file.element = document.createElement("button");
-        file.element.id = file.name;
+        file.element.id = file.path;
         file.element.classList.add(this.CLASS_NAME_PREFIX + "file");
         file.element.title = fileInfo.path;
         // highlight selected file
@@ -810,17 +866,21 @@ class MEditor {
             e.stopPropagation();
             console.log("dir menu clicked:", dirInfo);
             this.popupMenu(dirMenu, [
-                {text: "rename", clickAction: (e) => {console.log("rename: ", dirInfo);}},
+                {text: "rename", clickAction: (e) => {
+                    //console.log("rename: ", dirInfo);
+                    this.explorer.renameDirClickAction(dirInfo);
+                }},
                 {text: "new file", clickAction: (e) => {
-                    console.log("new file: ", dirInfo);
+                    //console.log("new file: ", dirInfo);
                     this.explorer.newFileClickAction(dirInfo);
                 }},
                 {text: "new folder", clickAction: (e) => {
-                    console.log("new folder: ", dirInfo);
+                    //console.log("new folder: ", dirInfo);
                     this.explorer.newDirClickAction(dirInfo);
                 }},
                 {text: "delete", clickAction: (e) => {
-                    console.log("delete: ", dirInfo);
+                    //console.log("delete: ", dirInfo);
+                    this.explorer.deleteDirClickAction(dirInfo);
                 }}
             ]);
             this.page.popupMenuCloseAction = () => {
@@ -841,7 +901,7 @@ class MEditor {
         dir.path = dirInfo.path;
         dir.files = [];
         dir.element = document.createElement("div");
-        dir.element.id = dir.name;
+        dir.element.id = dir.path;
         dir.element.classList.add(this.CLASS_NAME_PREFIX + "dir");
         
         let dirMenu = {};
@@ -849,8 +909,7 @@ class MEditor {
         dirMenu.element.classList.add(this.CLASS_NAME_PREFIX + "dir-menu");
         dirMenu.element.title = dirInfo.name;
         dirMenu.element.addEventListener("click", (e) => {
-            dirName.element.classList.toggle(this.CLASS_NAME_PREFIX + "dir-name-expanded");
-            dirContent.element.classList.toggle(this.CLASS_NAME_PREFIX + "dir-content-show");
+            this.explorer.toggleExpand(dir.path);
         });
         dir.element.appendChild(dirMenu.element);
         dir.menu = dirMenu;
@@ -867,6 +926,17 @@ class MEditor {
         dirContent.element.classList.add(this.CLASS_NAME_PREFIX + "dir-content");
         dir.element.appendChild(dirContent.element);
         dir.content = dirContent;
+
+
+        // expand dir if it is in the expanded list
+        let expandList = localStorage.getItem("explorerExpandedList");
+        if(expandList){
+            expandList = JSON.parse(expandList);
+            if(expandList.includes(dir.path)){
+                dirName.element.classList.add(this.CLASS_NAME_PREFIX + "dir-name-expanded");
+                dirContent.element.classList.add(this.CLASS_NAME_PREFIX + "dir-content-show");
+            }
+        }
 
 
         let dirControl = this.dirControl(dirMenu, dirInfo);

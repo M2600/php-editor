@@ -163,15 +163,32 @@ async function main(){
     })
 
     explorer.setRenameClickAction((file) => {
-        console.log("re: Rename: ", file);
+        renameFileDialog(file.path);
     })
 
     explorer.setDuplicateClickAction((file) => {
         console.log("re: Duplicate: ", file);
+        duplicateFile(file.path).then((newPath) => {
+            loadExplorer().then(() => {
+                CURRENT_FILE = false;
+                loadFile(newPath);
+            });
+        });
     })
 
     explorer.setDeleteClickAction((file) => {
         console.log("re: Delete: ", file);
+        deleteFileDialog(file.path);
+    })
+
+    explorer.setRenameDirClickAction((dir) => {
+        console.log("re: rename dir: ", dir);
+        renameDirDialog(dir.path);
+    })
+
+    explorer.setDeleteDirClickAction((dir) => {
+        console.log("re: delete dir: ", dir);
+        deleteDirDialog(dir.path);
     })
 
     testFiles = {
@@ -693,7 +710,7 @@ async function pushSaveButton() {
             return;
         }
         mConsole.print("File saved: " + CURRENT_FILE.path, "success");
-        //phpSyntaxCheck(FILENAME);
+        phpSyntaxCheck(CURRENT_FILE.path);
     });
 }
 
@@ -734,82 +751,167 @@ async function saveFile(path, content) {
 
 
 
-// async function renameFile(path, newPath) {
-//     await fetch("/api/file_manager.php", {
-//         method: "POST",
-//         headers: {
-//             "Content-Type": "application/json"
-//         },
-//         body: JSON.stringify({
-//             action: "rename",
-//             path: path,
-//             newPath: newPath,
-//         })
-//     }).then(response => response.json()).then(data => {
-//         DEBUG && console.log(data);
-//         if (data.status == "error") {
-//             console.error(data.error);
-//             return;
-//         }
-//         if (data.status == "session_error") {
-//             sessionError();
-//             return;
-//         }
-//         DEBUG && console.log("File renamed");
-//         localnewPath = data.newPath;
-//     })
-//     return localnewPath;
-// }
 
-// async function duplicateFile(path) {
-//     await fetch("/api/file_manager.php", {
-//         method: "POST",
-//         headers: {
-//             "Content-Type": "application/json"
-//         },
-//         body: JSON.stringify({
-//             action: "duplicate",
-//             path: path,
-//         })
-//     }).then(response => response.json()).then(data => {
-//         DEBUG && console.log(data);
-//         if (data.status == "error") {
-//             console.error(data.error);
-//             return;
-//         }
-//         if (data.status == "session_error") {
-//             sessionError();
-//             return;
-//         }
-//         DEBUG && console.log("File duplicated");
-//         newPath = data.newPath;
-//     })
-//     return newPath;
-// }
+async function renameFile(path, newPath) {
+    let ret;
+    let body = {
+        action: "rename",
+        path: path,
+        newPath: newPath,
+    };
+    let status = await api("/api/file_manager.php", body=body)
+    .then(data => {
+        if (data.status === "error") {
+            console.error(data.error);
+            return 1;
+        }
+        if (data.status === "session_error") {
+            sessionError();
+            return 0;
+        }
+        ret = data.newPath;
+    });
+    if(status == 1){
+        mConsole.print("File rename error: " + path, "error");
+        return false;
+    }
+    return ret;
+}
 
-// async function deleteFile(path) {
-//     await fetch("/api/file_manager.php", {
-//         method: "POST",
-//         headers: {
-//             "Content-Type": "application/json"
-//         },
-//         body: JSON.stringify({
-//             action: "delete",
-//             path: path,
-//         })
-//     }).then(response => response.json()).then(data => {
-//         DEBUG && console.log(data);
-//         if (data.status == "error") {
-//             console.error(data.error);
-//             return;
-//         }
-//         if (data.status == "session_error") {
-//             sessionError();
-//             return;
-//         }
-//         DEBUG && console.log("File deleted");
-//     })
-// }
+function renameFileDialog(path) {
+    let windowName = "Rename file";
+    // Check if window already exists
+    let windowExists = false;
+    DEBUG && console.log("popup windows: ", editor.page.popupWindows);
+    editor.page.popupWindows.forEach((popup) => {
+        if (popup.title == windowName) {
+            DEBUG && console.log("popup window already exists");
+            windowExists = true;
+            return;
+        }
+    });
+    if (windowExists) {
+        return;
+    }
+    let contents = document.createElement("div");
+    let input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = "File name";
+    input.value = path;
+    contents.appendChild(input);
+    let controls = document.createElement("div");
+    controls.style.display = "flex";
+    controls.style.flexDirection = "row-reverse";
+    controls.style.marginTop = ".3rem";
+    contents.appendChild(controls);
+    let renameButton = document.createElement("button");
+    renameButton.innerHTML = "Rename";
+    renameButton.classList.add("meditor-button");
+    renameButton.addEventListener("click", async () => {
+        console.log("Rename: ", path);
+        DEBUG && console.log("popup window: ", popupWindow);
+        popupWindow.remove();
+        await renameFile(path, input.value);
+        await loadExplorer();
+    });
+    controls.appendChild(renameButton);
+    let popupWindow = editor.popupWindow(windowName, contents);
+}
+
+
+async function duplicateFile(path) {
+    let ret;
+    let body = {
+        action: "duplicate",
+        path: path,
+    };
+    let status = await api("/api/file_manager.php", body=body)
+    .then(data => {
+        if (data.status === "error") {
+            console.error(data.error);
+            return 1;
+        }
+        if (data.status === "session_error") {
+            sessionError();
+            return 0;
+        }
+        ret = data.newPath;
+    });
+    if(status == 1){
+        mConsole.print("File duplicate error: " + path, "error");
+        return false;
+    }
+    return ret;
+}
+
+
+async function deleteFile(path) {
+    let ret;
+    let body = {
+        action: "delete",
+        path: path,
+    };
+    let status = await api("/api/file_manager.php", body=body)
+    .then(data => {
+        if (data.status === "error") {
+            console.error(data.error);
+            return 1;
+        }
+        if (data.status === "session_error") {
+            sessionError();
+            return 0;
+        }
+        ret = data.path;
+    });
+    if(status == 1){
+        mConsole.print("File delete error: " + path, "error");
+        return false;
+    }
+    return ret;
+
+}
+
+function deleteFileDialog(path) {
+    let windowName = "Delete file";
+    // Check if window already exists
+    let windowExists = false;
+    DEBUG && console.log("popup windows: ", editor.page.popupWindows);
+    editor.page.popupWindows.forEach((popup) => {
+        if (popup.title == windowName) {
+            DEBUG && console.log("popup window already exists");
+            windowExists = true;
+            return;
+        }
+    });
+    if (windowExists) {
+        return;
+    }
+    let contents = document.createElement("div");
+    let message = document.createElement("div");
+    message.innerHTML = path + ": 本当に削除しますか？";
+    contents.appendChild(message);
+    let controls = document.createElement("div");
+    controls.style.display = "flex";
+    controls.style.flexDirection = "row-reverse";
+    controls.style.marginTop = ".3rem";
+    contents.appendChild(controls);
+    let deleteButton = document.createElement("button");
+    deleteButton.innerHTML = "Delete";
+    deleteButton.classList.add("meditor-button");
+    deleteButton.addEventListener("click", async () => {
+        console.log("Delete: ", path);
+        DEBUG && console.log("popup window: ", popupWindow);
+        popupWindow.remove();
+        await deleteFile(path);
+        if(CURRENT_FILE.path == path){
+            CURRENT_FILE = false;
+            hideAllPreviewer();
+        }
+        await loadExplorer();
+    });
+    controls.appendChild(deleteButton);
+    let popupWindow = editor.popupWindow(windowName, contents);
+}
 
 
 // async function runFile(path) {
@@ -1027,6 +1129,135 @@ function newDirDialog(dir) {
 
     
 
+async function renameDir(path, newPath) {
+    let ret;
+    let body = {
+        action: "rename",
+        path: path,
+        newPath: newPath,
+    };
+    let status = await api("/api/file_manager.php", body=body)
+    .then(data => {
+        if (data.status === "error") {
+            console.error(data.error);
+            return 1;
+        }
+        if (data.status === "session_error") {
+            sessionError();
+            return 0;
+        }
+        ret = data.newPath;
+    });
+    if(status == 1){
+        mConsole.print("Directory rename error: " + path, "error");
+        return false;
+    }
+    return ret;
+}
+
+function renameDirDialog(path) {
+    let windowName = "Rename folder";
+    // Check if window already exists
+    let windowExists = false;
+    DEBUG && console.log("popup windows: ", editor.page.popupWindows);
+    editor.page.popupWindows.forEach((popup) => {
+        if (popup.title == windowName) {
+            DEBUG && console.log("popup window already exists");
+            windowExists = true;
+            return;
+        }
+    });
+    if (windowExists) {
+        return;
+    }
+    let contents = document.createElement("div");
+    let input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = "Folder name";
+    input.value = path;
+    contents.appendChild(input);
+    let controls = document.createElement("div");
+    controls.style.display = "flex";
+    controls.style.flexDirection = "row-reverse";
+    controls.style.marginTop = ".3rem";
+    contents.appendChild(controls);
+    let renameButton = document.createElement("button");
+    renameButton.innerHTML = "Rename";
+    renameButton.classList.add("meditor-button");
+    renameButton.addEventListener("click", async () => {
+        console.log("Rename: ", path);
+        DEBUG && console.log("popup window: ", popupWindow);
+        popupWindow.remove();
+        await renameDir(path, input.value);
+        await loadExplorer();
+    });
+    controls.appendChild(renameButton);
+    let popupWindow = editor.popupWindow(windowName, contents);
+}
+
+async function deleteDir(path) {
+    let ret;
+    let body = {
+        action: "deleteDir",
+        path: path,
+    };
+    let status = await api("/api/file_manager.php", body=body)
+    .then(data => {
+        if (data.status === "error") {
+            console.error(data.error);
+            return 1;
+        }
+        if (data.status === "session_error") {
+            sessionError();
+            return 0;
+        }
+        ret = data.path;
+    });
+    if(status == 1){
+        mConsole.print("Directory delete error: " + path, "error");
+        return false;
+    }
+    return ret;
+}
+
+function deleteDirDialog(path) {
+    let windowName = "Delete folder";
+    // Check if window already exists
+    let windowExists = false;
+    DEBUG && console.log("popup windows: ", editor.page.popupWindows);
+    editor.page.popupWindows.forEach((popup) => {
+        if (popup.title == windowName) {
+            DEBUG && console.log("popup window already exists");
+            windowExists = true;
+            return;
+        }
+    });
+    if (windowExists) {
+        return;
+    }
+    let contents = document.createElement("div");
+    let message = document.createElement("div");
+    message.innerHTML = path + ": フォルダ内のファイルも削除されます。本当に削除しますか？";
+    contents.appendChild(message);
+    let controls = document.createElement("div");
+    controls.style.display = "flex";
+    controls.style.flexDirection = "row-reverse";
+    controls.style.marginTop = ".3rem";
+    contents.appendChild(controls);
+    let deleteButton = document.createElement("button");
+    deleteButton.innerHTML = "Delete";
+    deleteButton.classList.add("meditor-button");
+    deleteButton.addEventListener("click", async () => {
+        console.log("Delete: ", path);
+        DEBUG && console.log("popup window: ", popupWindow);
+        popupWindow.remove();
+        await deleteDir(path);
+        await loadExplorer();
+    });
+    controls.appendChild(deleteButton);
+    let popupWindow = editor.popupWindow(windowName, contents);
+}
+
 
 // async function uploadFiles() {
 //     let input = document.getElementById("file-input");
@@ -1095,57 +1326,51 @@ function newDirDialog(dir) {
 //     document.body.appendChild(dialog);
 // }
 
-// async function phpSyntaxCheck(path) {
-//     let logOutput = document.getElementById("log-output");
-//     await fetch("/api/file_manager.php", {
-//         method: "POST",
-//         headers: {
-//             "Content-Type": "application/json"
-//         },
-//         body: JSON.stringify({
-//             action: "syntax_check",
-//             path: path
-//         })
-//     }).then(response => response.json()).then(data => {
-//         DEBUG && console.log(data);
-//         if (data.status == "error") {
-//             console.error(data.error);
-//             return;
-//         }
-//         if (data.status == "session_error") {
-//             sessionError();
-//             return;
-//         }
 
-//         if (data.result) {
-//             console.log("syntax error: " + data.message);
-//             data.message.forEach(message => {
-//                 $categoryStr = message.split(":")[0];
-//                 if ($categoryStr.indexOf("error") > -1) {
-//                     logOutput.innerHTML += "<span class=\"error\">" + message.replaceAll("\n", "<br>") + "</span><br>";
-//                 }
-//                 else if ($categoryStr.indexOf("warning") > -1) {
-//                     logOutput.innerHTML += "<span class=\"warning\">" + message.replaceAll("\n", "<br>") + "</span><br>";
-//                 }
-//                 else {
-//                     logOutput.innerHTML += "<span class=\"info\">" + message.replaceAll("\n", "<br>") + "</span><br>";
-//                 }
-//             });
-//         }
-//         else {
-//             console.log("syntax ok");
-//             logOutput.innerHTML += "<span class=\"success\">No syntax error occurred</span><br>";
-//         }
 
-//         logOutput.scrollTop = logOutput.scrollHeight;
-//     })
-// }
+async function phpSyntaxCheck(path) {
+    let ret;
+    let body = {
+        action: "syntax_check",
+        path: path,
+    };
+    let status = await api("/api/file_manager.php", body=body)
+    .then(data => {
+        if (data.status === "error") {
+            console.error(data.error);
+            return 1;
+        }
+        if (data.status === "session_error") {
+            sessionError();
+            return 0;
+        }
+        ret = data;
+    });
+    if(status == 1){
+        mConsole.print("PHP syntax check error: " + path, "error");
+        return false;
+    }
+    if (ret.result) {
+        ret.message.forEach(message => {
+            $categoryStr = message.split(":")[0];
+            if ($categoryStr.indexOf("error") > -1) {
+                mConsole.print(message.replaceAll("\n", "<br>"), "error");
+            }
+            else if ($categoryStr.indexOf("warning") > -1) {
+                mConsole.print(message.replaceAll("\n", "<br>"), "warning");
+            }
+            else {
+                mConsole.print(message.replaceAll("\n", "<br>"), "info");
+            }
+        });
+    }
+    else {
+        mConsole.print("PHP syntax ok: " + path, "success");
+    }
+    return ret;
+}
+
 
 // function phpRun(path) { }
 
 
-
-// document.getElementById("newFile").addEventListener("click", newFileDialog);
-// document.getElementById("uploadFile").addEventListener("click", fileUploadDialog);
-
-// loadExplorer();

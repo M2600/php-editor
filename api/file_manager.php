@@ -56,6 +56,13 @@ if($action == "rename"){
     exit();
 }
 
+if($action == "renameDir"){
+    $newPath = $params["newPath"];
+    $newPath = renameDirectory($path, $newPath);
+    echo json_encode(array("status" => "success", "newPath" => $newPath));
+    exit();
+}
+
 if($action == "duplicate"){
     $newPath = explode(".", $path)[0] . "_copy." . explode(".", $path)[1];
     $newPath = duplicateFile($path, $newPath);
@@ -75,6 +82,13 @@ if($action == "delete"){
     echo json_encode(array("status" => "success"));
     exit();
 }
+
+if($action == "deleteDir"){
+    deleteDirectory($path);
+    echo json_encode(array("status" => "success"));
+    exit();
+}
+
 
 if($action == "list"){
     $files = fileList("");

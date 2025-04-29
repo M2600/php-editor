@@ -170,7 +170,28 @@ function renameFile($userPath, $newPath){
     try{
         $serverPath = convertUserPath($userPath);
         $newServerPath = convertUserPath($newPath);
-        rename($serverPath, $newServerPath);
+        $ret = rename($serverPath, $newServerPath);
+        if($ret === false){
+            echo json_encode(array("status" => "error", "error" => "Rename failed"));
+            exit();
+        }
+        return str_replace(getUserRoot(), "", $newServerPath);
+    }
+    catch(Exception $e){
+        echo json_encode(array("status" => "error", "error" => $e->getMessage()));
+        exit();
+    }
+}
+
+function renameDirectory($userPath, $newPath){
+    try{
+        $serverPath = convertUserPath($userPath);
+        $newServerPath = convertUserPath($newPath);
+        $ret = rename($serverPath, $newServerPath);
+        if($ret === false){
+            echo json_encode(array("status" => "error", "error" => "Rename failed"));
+            exit();
+        }
         return str_replace(getUserRoot(), "", $newServerPath);
     }
     catch(Exception $e){
@@ -223,6 +244,28 @@ function deleteFile($userPath){
     try{
         $serverPath = convertUserPath($userPath);
         unlink($serverPath);
+    }
+    catch(Exception $e){
+        echo json_encode(array("status" => "error", "error" => $e->getMessage()));
+        exit();
+    }
+}
+
+function deleteDirectory($userPath){
+    try{
+        $serverPath = convertUserPath($userPath);
+        $paths = scandir($serverPath);
+        foreach($paths as $path){
+            if($path == "." || $path == "..") continue;
+            $fullPath = $serverPath . "/" . $path;
+            if(is_dir($fullPath)){
+                deleteDirectory($fullPath);
+            }
+            else{
+                unlink($fullPath);
+            }
+        }
+        rmdir($serverPath);
     }
     catch(Exception $e){
         echo json_encode(array("status" => "error", "error" => $e->getMessage()));

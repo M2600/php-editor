@@ -1,113 +1,7 @@
-// Require: ace.js, ace/ext-language_tools.js
+
 
 ace.require("ace/ext/language_tools");
 
-class AceWrapper {
-    constructor(editorId) {
-        this.editorDOM = document.getElementById(editorId);
-        this.editor = ace.edit(editorId);
-    }
-
-    mySettings() {
-        this.editor.$blockScrolling = Infinity;
-        this.editor.setTheme("ace/theme/monokai");
-        this.editor.setFontSize(14);
-        this.editor.setShowPrintMargin(false);
-        this.editor.setOptions({
-            fontFamily: "monospace",
-            enableSnippets: true,
-            //enableBasicAutocompletion: true,
-            enableLiveAutocompletion: true,
-            enableEmmet: true,
-            scrollPastEnd: 0.2,
-            //maxLines: Infinity,
-        });
-        this.editor.getSession().setUseWrapMode(true);
-        this.editor.getSession().setTabSize(4);
-
-        //this.editor.setKeyboardHandler("ace/keyboard/vim");
-    }
-
-    myKeybindings() {
-        // remove ctrl-p keybind for mac-emacs users
-        delete this.editor.keyBinding.$defaultHandler.commandKeyBinding["ctrl-p"];
-
-        this.editor.commands.addCommand({
-            name: "save",
-            bindKey: {
-                win: "Ctrl-S",
-                mac: "Command-S"
-            },
-            exec: function (editor) {
-                console.log("save shortcut")
-                pushSaveButton();
-            }
-        });
-
-        this.editor.commands.addCommand({
-            name: "run",
-            bindKey: {
-                win: "F10",
-                mac: "",
-            },
-            exec: function (editor) {
-                console.log("run shortcut");
-                //pushRunButton();
-                openInOtherWindow();
-            }
-        })
-    }
-
-    myEvents() {
-        // this.editor.selection.on('changeCursor', () => {
-        //     console.log("change cursor event");
-        //     const cursorPosition = this.editor.getCursorPosition().row;
-        //     editor.scrollToLine(cursorPosition, true, true, function () {});
-        // });
-    }
-
-    hideEditor() {
-        this.editorDOMStyle = this.editorDOM.style.display;
-        this.editorDOM.style.display = "none";
-    }
-
-    showEditor() {
-        this.editorDOM.style.display = this.editorDOMStyle;
-    }
-
-}
-
-
-class MyEditor {
-
-    EDITORS;
-    FILE_NAME;
-    READONLY;
-    USER_ID;
-
-    NEW_FILE_DISABLED;
-    DELETE_DIALOG_DISABLED;
-    RENAME_DIALOG_DISABLED;
-    DUPLICATE_DIALOG_DISABLED;
-
-    runBrowserTab;
-
-    constructor() {
-        this.EDITORS = [];
-        this.FILE_NAME = false;
-        this.READONLY = false;
-        this.USER_ID = false;
-        this.NEW_FILE_DISABLED = false;
-        this.DELETE_DIALOG_DISABLED = false;
-        this.RENAME_DIALOG_DISABLED = false;
-        this.DUPLICATE_DIALOG_DISABLED = false;
-        this.runBrowserTab = false;
-    }
-
-    
-
-    
-}
 
 var editor = ace.edit("editor");
 editor.$blockScrolling = Infinity;
@@ -117,7 +11,7 @@ editor.setShowPrintMargin(false);
 editor.setReadOnly(true);
 editor.setOptions({
     fontFamily: "monospace",
-    //enableBasicAutocompletion: true,
+    enableBasicAutocompletion: true,
     enableSnippets: true,
     enableLiveAutocompletion: true,
     //maxLines: Infinity,
@@ -139,8 +33,19 @@ document.getElementById("main-body").addEventListener("click", (e) => {
     //editor.moveCursorTo(editor.session.getLength(), editor.session.getLine(editor.session.getLength()).length);
 })
 
-// rmeove ctrl-p keybind for mac-emacs users
-delete editor.keyBinding.$defaultHandler.commandKeyBinding["ctrl-p"];
+// remove ctrl-p keybind for mac-emacs users
+//delete editor.keyBinding.$defaultHandler.commandKeyBinding["ctrl-p"];
+editor.commands.removeCommand("jumptomatching");
+// editor.commands.addCommand({
+//     name: "golineup",
+//     bindKey: { win: "Up", mac: "Up" },  // MacではCommand-Pにしたい場合
+//     exec: function(editor) {
+//         editor.navigateUp(1); // 1行上に移動するカスタム動作
+//     },
+//     readOnly: true // 読み取り専用の動作にする
+// });
+
+
 
 // add save keybind
 editor.commands.addCommand({
@@ -182,13 +87,9 @@ editor.selection.on('changeCursor', () => {
 });
 
 
-
-
-
-
-
-
-
+editor.getSession().on('change', () => {
+    FILECHANGED = true;
+});
 
 
 //editor.execCommand("showSettingsMenu") 
@@ -219,6 +120,10 @@ const EXT_LANG = [
     {
         ext: ["txt"],
         lang: "text"
+    },
+    {
+        ext: ["json"],
+        lang: "json"
     }
 ];
 
@@ -226,8 +131,10 @@ const EXT_LANG = [
 var FILELIST = [];
 var FILENAME = false;
 var READONLY = false;
+var FILECHANGED = false;
 var USERID = false;
 var NEWFILEDISABLED = false;
+var UPLOADDISABLED = false;
 var DELETEDIALOGDISABLED = false;
 var RENAMEDIALOGDISABLED = false;
 var DUPLICATEDIALOGDISABLED = false;
@@ -368,7 +275,7 @@ async function renameDialog(path) {
     let dialog = document.createElement("div");
     dialog.classList.add("rename-dialog");
 
-    let func = () => {
+    let func = async () => {
         let newName = document.getElementById("new-file-name").value;
         if (!fileNameCheck(newName)) {
             console.error("Invalid file name");
@@ -380,6 +287,9 @@ async function renameDialog(path) {
         }
         dialog.remove();
         RENAMEDIALOGDISABLED = false;
+        if(FILENAME && !READONLY && FILECHANGED) {
+            await saveFile(FILENAME, editor.getValue());
+        }
         renameFile(path, newName).then(newPath => {
             loadExplorer().then(() => {
                 FILENAME = false;
@@ -597,7 +507,7 @@ async function previewImage(imageBase64) {
 
 
 async function loadFile(path) {
-    if (FILENAME && !READONLY) {
+    if (FILENAME && !READONLY && FILECHANGED) {
         saveFile(FILENAME, editor.getValue());
     }
     let fileElement = document.getElementById(path);
@@ -654,6 +564,7 @@ async function loadFile(path) {
         }
 
         FILENAME = path;
+        FILECHANGED = false;
         fileName.innerHTML = FILENAME;
         openOtherWindow.addEventListener("click", openInOtherWindow);
         saveButton.addEventListener("click", pushSaveButton);
@@ -752,6 +663,9 @@ async function renameFile(path, newPath) {
 }
 
 async function duplicateFile(path) {
+    if(FILENAME && !READONLY && FILECHANGED) {
+        await saveFile(FILENAME, editor.getValue());
+    }
     await fetch("/api/file_manager.php", {
         method: "POST",
         headers: {
@@ -958,8 +872,16 @@ async function newFileDialog() {
     dialog.appendChild(controls);
 
     document.body.appendChild(dialog);
-    newFileName.focus();
 
+    document.addEventListener("keydown", function a(e){
+        if (e.key == "Escape") {
+            dialog.remove();
+            NEWFILEDISABLED = false;
+        }
+        document.removeEventListener("keydown", (e) => a);
+    });
+
+    newFileName.focus();
 }
 
 
@@ -996,10 +918,15 @@ async function uploadFiles() {
 
 
 async function fileUploadDialog() {
+    if (UPLOADDISABLED) {
+        return;
+    }
+    UPLOADDISABLED = true;
 
     upload = () => {
         uploadFiles();
         dialog.remove();
+        UPLOADDISABLED = false;
     }
 
     let dialog = document.createElement("dic");
@@ -1023,12 +950,21 @@ async function fileUploadDialog() {
     cancelButton.innerHTML = "<i class=\"fa-solid fa-ban\"></i>キャンセル";
     cancelButton.addEventListener("click", () => {
         dialog.remove();
+        UPLOADDISABLED = false;
     });
     controls.appendChild(cancelButton);
 
     dialog.appendChild(controls);
 
     document.body.appendChild(dialog);
+    
+    document.addEventListener("keydown", function a(e){
+        if (e.key == "Escape") {
+            dialog.remove();
+            UPLOADDISABLED = false;
+        }
+        document.removeEventListener("keydown", (e) => a);
+    });
 }
 
 async function phpSyntaxCheck(path) {

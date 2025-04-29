@@ -49,6 +49,7 @@ i {
 .window-title {
     font-size: 1em;
     margin: .1em;
+    min-height: 1.5em;
     white-space: nowrap;
     overflow: hidden;
 }
@@ -410,16 +411,6 @@ i {
     padding-top: auto;
     padding-bottom: auto;
     border: 1px solid #666;
-}
-.upload-dialog input::file-selector-button {
-    position: absolute;
-    top: 50%;
-    text-align: center;
-    padding-top: auto;
-    padding-bottom: auto;
-    border: 1px solid #666;
-    content: "Select File or Drop Here";
-
 }
 .upload-dialog-controls{
     display: flex;

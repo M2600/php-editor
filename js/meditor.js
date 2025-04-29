@@ -50,6 +50,14 @@ async function main(){
     });
 
 
+    editor.page.header.header.menu.items.push(editor.generateButton(
+        editor.page.header.header.menu,
+        "logout",
+        (e) => {window.location.href = "/logout.php";}
+    ));
+// function newDirDialog(dir) {
+
+
     mConsole = editor.console(editor.page.main.mid.container.bottom);
 
 

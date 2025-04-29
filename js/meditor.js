@@ -86,6 +86,7 @@ async function main(){
         "Debug",
         (e) => {
             console.log("Debug: ");
+            runPhp(CURRENT_FILE.path);
         },
     ))
 
@@ -814,51 +815,61 @@ function deleteFileDialog(path) {
 }
 
 
-// async function runFile(path) {
-//     let logOutput = document.getElementById("log-output");
-//     await fetch("/api/file_manager.php", {
-//         method: "POST",
-//         headers: {
-//             "Content-Type": "application/json"
-//         },
-//         body: JSON.stringify({
-//             action: "run",
-//             path: path
-//         })
-//     }).then(response => response.json()).then(data => {
-//         DEBUG && console.log(data);
-//         if (data.status == "error") {
-//             console.error(data.error);
-//             return;
-//         }
-//         if (data.status == "session_error") {
-//             sessionError();
-//             return;
-//         }
-//         DEBUG && console.log("File run");
+async function runPhp(path){
 
-//         if (data.result) {
-//             console.log("run error: " + data.message);
-//         }
-//         else {
-//             console.log("run ok");
-//         }
-//         data.message.forEach(message => {
-//             $categoryStr = message.split(":")[0];
-//             if ($categoryStr.indexOf("error") > -1) {
-//                 logOutput.innerHTML += "<span class=\"error\">" + message.replaceAll("\n", "<br>") + "</span><br>";
-//             }
-//             else if ($categoryStr.indexOf("Warning") > -1) {
-//                 logOutput.innerHTML += "<span class=\"warning\">" + message.replaceAll("\n", "<br>") + "</span><br>";
-//             }
-//             else {
-//                 logOutput.innerHTML += "<span class=\"info\">" + message.replaceAll("\n", "<br>") + "</span><br>";
-//             }
-//         })
+    if(!CURRENT_FILE){
+        return;
+    }
 
-//         logOutput.scrollTop = logOutput.scrollHeight;
-//     });
-// }
+    if(!CURRENT_FILE.readonly){
+        await saveFile(path, CURRENT_FILE.aceObj.editor.getValue());
+        mConsole.print("File saved: " + path, "success");
+    }
+
+
+    let ret;
+    let body = {
+        action: "run",
+        path: path,
+    }
+    let status = await api("/api/file_manager.php", body=body)
+    .then(data => {
+        if (data.status === "error") {
+            console.error(data.error);
+            return 1;
+        }
+        if (data.status === "session_error") {
+            sessionError();
+            return 0;
+        }
+        ret = data;
+    });
+    if(status == 1){
+        mConsole.print("PHP run error: " + path, "error");
+        return false;
+    }
+
+    if(ret.result){
+        mConsole.print("PHP run error: " + path, "error");
+    }
+    else{
+        mConsole.print("PHP run ok: " + path, "success");
+    }
+    ret.message.forEach(message => {
+        $categoryStr = message.split(":")[0];
+        if ($categoryStr.indexOf("error") > -1) {
+            mConsole.print(message.replaceAll("\n", "<br>"), "error");
+        }
+        else if ($categoryStr.indexOf("warning") > -1) {
+            mConsole.print(message.replaceAll("\n", "<br>"), "warning");
+        }
+        else {
+            mConsole.print(message.replaceAll("\n", "<br>"), "info");
+        }
+    })
+    return ret;
+}
+
 
 
 

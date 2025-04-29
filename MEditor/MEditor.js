@@ -674,10 +674,10 @@ class MEditor {
 
             this.popupMenu(otherButton, [
                 {text: "New Folder", clickAction: (e) => {
-                    parentObj.explorer.newDirClickAction("/");
+                    parentObj.explorer.newDirClickAction({name: "/", path: "/", files: []});
                 }},
                 {text: "Upload", clickAction: (e) => {
-                    parentObj.explorer.uploadClickAction("/"); 
+                    parentObj.explorer.uploadClickAction({name: "/", path: "/", files: []} ); 
                 }},
             ]);
             this.page.popupMenuCloseAction = () => {

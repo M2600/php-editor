@@ -988,6 +988,7 @@ async function createDir(path) {
 }
 
 function newDirDialog(dir) {
+    DEBUG && console.log(dir);
     let windowName = "New folder";
 
     // Check if window already exists
@@ -1005,7 +1006,7 @@ function newDirDialog(dir) {
     }
 
     if(!dir){
-        var currentDir = getCurrentPath();
+        var currentDir = "/";
     }
     else{
         var currentDir = dir.path;

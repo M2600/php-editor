@@ -656,7 +656,11 @@ class MEditor {
         parentObj.explorer.menu.element.appendChild(parentObj.explorer.menu.control.element);
 
         parentObj.explorer.menu.control.items = [];
-        let newFileButton = this.generateButton(parentObj.explorer.menu.control, "New File", (e) => {parentObj.explorer.newFileClickAction();});
+        let newFileButton = this.generateButton(
+            parentObj.explorer.menu.control,
+            "New File",
+            (e) => {parentObj.explorer.newFileClickAction();}
+        );
         
         parentObj.explorer.menu.control.items.push(newFileButton);
         //parentObj.explorer.menu.control.items.push(this.generateButton(parentObj.explorer.menu.control, "New Folder", this.EXPLORER_NEW_DIR_ACTION));
@@ -669,7 +673,12 @@ class MEditor {
             console.log("menu clicked");
 
             this.popupMenu(otherButton, [
-                {text: "New Folder", clickAction: (e) => {parentObj.explorer.newDirClickAction();}},
+                {text: "New Folder", clickAction: (e) => {
+                    parentObj.explorer.newDirClickAction("/");
+                }},
+                {text: "Upload", clickAction: (e) => {
+                    parentObj.explorer.uploadClickAction("/"); 
+                }},
             ]);
             this.page.popupMenuCloseAction = () => {
                 //parentObj.explorer.content.element.style.overflowY = "auto";
@@ -744,6 +753,15 @@ class MEditor {
         }
         parentObj.explorer.setDeleteDirClickAction = (func) => {
             parentObj.explorer.deleteDirClickAction = func;
+        }
+
+
+        parentObj.explorer.uploadClickAction = (dir) => {
+            console.log("upload: ", dir);
+        }
+
+        parentObj.explorer.setUploadClickAction = (func) => {
+            parentObj.explorer.uploadClickAction = func;
         }
 
 
@@ -877,6 +895,10 @@ class MEditor {
                 {text: "new folder", clickAction: (e) => {
                     //console.log("new folder: ", dirInfo);
                     this.explorer.newDirClickAction(dirInfo);
+                }},
+                {text: "upload", clickAction: (e) => {
+                    //console.log("upload: ", dirInfo);
+                    this.explorer.uploadClickAction(dirInfo);
                 }},
                 {text: "delete", clickAction: (e) => {
                     //console.log("delete: ", dirInfo);

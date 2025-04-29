@@ -11,6 +11,10 @@ if(!isset($_SESSION["id"])){
 require_once("file_functions.php");
 
 $action = $_POST["action"];
+$path = htmlspecialchars_decode($_POST["path"], ENT_QUOTES);
+if(!str_ends_with($path, "/")){
+    $path = $path . "/";
+}
 $files = $_FILES;
 
 error_log(print_r($_POST, true));
@@ -21,7 +25,7 @@ if($action == "upload"){
     $filePaths = array();
     try{
         foreach($files as $file){
-            $serverPath = convertUserPath($file["name"]);
+            $serverPath = convertUserPath($path . $file["name"]);
             move_uploaded_file($file["tmp_name"], $serverPath);
             $filePaths[] = str_replace(getUserRoot(), "", $serverPath);
         }

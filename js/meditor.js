@@ -199,6 +199,15 @@ async function main(){
         deleteDirDialog(dir.path);
     })
 
+
+    explorer.setUploadClickAction((dir) => {
+        console.log("re: upload: ");
+        fileUploadDialog(dir.path);
+    })
+
+
+
+
     testFiles = {
         name: "/",
         type: "dir",
@@ -504,123 +513,6 @@ function fileNameCheck(fileName) {
 // }
 
 
-
-
-// async function renameDialog(path) {
-//     if (RENAMEDIALOGDISABLED) {
-//         return;
-//     }
-//     RENAMEDIALOGDISABLED = true;
-
-//     let dialog = document.createElement("div");
-//     dialog.classList.add("rename-dialog");
-
-//     let func = () => {
-//         let newName = document.getElementById("new-file-name").value;
-//         if (!fileNameCheck(newName)) {
-//             console.error("Invalid file name");
-//             return;
-//         }
-//         if (fileNameExist(newName)) {
-//             console.error("File name already exists");
-//             return;
-//         }
-//         dialog.remove();
-//         RENAMEDIALOGDISABLED = false;
-//         renameFile(path, newName).then(newPath => {
-//             loadExplorer().then(() => {
-//                 FILENAME = false;
-//                 loadFile(newPath);
-//             });
-//         });
-//     }
-
-//     let newName = document.createElement("input");
-//     newName.type = "text";
-//     newName.id = "new-file-name";
-//     newName.placeholder = "New name";
-//     newName.value = path;
-//     newName.addEventListener("change", () => {
-//         if (!fileNameCheck(newName.value)) {
-//             newName.style.borderColor = "red";
-//         }
-//         else if (fileNameExist(newName.value)) {
-//             newName.style.borderColor = "orange";
-//         }
-//         else {
-//             newName.style.borderColor = "initial";
-//         }
-//     })
-//     newName.addEventListener("keydown", async (e) => {
-//         if (e.key == "Enter") {
-//             func();
-//         }
-//     })
-//     dialog.appendChild(newName);
-
-//     let controls = document.createElement("div");
-//     controls.classList.add("rename-dialog-controls");
-//     dialog.appendChild(controls);
-
-//     let renameButton = document.createElement("button");
-//     renameButton.innerHTML = "<i class=\"fa-solid fa-check\"></i>Rename";
-//     renameButton.addEventListener("click", func);
-//     controls.appendChild(renameButton);
-
-//     let cancelButton = document.createElement("button");
-//     cancelButton.innerHTML = "<i class=\"fa-solid fa-ban\"></i>Cancel";
-//     cancelButton.addEventListener("click", () => {
-//         dialog.remove();
-//         RENAMEDIALOGDISABLED = false;
-//     });
-//     controls.appendChild(cancelButton);
-
-//     document.body.appendChild(dialog);
-//     newName.focus();
-// }
-
-
-// async function deleteDialog(path) {
-//     if (DELETEDIALOGDISABLED) {
-//         return;
-//     }
-//     DELETEDIALOGDISABLED = true;
-
-//     let dialog = document.createElement("div");
-//     dialog.classList.add("delete-dialog");
-
-//     let message = document.createElement("div");
-//     message.innerHTML = path + ": 本当に削除しますか？";
-//     dialog.appendChild(message);
-
-//     let controls = document.createElement("div");
-//     controls.classList.add("delete-dialog-controls");
-//     dialog.appendChild(controls);
-
-//     let deleteButton = document.createElement("button");
-//     deleteButton.innerHTML = "<i class=\"fa-solid fa-check\"></i>削除";
-//     deleteButton.addEventListener("click", async () => {
-//         console.log("delete");
-//         dialog.remove();
-//         DELETEDIALOGDISABLED = false;
-//         FILENAME = false;
-//         await deleteFile(path);
-//         await loadExplorer();
-//         FILENAME = false;
-//         resetEditor();
-//     });
-//     controls.appendChild(deleteButton);
-
-//     let cancelButton = document.createElement("button");
-//     cancelButton.innerHTML = "<i class=\"fa-solid fa-ban\"></i>キャンセル";
-//     cancelButton.addEventListener("click", () => {
-//         dialog.remove();
-//         DELETEDIALOGDISABLED = false;
-//     });
-//     controls.appendChild(cancelButton);
-
-//     document.body.appendChild(dialog);
-// }
 
 
 async function loadExplorer() {
@@ -1267,72 +1159,95 @@ function deleteDirDialog(path) {
 }
 
 
-// async function uploadFiles() {
-//     let input = document.getElementById("file-input");
-//     files = input.files;
-//     const fd = new FormData();
-//     fd.append("action", "upload");
-//     for (let i = 0; i < files.length; i++) {
-//         fd.append(i, files[i]);
-//     }
-//     await fetch("/api/file_upload.php", {
-//         method: "POST",
-//         body: fd,
-//     }).then(response => response.json()).then(data => {
-//         DEBUG && console.log(data);
-//         if (data.status == "error") {
-//             console.error(data.error);
-//             return;
-//         }
-//         if (data.status == "session_error") {
-//             sessionError();
-//             return;
-//         }
-//         ret = data.paths;
-//         DEBUG && console.log("Files uploaded");
-//     }).then(() => {
-//         loadExplorer();
-//     });
-//     return ret;
-// }
 
 
+async function uploadFiles(fileInput, dir) {
+    if (!dir){
+        dir = "/";
+    }
+    let ret;
+    if (fileInput.files.length == 0) {
+        mConsole.print("No files selected", "error");
+        return false;
+    }
+    let files = fileInput.files;
+    const fd = new FormData();
+    fd.append("action", "upload");
+    fd.append("path", dir);
+    for (let i = 0; i < files.length; i++) {
+        fd.append(i, files[i]);
+    }
+    await fetch("/api/file_upload.php", {
+        method: "POST",
+        body: fd,
+    }).then(response => response.json()).then(data => {
+        DEBUG && console.log(data);
+        if (data.status == "error") {
+            console.error(data.error);
+            return;
+        }
+        if (data.status == "session_error") {
+            sessionError();
+            return;
+        }
+        ret = data.paths;
+        DEBUG && console.log("Files uploaded");
+    }).then(() => {
+        loadExplorer();
+    });
+    return ret;
+}
 
-// async function fileUploadDialog() {
+async function fileUploadDialog(dir) {
+    if(!dir){
+        dir = "/";
+    }
+    let windowName = "Upload files";
 
-//     upload = () => {
-//         uploadFiles();
-//         dialog.remove();
-//     }
+    // Check if window already exists
+    let windowExists = false;
+    DEBUG && console.log("popup windows: ", editor.page.popupWindows);
+    editor.page.popupWindows.forEach((popup) => {
+        if (popup.title == windowName) {
+            DEBUG && console.log("popup window already exists");
+            windowExists = true;
+            return;
+        }
+    });
+    if (windowExists) {
+        return;
+    }
 
-//     let dialog = document.createElement("dic");
-//     dialog.classList.add("upload-dialog");
+    let contents = document.createElement("div");
+    let fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.multiple = true;
+    fileInput.id = "file-input";
+    contents.appendChild(fileInput);
+    
+    let controls = document.createElement("div");
+    controls.style.display = "flex";
+    controls.style.flexDirection = "row-reverse";
+    controls.style.marginTop = ".3rem";
+    contents.appendChild(controls);
+    
+    let uploadButton = document.createElement("button");
+    uploadButton.innerHTML = "Upload";
+    uploadButton.classList.add("meditor-button");
+    uploadButton.addEventListener("click", async () => {
+        console.log("Upload: ");
+        DEBUG && console.log("popup window: ", popupWindow);
+        popupWindow.remove();
+        await uploadFiles(fileInput, dir);
+        await loadExplorer();
+    });
+    
+    controls.appendChild(uploadButton);
+    
+    let popupWindow = editor.popupWindow(windowName, contents);
+}
 
-//     let fileInput = document.createElement("input");
-//     fileInput.type = "file";
-//     fileInput.multiple = true;
-//     fileInput.id = "file-input";
-//     dialog.appendChild(fileInput);
 
-//     let controls = document.createElement("div");
-//     controls.classList.add("upload-dialog-controls");
-
-//     let uploadButton = document.createElement("button");
-//     uploadButton.innerHTML = "<i class=\"fa-solid fa-check\"></i>アップロード";
-//     uploadButton.addEventListener("click", upload);
-//     controls.appendChild(uploadButton);
-
-//     let cancelButton = document.createElement("button");
-//     cancelButton.innerHTML = "<i class=\"fa-solid fa-ban\"></i>キャンセル";
-//     cancelButton.addEventListener("click", () => {
-//         dialog.remove();
-//     });
-//     controls.appendChild(cancelButton);
-
-//     dialog.appendChild(controls);
-
-//     document.body.appendChild(dialog);
-// }
 
 
 

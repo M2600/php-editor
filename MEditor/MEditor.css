@@ -702,7 +702,7 @@ i {
 }
 
 #main-top-bar-left {
-
+    display: auto;
 }
 #main-top-bar-right {
     margin-left: auto;

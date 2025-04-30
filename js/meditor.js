@@ -1037,6 +1037,11 @@ function newFileDialog(dir){
         console.log("Create: ", currentDir + input.value);
         DEBUG && console.log("popup window: ", popupWindow);
         popupWindow.remove();
+        if(CURRENT_FILE && !CURRENT_FILE.readonly){
+            saveFile(CURRENT_FILE.path, CURRENT_FILE.aceObj.editor.getValue());
+            mConsole.print("File saved: " + CURRENT_FILE.path, "success");
+        }
+        hideAllPreviewer();
         await createFile(currentDir + input.value);
         await loadExplorer();
     });

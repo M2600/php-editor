@@ -321,6 +321,12 @@ class MEditor {
         parentObj.main.element.appendChild(right.element);
         parentObj.main.right = right;
 
+        right.hide = () => {
+            right.element.style.display = "none";
+            rightSash.element.style.display = "none";
+            this.adjustPage();
+        }
+
 
         let rightSashMove = (e) => {
             let parentLeft = parentElement.getBoundingClientRect().left;

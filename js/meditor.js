@@ -401,6 +401,15 @@ async function main(){
     // explorer.loadExplorer(testFiles);
 
     await loadExplorer();
+
+
+
+
+    // hide right window
+    editor.page.main.right.hide();
+
+
+
     // theme
     let theme = userConfig.get("theme");
     if(theme == null){

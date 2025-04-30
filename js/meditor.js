@@ -14,7 +14,77 @@ function pathFromDir(path){
 
 
 
+class UserConfig {
+    constructor(localStorageKey="php-editor-user-config"){
+        this.config = {};
+        this.localStorageKey = localStorageKey;
+        this.load();
+    }
 
+    load(){
+        let json = localStorage.getItem(this.localStorageKey);
+        if(json == null){
+            return {};
+        }
+        try{
+            this.config = JSON.parse(json);
+        }
+        catch(e){
+            console.error("Error loading user config: ", e);
+            this.config = {};
+        }
+    }
+
+    save(){
+        let json = JSON.stringify(this.config);
+        localStorage.setItem(this.localStorageKey, json);
+    }
+
+
+
+    get(key) {
+        this.load();
+        let value = this.config[key];
+        if(value == undefined){
+            return null;
+        }
+        return value;
+    }
+
+    set(key, value) {
+        this.config[key] = value;
+        this.save();
+    }
+
+    remove(key) {
+        delete this.config[key];
+        this.save();
+    }
+}
+
+
+
+
+
+
+function changeTheme(theme){
+    DEBUG && console.log("Theme: ", theme);
+    if(theme == "dark"){
+        if(CURRENT_FILE){
+            CURRENT_FILE.aceObj.editor.setTheme("ace/theme/monokai");
+        }
+        document.body.setAttribute("theme", "dark");
+        editor.THEME = "dark";
+    }
+    else{
+        if(CURRENT_FILE){
+            CURRENT_FILE.aceObj.editor.setTheme("ace/theme/chrome");
+        }
+        document.body.setAttribute("theme", "light");
+        editor.THEME = "light";
+    }
+    userConfig.set("theme", theme);
+}
 
 
 
@@ -26,6 +96,8 @@ var FILE_LIST = {};
 var RUN_BROWSER_TAB = undefined;
 
 const DEBUG = true;
+
+const userConfig = new UserConfig();
 
 const editor = new MEditor();
 editor.DEBUG = true;
@@ -47,6 +119,7 @@ async function main(){
                 CURRENT_FILE.aceObj.editor.setTheme("ace/theme/chrome");
             }
         }
+        userConfig.set("theme", theme);
     });
 
 
@@ -388,6 +461,12 @@ async function main(){
     // explorer.loadExplorer(testFiles);
 
     await loadExplorer();
+    // theme
+    let theme = userConfig.get("theme");
+    if(theme == null){
+        theme = "light";
+    }
+    changeTheme(theme);
 }
 
 main();

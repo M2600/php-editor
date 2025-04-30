@@ -213,7 +213,10 @@ async function main(){
 
     explorer.setUploadClickAction((dir) => {
         console.log("re: upload: ");
-        fileUploadDialog(dir.path);
+        if(!dir){
+            dir = getCurrentPath();
+        }
+        fileUploadDialog(dir);
     })
 
 
@@ -1087,7 +1090,7 @@ function newDirDialog(dir) {
     }
 
     if(!dir){
-        var currentDir = "/";
+        var currentDir = getCurrentPath();
     }
     else{
         var currentDir = dir.path;
@@ -1256,7 +1259,7 @@ function deleteDirDialog(path) {
 
 async function uploadFiles(fileInput, dir) {
     if (!dir){
-        dir = "/";
+        dir = getCurrentPath();
     }
     let ret;
     if (fileInput.files.length == 0) {

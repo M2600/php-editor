@@ -135,6 +135,7 @@ async function main(){
 
 
     const editorEditor = editor.workPlace(editor.page.main.mid.container.main);
+    editor.wp = editorEditor;
 
     editorEditor.menu.left.items.push(editor.generateButton(
         editorEditor.menu.left,
@@ -166,74 +167,10 @@ async function main(){
     const explorer = editor.createExplorer(editor.page.main.left, opt={
         title: "エクスプローラー",
     });
+
+
     explorer.setFileClickAction(async function (file) {
-        DEBUG && console.log("fileInfo", file);
-        apiRet = await loadFile(file.path);
-        hideAllPreviewer();
-        if(file.type == "text"){
-            file.readonly = false;
-            if(file.aceObj == undefined || file.aceObj == null){
-                let aceDOM = document.createElement("div");
-                editorEditor.content.element.appendChild(aceDOM);
-                aceDOM.id = "ace-" + file.path;
-                aceDOM.classList.add("viewer");
-                aceDOM.style.width = "100%";
-                aceDOM.style.height = "100%";
-                const ace = new AceWrapper(aceDOM.id);
-                ace.loadMySettings();
-                let mode = extToLang(file.path.split(".").pop());
-                ace.setMode(mode);
-                file.aceObj = ace;
-                aceKeybinds(file.aceObj.editor);
-                file.aceObj.setValue(apiRet.content);
-                file.aceObj.editor.gotoLine(0);
-            }
-            else{
-                console.log("ace already exists");
-            }
-
-            // set theme
-            if(editor.THEME == "dark") {
-                file.aceObj.editor.setTheme("ace/theme/monokai");
-            }
-            else{
-                file.aceObj.editor.setTheme("ace/theme/chrome");
-            }
-
-            file.aceObj.show();
-            file.aceObj.focus();
-        }
-        else if(file.type == "image"){
-            file.readonly = true;
-            if(file.viewer == undefined || file.viewer == null){
-
-                let src = "data:image/png;base64," + apiRet.content;
-                let img = editor.imageViewer(editorEditor.content, src);
-                img.element.classList.add("viewer");
-
-                file.viewer = img;
-            }
-            else(
-                console.log("image already exists")
-            )
-
-            file.viewer.element.style.display = "flex";
-        }
-        else {
-            file.readonly = true;
-            if(file.viewer == undefined || file.viewer == null){
-                console.log("Unknown file type: ", file.type);
-                msg = editor.viewerMessage(editorEditor.content, "このファイルはプレビューできません");
-                msg.element.classList.add("viewer");
-                file.viewer = msg;
-            }
-            else{
-                DEBUG && console.log("viewer message already exists");
-            }
-            file.viewer.element.style.display = "flex";
-        }
-        CURRENT_FILE = file;
-        
+        openFile(file);
     })
 
     explorer.setNewFileClickAction((dir) => {
@@ -676,6 +613,71 @@ async function loadFile(path) {
         };
     });
     return ret;
+}
+
+
+async function openFile(file) {
+    DEBUG && console.log("fileInfo", file);
+    apiRet = await loadFile(file.path);
+    hideAllPreviewer();
+    if(file.type == "text"){
+        file.readonly = false;
+        if(file.aceObj == undefined || file.aceObj == null){
+            let aceDOM = document.createElement("div");
+            editor.wp.content.element.appendChild(aceDOM);
+            aceDOM.id = "ace-" + file.path;
+            aceDOM.classList.add("viewer");
+            aceDOM.style.width = "100%";
+            aceDOM.style.height = "100%";
+            const ace = new AceWrapper(aceDOM.id);
+            ace.loadMySettings();
+            let mode = extToLang(file.path.split(".").pop());
+            ace.setMode(mode);
+            file.aceObj = ace;
+            aceKeybinds(file.aceObj.editor);
+            file.aceObj.setValue(apiRet.content);
+            file.aceObj.editor.gotoLine(0);
+        }
+        else{
+            console.log("ace already exists");
+        }
+        // set theme
+        if(editor.THEME == "dark") {
+            file.aceObj.editor.setTheme("ace/theme/monokai");
+        }
+        else{
+            file.aceObj.editor.setTheme("ace/theme/chrome");
+        }
+        file.aceObj.show();
+        file.aceObj.focus();
+    }
+    else if(file.type == "image"){
+        file.readonly = true;
+        if(file.viewer == undefined || file.viewer == null){
+            let src = "data:image/png;base64," + apiRet.content;
+            let img = editor.imageViewer(editor.wp.content, src);
+            img.element.classList.add("viewer");
+            file.viewer = img;
+        }
+        else(
+            console.log("image already exists")
+        )
+        file.viewer.element.style.display = "flex";
+    }
+    else {
+        file.readonly = true;
+        if(file.viewer == undefined || file.viewer == null){
+            console.log("Unknown file type: ", file.type);
+            msg = editor.viewerMessage(editor.wp.content, "このファイルはプレビューできません");
+            msg.element.classList.add("viewer");
+            file.viewer = msg;
+        }
+        else{
+            DEBUG && console.log("viewer message already exists");
+        }
+        file.viewer.element.style.display = "flex";
+    }
+    CURRENT_FILE = file;
 }
 
 

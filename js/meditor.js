@@ -304,6 +304,8 @@ function aceKeybinds(ace){
             openInOtherWindow();
         }
     })
+
+    ace.commands.removeCommands("jumptomatching");
 }
 
 

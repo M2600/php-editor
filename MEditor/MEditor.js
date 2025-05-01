@@ -37,7 +37,7 @@ class AceWrapper {
 
     myKeybindings() {
         // remove ctrl-p keybind for mac-emacs users
-        delete this.editor.keyBinding.$defaultHandler.commandKeyBinding["ctrl-p"];
+        //delete this.editor.keyBinding.$defaultHandler.commandKeyBinding["ctrl-p"];
 
         // ============ SAMPLE ============
         // remove all keybindings except for ctrl-d

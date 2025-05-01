@@ -398,6 +398,43 @@ function fileNameCheck(fileName) {
 //     return $exist;
 // }
 
+function aceObjFromFileList(fileList, path) {
+    //DEBUG && console.log("aceObjFromFileList: ", fileList, path);
+    let aceObj = null;
+    fileList.forEach(file => {
+        if (file.path == path) {
+            aceObj = file.aceObj;
+        }
+        else if (file.type == "dir") {
+            if(aceObj == null){
+                aceObj = aceObjFromFileList(file.files, path);
+            }
+        }
+    });
+    //console.log("aceObj: ", aceObj);
+    return aceObj;
+}
+
+
+function mergeAceObjInFileList(fileList, prevFileList) {
+    if (prevFileList == undefined || prevFileList == null) {
+        return fileList;
+    }
+    DEBUG && console.log("merging aceObj in fileList", fileList, prevFileList);
+    fileList.forEach(file => {
+        //DEBUG && console.log("file: ", file);
+        if (file.type == "dir") {
+            file.files = mergeAceObjInFileList(file.files, prevFileList);
+        }
+        else {
+            
+            //DEBUG && console.log("file.path: ", file.path);
+            file.aceObj = aceObjFromFileList(prevFileList, file.path);
+        }
+    });
+    return fileList;
+}
+
 
 
 
@@ -407,15 +444,19 @@ async function loadExplorer() {
         path: ""
     };
     await api("/api/file_manager.php", body=body)
-    .then(data => {
+    .then(data =>  {
         if (data.status === "session_error") {
             sessionError();
             return;
         }
         USERID = data.id;
+        let prevFILE_LIST = FILE_LIST;
         FILE_LIST = data.files;
         editor.explorer.setMenuTitle(USERID + "/");
-        editor.explorer.loadExplorer(data.files);
+        editor.explorer.loadExplorer(FILE_LIST);
+        console.log("FILE_LIST: ", FILE_LIST);
+        console.log("prevFILE_LIST: ", prevFILE_LIST);
+        FILE_LIST.files = mergeAceObjInFileList(FILE_LIST.files, prevFILE_LIST.files);
     });
 }
 
@@ -662,7 +703,10 @@ function renameFileDialog(path) {
         console.log("Rename: ", path);
         DEBUG && console.log("popup window: ", popupWindow);
         popupWindow.remove();
+        hideAllPreviewer();
         await renameFile(path, input.value);
+        // change the AceObj of file in the FILE_LIST to the new one
+        FILE_LIST = mergeAceObjInFileList(FILE_LIST, [CURRENT_FILE]);
         await loadExplorer();
     });
     controls.appendChild(renameButton);

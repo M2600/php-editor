@@ -802,7 +802,7 @@ class MEditor {
             }
             else {
                 let filePath = currentDirName + fileInfo.name;
-                this.DEBUG && console.log(filePath);
+                //this.DEBUG && console.log(filePath);
                 fileInfo.path = filePath;
                 this.explorerFile(parentObj, fileInfo);
             }

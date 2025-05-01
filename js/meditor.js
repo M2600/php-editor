@@ -305,7 +305,8 @@ function aceKeybinds(ace){
         }
     })
 
-    ace.commands.removeCommands("jumptomatching");
+    ace.commands.removeCommand("jumptomatching");
+    DEBUG && console.log("[Mac] remove commands: control+P ")
 }
 
 

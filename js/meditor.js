@@ -456,6 +456,8 @@ async function loadExplorer() {
         editor.explorer.loadExplorer(FILE_LIST);
         console.log("FILE_LIST: ", FILE_LIST);
         console.log("prevFILE_LIST: ", prevFILE_LIST);
+        // file.path は editor.explorer.loadExplorer() 内で定義される
+        // mergeAceObjInFileList() は file.path を使用する
         FILE_LIST.files = mergeAceObjInFileList(FILE_LIST.files, prevFILE_LIST.files);
     });
 }

@@ -358,6 +358,7 @@ i {
     padding-left: .5em;
     color: var(--me-color-text);
     text-align: left;
+    display: flex;
 }
 
 .meditor-dir-control {
@@ -376,7 +377,7 @@ i {
 
 
 
-.meditor-dir-name::before {
+/* .meditor-dir-name::before {
     font-size: 1em;
     content: "▶";
     margin-right: .4em;
@@ -384,7 +385,7 @@ i {
 
 .meditor-dir-name-expanded::before {
     content: "▼";
-}
+} */
 
 .meditor-dir-content {
     padding-left: 1.2em;

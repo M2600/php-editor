@@ -592,10 +592,19 @@ class MEditor {
             let dir = document.getElementById(path);
             if(dir){
                 let dirName = dir.getElementsByClassName(this.CLASS_NAME_PREFIX + "dir-name")[0];
+                let dirIcon = dir.getElementsByClassName(this.CLASS_NAME_PREFIX + "dir-icon")[0];
                 let dirContent = dir.getElementsByClassName(this.CLASS_NAME_PREFIX + "dir-content")[0];
                 dirName.classList.toggle(this.CLASS_NAME_PREFIX + "dir-name-expanded");
                 dirContent.classList.toggle(this.CLASS_NAME_PREFIX + "dir-content-show");
+                // toggle icon
+                if(dirName.classList.contains(this.CLASS_NAME_PREFIX + "dir-name-expanded")){
+                    dirIcon.innerHTML = "▼";
+                }
+                else{
+                    dirIcon.innerHTML = "▶";
+                }
                 //console.log(dirName, dirContent);
+                // save to localStorage
                 if(dirName.classList.contains(this.CLASS_NAME_PREFIX + "dir-name-expanded")){
                     expandList.push(path);
                 }
@@ -707,6 +716,13 @@ class MEditor {
         }
         parentObj.explorer.setFileClickAction = (func) => {
             parentObj.explorer.fileClickAction = func;
+        }
+
+        parentObj.explorer.dirClickAction = (dirInfo) => {
+            console.log(dirInfo);
+        }
+        parentObj.explorer.setDirClickAction = (func) => {
+            parentObj.explorer.dirClickAction = func;
         }
 
 
@@ -937,7 +953,7 @@ class MEditor {
         dirMenu.element.classList.add(this.CLASS_NAME_PREFIX + "dir-menu");
         dirMenu.element.title = dirInfo.name;
         dirMenu.element.addEventListener("click", (e) => {
-            this.explorer.toggleExpand(dir.path);
+            //this.explorer.toggleExpand(dir.path);
         });
         dir.element.appendChild(dirMenu.element);
         dir.menu = dirMenu;
@@ -945,9 +961,26 @@ class MEditor {
         let dirName = {};
         dirName.element = document.createElement("div");
         dirName.element.classList.add(this.CLASS_NAME_PREFIX + "dir-name");
-        dirName.element.innerHTML = dir.name + "/";
+        //dirName.element.innerHTML = dir.name + "/";
         dirMenu.element.appendChild(dirName.element);
         dirMenu.name = dirName;
+
+        let dirIcon = {};
+        dirIcon.element = document.createElement("div");
+        dirIcon.element.classList.add(this.CLASS_NAME_PREFIX + "dir-icon");
+        dirIcon.element.innerHTML = "▶";
+        dirIcon.element.addEventListener("click", (e) => {
+            this.explorer.toggleExpand(dir.path);
+        });
+        dirMenu.name.element.appendChild(dirIcon.element);
+        dirMenu.name.icon = dirIcon;
+
+        let dirNameText = {};
+        dirNameText.element = document.createElement("div");
+        dirNameText.element.classList.add(this.CLASS_NAME_PREFIX + "dir-name-text");
+        dirNameText.element.innerHTML = dir.name + "/";
+        dirMenu.name.element.appendChild(dirNameText.element);
+        dirMenu.name.Text = dirNameText;
 
         let dirContent = {};
         dirContent.element = document.createElement("div");
@@ -963,6 +996,7 @@ class MEditor {
             if(expandList.includes(dir.path)){
                 dirName.element.classList.add(this.CLASS_NAME_PREFIX + "dir-name-expanded");
                 dirContent.element.classList.add(this.CLASS_NAME_PREFIX + "dir-content-show");
+                dirIcon.element.innerHTML = "▼";
             }
         }
 

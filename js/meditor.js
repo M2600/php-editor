@@ -173,6 +173,10 @@ async function main(){
         openFile(file);
     })
 
+    explorer.setDirClickAction(async function (dir) {
+        console.log("re: dir click: ", dir);
+    })
+
     explorer.setNewFileClickAction((dir) => {
         newFileDialog(dir);
     })

@@ -206,7 +206,7 @@ async function main(){
     explorer.setDuplicateClickAction((file) => {
         console.log("re: Duplicate: ", file);
         duplicateFile(file.path).then((newPath) => {
-            loadExplorer().then(() => {
+            loadExplorer(editor.BASE_DIR).then(() => {
                 CURRENT_FILE = false;
                 loadFile(newPath);
             });

@@ -1,6 +1,23 @@
 // general functions
 
+class Path {
+    constructor(path){
+        
+    }
 
+    static join(...paths){
+        let path = "";
+        paths.forEach((p) => {
+            path += "/" + p;
+        })
+        path = path.replace(/\/+/g, "/");
+        if(path[path.length - 1] != "/"){
+            path += "/";
+        }
+        return path;
+    }
+    
+}
 
 
 
@@ -819,8 +836,7 @@ class MEditor {
 
     explorerRecursive(parentObj, dirInfo, currentDir="") {
         // build currentDir
-        let currentDirName = currentDir + dirInfo.name
-        if(!currentDirName.endsWith("/")) currentDirName += "/";
+        let currentDirName = Path.join(currentDir, dirInfo.name);
 
         for(let i=0; i<dirInfo.files.length; i++) {
             let fileInfo = dirInfo.files[i];

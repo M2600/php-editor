@@ -478,7 +478,7 @@ async function loadExplorer(path) {
         let prevFILE_LIST = FILE_LIST;
         FILE_LIST = data.files;
         editor.BASE_DIR = path;
-        let dir = (USERID + path).replace(/\/+/g, "/");
+        let dir = Path.join(USERID, path);
         editor.explorer.setMenuTitle(dir);
         editor.explorer.loadExplorer(FILE_LIST);
         //console.log("FILE_LIST: ", FILE_LIST);
@@ -510,13 +510,7 @@ async function openInOtherWindow() {
         mConsole.print("File saved: " + CURRENT_FILE.path, "success");
     }
     console.log(RUN_BROWSER_TAB);
-    let url = FILE_PAGE_BASE_URL + USERID;
-    if (CURRENT_FILE.path.startsWith("/")){
-        url += CURRENT_FILE.path;
-    }
-    else{
-        url += "/" + CURRENT_FILE.path;
-    }
+    let url = Path.join(FILE_PAGE_BASE_URL, USERID, CURRENT_FILE.path);
     if (!RUN_BROWSER_TAB || RUN_BROWSER_TAB.closed) {
         RUN_BROWSER_TAB = window.open(url);
     }

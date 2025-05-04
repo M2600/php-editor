@@ -243,7 +243,11 @@ function downloadFile($userPath){
 function deleteFile($userPath){
     try{
         $serverPath = convertUserPath($userPath);
-        unlink($serverPath);
+        $ret = unlink($serverPath);
+        if($ret === false){
+            echo json_encode(array("status" => "error", "error" => "Delete failed"));
+            exit();
+        }
     }
     catch(Exception $e){
         echo json_encode(array("status" => "error", "error" => $e->getMessage()));

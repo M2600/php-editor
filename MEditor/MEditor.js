@@ -586,7 +586,7 @@ class MEditor {
             explorerContent.content.element.innerHTML = "";
             //console.log(this.explorer);
             explorer.files = [];
-            this.explorerRecursive(explorerContent, explorerContents);
+            this.explorerRecursive(explorerContent, explorerContents, this.BASE_DIR);
         }
 
 

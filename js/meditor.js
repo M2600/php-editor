@@ -187,7 +187,7 @@ async function main(){
             loadExplorer(getParentDir(editor.BASE_DIR));
         }
         else{
-            loadExplorer(editor.BASE_DIR + dir.path);
+            loadExplorer(dir.path);
         }
     })
 

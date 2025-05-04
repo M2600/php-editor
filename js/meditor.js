@@ -11,6 +11,14 @@ function pathFromDir(path){
     return dir;
 }
 
+function getParentDir(path){
+    let dir = path.replace(/\/+$/, "");
+    dir = dir.substring(0, dir.lastIndexOf("/"));
+    if(dir == ""){
+        dir = "/";
+    }
+    return dir;
+}
 
 
 
@@ -175,6 +183,12 @@ async function main(){
 
     explorer.setDirClickAction(async function (dir) {
         console.log("re: dir click: ", dir);
+        if(dir.name == "../" || dir.name == ".."){
+            loadExplorer(getParentDir(editor.BASE_DIR));
+        }
+        else{
+            loadExplorer(editor.BASE_DIR + dir.path);
+        }
     })
 
     explorer.setNewFileClickAction((dir) => {
@@ -258,7 +272,7 @@ async function main(){
     // explorer.setMenuTitle(USER_ID + "/");
     // explorer.loadExplorer(testFiles);
 
-    await loadExplorer();
+    await loadExplorer("/");
 
 
 
@@ -424,7 +438,7 @@ function mergeAceObjInFileList(fileList, prevFileList) {
     if (prevFileList == undefined || prevFileList == null) {
         return fileList;
     }
-    DEBUG && console.log("merging aceObj in fileList", fileList, prevFileList);
+    //DEBUG && console.log("merging aceObj in fileList", fileList, prevFileList);
     fileList.forEach(file => {
         //DEBUG && console.log("file: ", file);
         if (file.type == "dir") {
@@ -442,10 +456,17 @@ function mergeAceObjInFileList(fileList, prevFileList) {
 
 
 
-async function loadExplorer() {
+async function loadExplorer(path) {
+    path = path.replace(/\/+/g, "/");
+    if (path == null | path == undefined){
+        path = "/";
+    }
+    if (path[path.length - 1] != "/") {
+        path += "/";
+    }
     let body = {
         action: "list-object",
-        path: ""
+        path: path,
     };
     await api("/api/file_manager.php", body=body)
     .then(data =>  {
@@ -456,10 +477,12 @@ async function loadExplorer() {
         USERID = data.id;
         let prevFILE_LIST = FILE_LIST;
         FILE_LIST = data.files;
-        editor.explorer.setMenuTitle(USERID + "/");
+        editor.BASE_DIR = path;
+        let dir = (USERID + path).replace(/\/+/g, "/");
+        editor.explorer.setMenuTitle(dir);
         editor.explorer.loadExplorer(FILE_LIST);
-        console.log("FILE_LIST: ", FILE_LIST);
-        console.log("prevFILE_LIST: ", prevFILE_LIST);
+        //console.log("FILE_LIST: ", FILE_LIST);
+        //console.log("prevFILE_LIST: ", prevFILE_LIST);
         // file.path は editor.explorer.loadExplorer() 内で定義される
         // mergeAceObjInFileList() は file.path を使用する
         FILE_LIST.files = mergeAceObjInFileList(FILE_LIST.files, prevFILE_LIST.files);

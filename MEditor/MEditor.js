@@ -564,11 +564,27 @@ class MEditor {
          * 
          */
         explorer.loadExplorer = (explorerContents) => {
-
+            if (!this.BASE_DIR){
+                this.BASE_DIR = explorerContents.path;
+            }
+            if (!this.BASE_DIR.endsWith("/")){
+                this.BASE_DIR += "/";
+            }
+            
+            // this.BASE_DIR is not "/" and add "../" file to explorerContents
+            if (this.BASE_DIR != "/") {
+                let parentDir = {
+                    name: "../",
+                    type: "file",
+                }
+                explorerContents.files.unshift(parentDir);
+            }
+            this.DEBUG && console.log("explorer.loadExplorer() explorerContents: ", explorerContents);
+            
             let explorerContent = this.explorer;
             // clear old contents
             explorerContent.content.element.innerHTML = "";
-            console.log(this.explorer);
+            //console.log(this.explorer);
             explorer.files = [];
             this.explorerRecursive(explorerContent, explorerContents);
         }
@@ -866,16 +882,27 @@ class MEditor {
         file.element.classList.add(this.CLASS_NAME_PREFIX + "file");
         file.element.title = fileInfo.path;
         // highlight selected file
-        file.element.addEventListener("click", (e) => {
-            let old = document.getElementsByClassName(this.CLASS_NAME_PREFIX + "file-selected");
-            for(let i=0; i<old.length; i++) {
-                old[i].classList.remove(this.CLASS_NAME_PREFIX + "file-selected");
-            }
-            file.element.classList.toggle(this.CLASS_NAME_PREFIX + "file-selected");
-        });
-        file.element.addEventListener("click", function a(e) {
-            this.explorer.fileClickAction(fileInfo);
-        }.bind(this));
+        if (fileInfo.name == "../"){
+            file.element.addEventListener("click", (e) => {
+                let old = document.getElementsByClassName(this.CLASS_NAME_PREFIX + "file-selected");
+                for(let i=0; i<old.length; i++) {
+                    old[i].classList.remove(this.CLASS_NAME_PREFIX + "file-selected");
+                }
+                this.explorer.dirClickAction(fileInfo);
+            });
+        }
+        else{
+            file.element.addEventListener("click", (e) => {
+                let old = document.getElementsByClassName(this.CLASS_NAME_PREFIX + "file-selected");
+                for(let i=0; i<old.length; i++) {
+                    old[i].classList.remove(this.CLASS_NAME_PREFIX + "file-selected");
+                }
+                file.element.classList.toggle(this.CLASS_NAME_PREFIX + "file-selected");
+            });
+            file.element.addEventListener("click", function a(e) {
+                this.explorer.fileClickAction(fileInfo);
+            }.bind(this));
+        }
 
         let fileName = {};
         fileName.element = document.createElement("div");
@@ -954,6 +981,7 @@ class MEditor {
         dirMenu.element.title = dirInfo.name;
         dirMenu.element.addEventListener("click", (e) => {
             //this.explorer.toggleExpand(dir.path);
+            this.explorer.dirClickAction(dirInfo);
         });
         dir.element.appendChild(dirMenu.element);
         dir.menu = dirMenu;
@@ -970,6 +998,7 @@ class MEditor {
         dirIcon.element.classList.add(this.CLASS_NAME_PREFIX + "dir-icon");
         dirIcon.element.innerHTML = "▶";
         dirIcon.element.addEventListener("click", (e) => {
+            e.stopPropagation();
             this.explorer.toggleExpand(dir.path);
         });
         dirMenu.name.element.appendChild(dirIcon.element);

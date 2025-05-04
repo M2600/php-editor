@@ -729,8 +729,8 @@ function renameFileDialog(path) {
         hideAllPreviewer();
         await renameFile(path, input.value);
         // change the AceObj of file in the FILE_LIST to the new one
-        FILE_LIST = mergeAceObjInFileList(FILE_LIST, [CURRENT_FILE]);
-        await loadExplorer();
+        //FILE_LIST = mergeAceObjInFileList(FILE_LIST, [CURRENT_FILE]);
+        await loadExplorer(editor.BASE_DIR);
     });
     controls.appendChild(renameButton);
     let popupWindow = editor.popupWindow(windowName, contents);

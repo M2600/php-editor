@@ -825,7 +825,7 @@ function deleteFileDialog(path) {
             CURRENT_FILE = false;
             hideAllPreviewer();
         }
-        await loadExplorer();
+        await loadExplorer(editor.BASE_DIR);
     });
     controls.appendChild(deleteButton);
     let popupWindow = editor.popupWindow(windowName, contents);

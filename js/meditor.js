@@ -976,7 +976,7 @@ function newFileDialog(dir){
         }
         hideAllPreviewer();
         await createFile(currentDir + input.value);
-        await loadExplorer();
+        await loadExplorer(editor.BASE_DIR);
     });
     controls.appendChild(createButton);
     let popupWindow = editor.popupWindow(windowName, contents);

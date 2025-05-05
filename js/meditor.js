@@ -1186,7 +1186,7 @@ function deleteDirDialog(path) {
         DEBUG && console.log("popup window: ", popupWindow);
         popupWindow.remove();
         await deleteDir(path);
-        await loadExplorer();
+        await loadExplorer(editor.BASE_DIR);
     });
     controls.appendChild(deleteButton);
     let popupWindow = editor.popupWindow(windowName, contents);

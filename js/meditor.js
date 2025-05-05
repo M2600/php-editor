@@ -230,10 +230,7 @@ async function main(){
 
 
     explorer.setUploadClickAction((dir) => {
-        console.log("re: upload: ");
-        if(!dir){
-            dir = getCurrentPath();
-        }
+        console.log("re: upload: ", dir);
         fileUploadDialog(dir);
     })
 
@@ -918,12 +915,13 @@ async function createFile(path) {
 }
 
 function getCurrentPath() {
-    if (!CURRENT_FILE){
-        return "/";
-    }
-    else{
-        return CURRENT_FILE.path.substring(0, CURRENT_FILE.path.lastIndexOf("/") + 1);
-    }
+    // if (!CURRENT_FILE){
+    //     return "/";
+    // }
+    // else{
+    //     return CURRENT_FILE.path.substring(0, CURRENT_FILE.path.lastIndexOf("/") + 1);
+    // }
+    return editor.BASE_DIR;
 }
 
 function newFileDialog(dir){
@@ -1227,14 +1225,18 @@ async function uploadFiles(fileInput, dir) {
         ret = data.paths;
         DEBUG && console.log("Files uploaded");
     }).then(() => {
-        loadExplorer();
+        loadExplorer(editor.BASE_DIR);
     });
     return ret;
 }
 
 async function fileUploadDialog(dir) {
+    let path;
     if(!dir){
-        dir = "/";
+        path = getCurrentPath();
+    }
+    else{
+        path = dir.path;
     }
     let windowName = "Upload files";
 
@@ -1272,8 +1274,8 @@ async function fileUploadDialog(dir) {
         console.log("Upload: ");
         DEBUG && console.log("popup window: ", popupWindow);
         popupWindow.remove();
-        await uploadFiles(fileInput, dir);
-        await loadExplorer();
+        await uploadFiles(fileInput, path);
+        await loadExplorer(editor.BASE_DIR);
     });
     
     controls.appendChild(uploadButton);

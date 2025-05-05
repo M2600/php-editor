@@ -51,6 +51,12 @@ function convertUserPath($path){
     return $userPath;
 }
 
+// convert server path to user path
+function convertServerPath($path){
+    $userPath = str_replace(getUserRoot(), "", $path);
+    return $userPath;
+}
+
 function shellEscape($str){
     return escapeshellarg($str);
 }
@@ -263,13 +269,17 @@ function deleteDirectory($userPath){
             if($path == "." || $path == "..") continue;
             $fullPath = $serverPath . "/" . $path;
             if(is_dir($fullPath)){
-                deleteDirectory($fullPath);
+                deleteDirectory(convertServerPath($fullPath));
             }
             else{
                 unlink($fullPath);
             }
         }
-        rmdir($serverPath);
+        $ret = rmdir($serverPath);
+        if($ret === false){
+            echo json_encode(array("status" => "error", "error" => "Delete failed"));
+            exit();
+        }
     }
     catch(Exception $e){
         echo json_encode(array("status" => "error", "error" => $e->getMessage()));

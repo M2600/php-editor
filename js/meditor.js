@@ -1055,7 +1055,7 @@ function newDirDialog(dir) {
         DEBUG && console.log("popup window: ", popupWindow);
         popupWindow.remove();
         await createDir(currentDir + input.value);
-        await loadExplorer();
+        await loadExplorer(editor.BASE_DIR);
     });
     controls.appendChild(createButton);
     let popupWindow = editor.popupWindow(windowName, contents);

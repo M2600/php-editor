@@ -508,6 +508,9 @@ async function openInOtherWindow() {
     }
     console.log(RUN_BROWSER_TAB);
     let url = Path.join(FILE_PAGE_BASE_URL, USERID, CURRENT_FILE.path);
+    if(url.endsWith("/")){
+        url = url.substring(0, url.length - 1);
+    }
     if (!RUN_BROWSER_TAB || RUN_BROWSER_TAB.closed) {
         RUN_BROWSER_TAB = window.open(url);
     }

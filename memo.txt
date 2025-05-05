@@ -141,6 +141,8 @@ PHPエディタ
         loadExplorer()で引数にディレクトリを指定すれば基本的にはおk
         ただその他の処理でサーバリクエスト送る際にbaseDir的なものを考慮させる必要あり
     +FILE_LISTのpathを書き換えた方が良さそう
+    rename時のカレントdir考慮
+    create時のカレントdir考慮
     
 
 

@@ -1,5 +1,3 @@
-<link rel="stylesheet" href="css/index.css">
-
 <?php
 if(!isset($_SESSION)){
     session_start();

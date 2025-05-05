@@ -1123,7 +1123,7 @@ function renameDirDialog(path) {
         DEBUG && console.log("popup window: ", popupWindow);
         popupWindow.remove();
         await renameDir(path, input.value);
-        await loadExplorer();
+        await loadExplorer(editor.BASE_DIR);
     });
     controls.appendChild(renameButton);
     let popupWindow = editor.popupWindow(windowName, contents);

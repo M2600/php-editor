@@ -21,6 +21,12 @@ $comments = array(
 	"log in successful",
 );
 
+$IGNORE_LINE_HEADS = array(
+	"#",
+	"//",
+	";",
+);
+
 function getRandomComment(){
 	global $comments;
 	$index = rand(0, count($comments)-1);
@@ -36,6 +42,10 @@ function checkPassword($id, $pw){
 	$lines = file($DATA_PATH, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach($lines as $line){
         $line = trim($line);
+		// Skip comment lines
+		if(in_array($line[0], $GLOBALS["IGNORE_LINE_HEADS"])){
+			continue;
+		}
         $line = explode(",", $line);
         if($line[0] == $id && $line[1] == $pw){
             return true;

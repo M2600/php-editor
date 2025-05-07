@@ -102,6 +102,7 @@ var USER_ID = "user_id";
 var CURRENT_FILE = false;
 var FILE_LIST = {};
 var RUN_BROWSER_TAB = undefined;
+var ACE_LIST = [];
 
 const DEBUG = true;
 
@@ -431,6 +432,19 @@ function aceObjFromFileList(fileList, path) {
 }
 
 
+function aceObjFromAceList(path){
+    //DEBUG && console.log("aceObjFromAceList: ", path);
+    let aceObj = null;
+    ACE_LIST.forEach(file => {
+        if (file.filePath == path) {
+            aceObj = file.aceObj;
+        }
+    });
+    //console.log("aceObj: ", aceObj);
+    return aceObj;
+}
+
+
 function mergeAceObjInFileList(fileList, prevFileList) {
     if (prevFileList == undefined || prevFileList == null) {
         return fileList;
@@ -444,7 +458,7 @@ function mergeAceObjInFileList(fileList, prevFileList) {
         else {
             
             //DEBUG && console.log("file.path: ", file.path);
-            file.aceObj = aceObjFromFileList(prevFileList, file.path);
+            file.aceObj = aceObjFromAceList(file.path);
         }
     });
     return fileList;
@@ -567,6 +581,10 @@ async function openFile(file) {
             let mode = extToLang(file.path.split(".").pop());
             ace.setMode(mode);
             file.aceObj = ace;
+            ACE_LIST.push({
+                aceObj: ace,
+                filePath: file.path,
+            })
             aceKeybinds(file.aceObj.editor);
             file.aceObj.setValue(apiRet.content);
             file.aceObj.editor.gotoLine(0);

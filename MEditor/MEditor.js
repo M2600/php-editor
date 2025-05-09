@@ -1234,6 +1234,133 @@ class MEditor {
     }
 
 
+    dictMenu(parentObj) {
+        let dictMenu = {};
+        dictMenu.element = document.createElement("div");
+        dictMenu.element.classList.add(this.CLASS_NAME_PREFIX + "dict-menu");
+        parentObj.element.appendChild(dictMenu.element);
+        parentObj.dictMenu = dictMenu;
+        dictMenu.items = [];
+
+        let dictMenuTitle = {};
+        dictMenuTitle.element = document.createElement("div");
+        dictMenuTitle.element.classList.add(this.CLASS_NAME_PREFIX + "dict-menu-title");
+        dictMenuTitle.element.innerHTML = "Dictionary";
+        dictMenu.element.appendChild(dictMenuTitle.element);
+        dictMenu.title = dictMenuTitle;
+
+        let dictMenuContent = {};
+        dictMenuContent.element = document.createElement("div");
+        dictMenuContent.element.classList.add(this.CLASS_NAME_PREFIX + "dict-menu-content");
+        dictMenu.element.appendChild(dictMenuContent.element);
+        dictMenu.content = dictMenuContent;
+
+
+
+        dictMenu.setTitle = (title) => {
+            dictMenu.title.element.innerHTML = title;
+        }
+
+
+        /*** Create add button to dictMenu
+         */
+        dictMenu.addButton = () => {
+            let button = {};
+            button.element = document.createElement("button");
+            button.element.classList.add(this.CLASS_NAME_PREFIX + "dict-menu-add-button");
+            button.element.innerHTML = "+";
+            button.element.addEventListener("click", (e) => {
+                let item = {"":""};
+                dictMenu.addItem(item);
+            })
+            dictMenu.element.appendChild(button.element);
+        }
+
+
+
+        /*** add item to dictMenu 
+            * @param {object} items
+            * items = {
+            *     key: value
+            * }
+        */
+
+        dictMenu.addItem = (item) => {
+            let keys = Object.keys(item);
+            keys.forEach((k) => {
+                let dict = {key: k, value: item[k]};
+                dictMenu.items.push(dict);
+                let itemElement = document.createElement("div");
+                itemElement.classList.add(this.CLASS_NAME_PREFIX + "dict-menu-item");
+                
+                let key = document.createElement("div");
+                key.classList.add(this.CLASS_NAME_PREFIX + "dict-menu-item-key");
+                let keyInput = document.createElement("input");
+                keyInput.type = "text";
+                keyInput.placeholder = "key";
+                keyInput.classList.add(this.CLASS_NAME_PREFIX + "dict-menu-item-key-input");
+                keyInput.value = k;
+                keyInput.addEventListener("change", (e) => {
+                    dict["key"] = keyInput.value;
+                });
+                key.appendChild(keyInput);
+
+                let value = document.createElement("div");
+                value.classList.add(this.CLASS_NAME_PREFIX + "dict-menu-item-value");
+                let valueInput = document.createElement("input");
+                valueInput.type = "text";
+                valueInput.placeholder = "value";
+                valueInput.classList.add(this.CLASS_NAME_PREFIX + "dict-menu-item-value-input");
+                valueInput.value = item[k];
+                valueInput.addEventListener("change", (e) => {
+                    dict["value"] = valueInput.value;
+                })
+                value.appendChild(valueInput);
+                
+                let separator = document.createElement("span");
+                separator.classList.add(this.CLASS_NAME_PREFIX + "dict-menu-item-separator");
+                separator.innerHTML = " : ";
+
+                let deleteButton = document.createElement("button");
+                deleteButton.classList.add(this.CLASS_NAME_PREFIX + "dict-menu-item-delete-button");
+                deleteButton.innerHTML = "×";
+                deleteButton.addEventListener("click", (e) => {
+                    dictMenu.items = dictMenu.items.filter((i) => i != dict);
+                    itemElement.remove();
+                });
+                itemElement.appendChild(key);
+                itemElement.appendChild(separator);
+                itemElement.appendChild(value);
+                itemElement.appendChild(deleteButton);
+                dictMenu.content.element.appendChild(itemElement);
+            });
+        }
+
+        dictMenu.getItems = () => {
+            return dictMenu.items;
+        }
+
+        dictMenu.getItemsAsObject = () => {
+            let obj = {};
+            dictMenu.items.forEach((item) => {
+                if(item.key == "" || item.value == ""){
+                    return;
+                }
+                obj[item.key] = item.value;
+            })
+            return obj;
+        }
+
+        return dictMenu;
+    }
+
+    createDictMenu(parentObj, opt={}) {
+        let dictMenu = this.dictMenu(parentObj);
+        dictMenu.items = [];
+        dictMenu.options = opt;
+
+        return dictMenu;
+    }
 
     removePopupMenus() {
         for(let i=0; i<this.page.popupMenus.length; i++) {

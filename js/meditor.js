@@ -114,6 +114,7 @@ editor.DEBUG = true;
 const FILE_PAGE_BASE_URL = "/user-programs/";
 
 var mConsole;
+var dictMenu;
 
 async function main(){
     await editor.editor("main");
@@ -275,8 +276,12 @@ async function main(){
 
 
 
-    // hide right window
-    editor.page.main.right.hide();
+    // right window
+    dictMenu = editor.createDictMenu(editor.page.main.right, opt={});
+    dictMenu.setTitle("GETパラメータ");
+    dictMenu.addItem({"": ""});
+    dictMenu.addButton();
+    //editor.page.main.right.hide();
 
 
 

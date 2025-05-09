@@ -825,6 +825,77 @@ i {
 
 
 
+.meditor-dict-menu {
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    width: 100%;
+}
+
+.meditor-dict-menu-title {
+
+}
+
+.meditor-dict-menu-content {
+    display: flex;
+    flex-direction: column;
+    overflow-y : auto;
+}
+
+.meditor-dict-menu-item {
+    display: flex;
+    margin: .1em .1em;
+}
+
+.meditor-dict-menu-item-key {
+
+}
+
+.meditor-dict-menu-item-key-input {
+    width: 4em;
+    background-color: var(--me-color-input-bg);
+    color: var(--me-color-text);
+    border: 1px solid var(--me-color-input-border);
+}
+.meditor-dict-menu-item-value {
+
+}
+
+.meditor-dict-menu-item-value-input {
+    width: 6em;
+    background-color: var(--me-color-input-bg);
+    color: var(--me-color-text);
+    border: 1px solid var(--me-color-input-border);
+}
+
+.meditor-dict-menu-item-separator {
+    padding-left: .2em;
+    padding-right: .4em;
+}
+
+.meditor-dict-menu-add-button {
+    background-color: var(--me-color-bg);
+    color: var(--me-color-text);
+    border: solid 1px #666;
+    cursor: pointer;
+    border-radius: .3em;
+    width: 1.5em;
+}
+.meditor-dict-menu-add-button:hover {
+    background-color: var(--me-color-bg-active);
+}
+
+.meditor-dict-menu-item-delete-button {
+    background-color: var(--me-color-bg);
+    color: var(--me-color-text);
+    border: solid 1px #666;
+    cursor: pointer;
+    border-radius: .3em;
+    width: 1.5em;
+}
+
+
+
 
 .duplicate-dialog {
     position: absolute;

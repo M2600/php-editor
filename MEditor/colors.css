@@ -16,6 +16,9 @@ body[theme="dark"] {
 	--me-color-bg-active-active: #999;
 	--me-color-border: #666;
 
+	--me-color-input-bg: #444;
+	--me-color-input-border: #666;
+
 	--me-color-sash: rgb(255, 255, 255, 0.2);
 
 	--me-color-editor-bg: #272822;
@@ -27,6 +30,9 @@ body[theme="light"] {
 	--me-color-bg-active: #ccc;
 	--me-color-bg-active-active: #ddd;
 	--me-color-border: #ccc;
+
+	--me-color-input-bg: #fff;
+	--me-color-input-bg-active: #f0f0f0;
 
 	--me-color-sash: rgb(0, 0, 0, 0.2);
 

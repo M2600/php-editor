@@ -31,8 +31,8 @@ body[theme="light"] {
 	--me-color-bg-active-active: #ddd;
 	--me-color-border: #ccc;
 
-	--me-color-input-bg: #fff;
-	--me-color-input-bg-active: #f0f0f0;
+	--me-color-input-bg: #ddd;
+	--me-color-input-bg-active: #eee;
 
 	--me-color-sash: rgb(0, 0, 0, 0.2);
 

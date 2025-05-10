@@ -5,6 +5,7 @@ Linux Mint 21.3 x86_64 (bitecool34)
 nginx 1.18.0
 php-fpm 8.3
 php-curl
+php-cgi
 composer
 
 

@@ -845,6 +845,7 @@ i {
 .meditor-dict-menu-item {
     display: flex;
     margin: .1em .1em;
+    overflow-x: hidden;
 }
 
 .meditor-dict-menu-item-key {

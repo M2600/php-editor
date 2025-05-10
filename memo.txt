@@ -150,5 +150,6 @@ PHPエディタ
             FILE_LIST[0].ace以外にACE_LISTみたいなのを用意
 
 
+デバッグ時にGETパラメータ
 
 

@@ -281,6 +281,10 @@ async function main(){
     dictMenu.setTitle("GETパラメータ");
     dictMenu.addItem({"": ""});
     dictMenu.addButton();
+    var debugButton = editor.generateButton(dictMenu, "Debug with GET", (e) => {
+        console.log("Debug: ");
+        runPhpCgi(CURRENT_FILE.path, dictMenu.getItemsAsObject());
+    });
     //editor.page.main.right.hide();
 
 
@@ -327,7 +331,7 @@ function aceKeybinds(ace){
     })
 
     ace.commands.removeCommand("jumptomatching");
-    DEBUG && console.log("[Mac] remove commands: control+P ")
+    //DEBUG && console.log("[Mac] remove commands: control+P ")
 }
 
 
@@ -889,6 +893,61 @@ async function runPhp(path){
         return false;
     }
 
+    if(ret.result){
+        mConsole.print("PHP run error: " + path, "error");
+    }
+    else{
+        mConsole.print("PHP run ok: " + path, "success");
+    }
+    ret.message.forEach(message => {
+        $categoryStr = message.split(":")[0];
+        if ($categoryStr.indexOf("error") > -1) {
+            mConsole.print(message.replaceAll("\n", "<br>"), "error");
+        }
+        else if ($categoryStr.indexOf("warning") > -1) {
+            mConsole.print(message.replaceAll("\n", "<br>"), "warning");
+        }
+        else {
+            mConsole.print(message.replaceAll("\n", "<br>"), "info");
+        }
+    })
+    return ret;
+}
+
+
+
+async function runPhpCgi(path, GETParams={}) {
+    if(!CURRENT_FILE){
+        return;
+    }
+
+    if(!CURRENT_FILE.readonly){
+        await saveFile(path, CURRENT_FILE.aceObj.editor.getValue());
+        mConsole.print("File saved: " + path, "success");
+    }
+
+    let ret;
+    let body = {
+        action: "cgi_run",
+        path: path,
+        GETParams: GETParams,
+    }
+    let status = await api("/api/file_manager.php", body=body)
+    .then(data => {
+        if (data.status === "error") {
+            console.error(data.error);
+            return 1;
+        }
+        if (data.status === "session_error") {
+            sessionError();
+            return 0;
+        }
+        ret = data;
+    });
+    if(status == 1){
+        mConsole.print("PHP run error: " + path, "error");
+        return false;
+    }
     if(ret.result){
         mConsole.print("PHP run error: " + path, "error");
     }

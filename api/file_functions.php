@@ -47,6 +47,7 @@ function getUserRoot(){
 // convert user path to server path
 function convertUserPath($path){
     $userPath = getUserRoot() . safePath($path);
+    $userPath = str_replace("//", "/", $userPath);
     //error_log("userpath: ".$userPath);
     return $userPath;
 }
@@ -410,11 +411,13 @@ function phpCgiRun($userPath, $printHttpHeaders=false, $GETParams=array()){
         if(file_exists($USER_SCRIPT_PHP_INI)){
             $command .= "-c " . shellEscape($USER_SCRIPT_PHP_INI) . " ";
         }
+        $command .= "-f ";
         $command .= shellEscape($serverPath) . " ";
         foreach($GETParams as $key => $value){
             $command .= shellEscape($key . "=" . $value) . " ";
         }
         $command .= "2>&1";
+        //error_log($command);
         exec($command, $output, $return);
         for($i = 0; $i < count($output); $i++){
             $output[$i] = str_replace(getUserRoot(), "", $output[$i]);

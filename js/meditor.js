@@ -525,7 +525,7 @@ async function openInOtherWindow() {
     if (!CURRENT_FILE) {
         return;
     }
-    if (!CURRENT_FILE.readonly) {
+    if (!CURRENT_FILE.readonly && CURRENT_FILE.changed) {
         await saveFile(CURRENT_FILE.path, CURRENT_FILE.aceObj.editor.getValue());
         mConsole.print("File saved: " + CURRENT_FILE.path, "success");
     }

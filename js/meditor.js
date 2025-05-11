@@ -180,6 +180,9 @@ async function main(){
 
 
     explorer.setFileClickAction(async function (file) {
+        if(CURRENT_FILE && !CURRENT_FILE.readonly && CURRENT_FILE.changed){
+            await saveFile(CURRENT_FILE.path, CURRENT_FILE.aceObj.editor.getValue());
+        }
         openFile(file);
     })
 

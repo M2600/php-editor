@@ -74,7 +74,9 @@ class AceWrapper {
     }
 
 
-
+    on(event, job) {
+        this.editor.getSession().on(event, job);
+    }
 
 
 

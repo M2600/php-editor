@@ -587,6 +587,10 @@ async function openFile(file) {
             aceDOM.style.height = "100%";
             const ace = new AceWrapper(aceDOM.id);
             ace.loadMySettings();
+            ace.on("change", () => {
+                //console.log("file changed; ", file);
+                file.changed = true;
+            })
             let mode = extToLang(file.path.split(".").pop());
             ace.setMode(mode);
             file.aceObj = ace;
@@ -597,6 +601,8 @@ async function openFile(file) {
             aceKeybinds(file.aceObj.editor);
             file.aceObj.setValue(apiRet.content);
             file.aceObj.editor.gotoLine(0);
+            // Set changed flag to false as default after setValue()
+            file.changed = false;
         }
         else{
             console.log("ace already exists");

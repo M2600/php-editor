@@ -807,7 +807,8 @@ function moveFileDialog(file) {
     FILE_LIST.files.forEach(f => {
         if (f.type == "dir") {
             options.push({
-                text: f.name,
+                text: "./" + f.name + "/",
+                title: f.path,
                 clickAction: (e) => {
                     let newPath = Path.join(f.path, file.name);
                     console.log("Move file to: ", newPath);

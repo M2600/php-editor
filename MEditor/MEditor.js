@@ -723,11 +723,11 @@ class MEditor {
             console.log("menu clicked");
 
             this.popupMenu(otherButton, [
-                {text: "New Folder", clickAction: (e) => {
+                {text: "New Folder", title: "Create New Folder", clickAction: (e) => {
                     parentObj.explorer.newDirClickAction();
                 }},
-                {text: "Upload", clickAction: (e) => {
-                    parentObj.explorer.uploadClickAction(); 
+                {text: "Upload", title: "Upload File", clickAction: (e) => {
+                    parentObj.explorer.uploadClickAction();
                 }},
             ]);
             this.page.popupMenuCloseAction = () => {
@@ -882,13 +882,13 @@ class MEditor {
             e.stopPropagation();
             console.log("file menu clicked:", fileInfo);
             this.popupMenu(fileMenu, [
-                {text: "rename", clickAction: (e) => {this.explorer.renameClickAction(fileInfo);}},
-                {text: "move", clickAction: (e) => {
+                {text: "rename", title: "Rename File", clickAction: (e) => {this.explorer.renameClickAction(fileInfo);}},
+                {text: "move", title: "Move File", clickAction: (e) => {
                     e.stopPropagation();
                     this.explorer.moveClickAction(fileInfo);
                 }},
-                {text: "duplicate", clickAction: (e) => {this.explorer.duplicateClickAction(fileInfo);}},
-                {text: "delete", clickAction: (e) => {this.explorer.deleteClickAction(fileInfo);}},
+                {text: "duplicate", title: "Duplicate File", clickAction: (e) => {this.explorer.duplicateClickAction(fileInfo);}},
+                {text: "delete", title: "Delete File", clickAction: (e) => {this.explorer.deleteClickAction(fileInfo);}},
             ]);
             this.page.popupMenuCloseAction = () => {
                 this.explorer.content.element.style.overflowY = "auto";
@@ -962,23 +962,23 @@ class MEditor {
             e.stopPropagation();
             console.log("dir menu clicked:", dirInfo);
             this.popupMenu(dirMenu, [
-                {text: "rename", clickAction: (e) => {
+                {text: "rename", title: "Rename Directory", clickAction: (e) => {
                     //console.log("rename: ", dirInfo);
                     this.explorer.renameDirClickAction(dirInfo);
                 }},
-                {text: "new file", clickAction: (e) => {
+                {text: "new file", title: "Create New File", clickAction: (e) => {
                     //console.log("new file: ", dirInfo);
                     this.explorer.newFileClickAction(dirInfo);
                 }},
-                {text: "new folder", clickAction: (e) => {
+                {text: "new folder", title: "Create New Folder", clickAction: (e) => {
                     //console.log("new folder: ", dirInfo);
                     this.explorer.newDirClickAction(dirInfo);
                 }},
-                {text: "upload", clickAction: (e) => {
+                {text: "upload", title: "Upload File", clickAction: (e) => {
                     //console.log("upload: ", dirInfo);
                     this.explorer.uploadClickAction(dirInfo);
                 }},
-                {text: "delete", clickAction: (e) => {
+                {text: "delete", title: "Delete Directory", clickAction: (e) => {
                     //console.log("delete: ", dirInfo);
                     this.explorer.deleteDirClickAction(dirInfo);
                 }}
@@ -1387,7 +1387,7 @@ class MEditor {
 
     popupMenu(
         parentObj, 
-        contents=[{text: "Menu1", clickAction: (e) => {console.log("menu1");}}, {text: "Menu2", clickAction: (e) => {}}]
+        contents=[{text: "Menu1", title: "desc", clickAction: (e) => {console.log("menu1");}}]
     ) {
 
         this.removePopupMenus();
@@ -1404,6 +1404,7 @@ class MEditor {
             content.element = document.createElement("button");
             content.element.classList.add(this.CLASS_NAME_PREFIX + "popup-menu-item");
             content.element.innerHTML = contents[i].text;
+            content.element.title = contents[i].title;
             content.element.addEventListener("click", contents[i].clickAction);
             menu.element.appendChild(content.element);
             menu.contents[i].element = content;

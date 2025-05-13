@@ -782,6 +782,13 @@ class MEditor {
             parentObj.explorer.renameClickAction = func;
         }
 
+        parentObj.explorer.moveClickAction = (fileInfo) => {
+            console.log("move: ", fileInfo);
+        }
+        parentObj.explorer.setMoveClickAction = (func) => {
+            parentObj.explorer.moveClickAction = func;
+        }
+
         parentObj.explorer.duplicateClickAction = (fileInfo) => {
             console.log("duplicate: ", fileInfo);
         }
@@ -876,6 +883,10 @@ class MEditor {
             console.log("file menu clicked:", fileInfo);
             this.popupMenu(fileMenu, [
                 {text: "rename", clickAction: (e) => {this.explorer.renameClickAction(fileInfo);}},
+                {text: "move", clickAction: (e) => {
+                    e.stopPropagation();
+                    this.explorer.moveClickAction(fileInfo);
+                }},
                 {text: "duplicate", clickAction: (e) => {this.explorer.duplicateClickAction(fileInfo);}},
                 {text: "delete", clickAction: (e) => {this.explorer.deleteClickAction(fileInfo);}},
             ]);

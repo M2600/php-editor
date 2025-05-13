@@ -208,6 +208,10 @@ async function main(){
         renameFileDialog(file.path);
     })
 
+    explorer.setMoveClickAction((file) => {
+        moveFileDialog(file);
+    })
+
     explorer.setDuplicateClickAction((file) => {
         console.log("re: Duplicate: ", file);
         duplicateFile(file.path).then((newPath) => {
@@ -476,8 +480,29 @@ function mergeAceObjInFileList(fileList, prevFileList) {
     return fileList;
 }
 
+function dirListFromFileList(fileList) {
+    //console.log("dirListFromFileList: ", fileList);
+    let dirList = {
+        name: fileList.name,
+        type: fileList.type,
+        files: [],
+    };
+    fileList.files.forEach(file => {
+        if (file.type == "dir") {
+            dirList.files.push({
+                name: file.name,
+                type: file.type,
+                files: dirListFromFileList(file)
+            });
+        }
+    });
+    return dirList;
+}
 
+function currentSubDir(path) {
+    let dir = path.replace(/\/+/g, "/");
 
+}
 
 async function loadExplorer(path) {
     path = path.replace(/\/+/g, "/");
@@ -770,6 +795,30 @@ function renameFileDialog(path) {
     });
     controls.appendChild(renameButton);
     let popupWindow = editor.popupWindow(windowName, contents);
+}
+
+
+function moveFileDialog(file) {
+    parent = {};
+    parent.element = document.getElementById(file.path);
+    console.log("parent: ", parent);
+    let options = [];
+    console.log("Move file: ", file);
+    FILE_LIST.files.forEach(f => {
+        if (f.type == "dir") {
+            options.push({
+                text: f.name,
+                clickAction: (e) => {
+                    let newPath = Path.join(f.path, file.name);
+                    console.log("Move file to: ", newPath);
+                }
+            });
+        }
+    });
+    let moveMenu = editor.popupMenu(
+        parent,
+        options,
+    );
 }
 
 

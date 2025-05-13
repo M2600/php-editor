@@ -894,6 +894,9 @@ i {
     border-radius: .3em;
     width: 1.5em;
 }
+.meditor-dict-menu-item-delete-button:hover {
+    background-color: var(--me-color-bg-active);
+}
 
 
 

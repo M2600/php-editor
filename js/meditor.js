@@ -17,6 +17,9 @@ function getParentDir(path){
     if(dir == ""){
         dir = "/";
     }
+    if(dir[dir.length - 1] != "/"){
+        dir += "/";
+    }
     return dir;
 }
 

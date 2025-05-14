@@ -772,11 +772,28 @@ function renameFileDialog(path) {
     if (windowExists) {
         return;
     }
+
+    let rename = async () => {
+        console.log("Rename: ", path);
+        DEBUG && console.log("popup window: ", popupWindow);
+        popupWindow.remove();
+        hideAllPreviewer();
+        await renameFile(path, input.value);
+        // change the AceObj of file in the FILE_LIST to the new one
+        //FILE_LIST = mergeAceObjInFileList(FILE_LIST, [CURRENT_FILE]);
+        await loadExplorer(editor.BASE_DIR);
+    }
+
     let contents = document.createElement("div");
     let input = document.createElement("input");
     input.type = "text";
     input.placeholder = "File name";
     input.value = path;
+    input.addEventListener("keydown", (e) => {
+        if (e.key == "Enter") {
+            rename();
+        }
+    });
     contents.appendChild(input);
     let controls = document.createElement("div");
     controls.style.display = "flex";
@@ -787,14 +804,7 @@ function renameFileDialog(path) {
     renameButton.innerHTML = "Rename";
     renameButton.classList.add("meditor-button");
     renameButton.addEventListener("click", async () => {
-        console.log("Rename: ", path);
-        DEBUG && console.log("popup window: ", popupWindow);
-        popupWindow.remove();
-        hideAllPreviewer();
-        await renameFile(path, input.value);
-        // change the AceObj of file in the FILE_LIST to the new one
-        //FILE_LIST = mergeAceObjInFileList(FILE_LIST, [CURRENT_FILE]);
-        await loadExplorer(editor.BASE_DIR);
+        await rename();
     });
     controls.appendChild(renameButton);
     let popupWindow = editor.popupWindow(windowName, contents);
@@ -1125,21 +1135,8 @@ function newFileDialog(dir){
             currentDir += "/";
         }
     }
-    console.log("New file: " + currentDir);
-    let contents = document.createElement("div");
-    let input = document.createElement("input");
-    input.type = "text";
-    input.placeholder = "File name";
-    contents.appendChild(input);
-    let controls = document.createElement("div");
-    controls.style.display = "flex";
-    controls.style.flexDirection = "row-reverse";
-    controls.style.marginTop = ".3rem";
-    contents.appendChild(controls);
-    let createButton = document.createElement("button");
-    createButton.innerHTML = "Create";
-    createButton.classList.add("meditor-button");
-    createButton.addEventListener("click", async () => {
+
+    let create = async () => {
         console.log("Create: ", currentDir + input.value);
         DEBUG && console.log("popup window: ", popupWindow);
         popupWindow.remove();
@@ -1150,6 +1147,29 @@ function newFileDialog(dir){
         hideAllPreviewer();
         await createFile(currentDir + input.value);
         await loadExplorer(editor.BASE_DIR);
+    }
+
+    console.log("New file: " + currentDir);
+    let contents = document.createElement("div");
+    let input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = "File name";
+    input.addEventListener("keydown", (e) => {
+        if (e.key == "Enter") {
+            create();
+        }
+    });
+    contents.appendChild(input);
+    let controls = document.createElement("div");
+    controls.style.display = "flex";
+    controls.style.flexDirection = "row-reverse";
+    controls.style.marginTop = ".3rem";
+    contents.appendChild(controls);
+    let createButton = document.createElement("button");
+    createButton.innerHTML = "Create";
+    createButton.classList.add("meditor-button");
+    createButton.addEventListener("click", async () => {
+        await create();
     });
     controls.appendChild(createButton);
     let popupWindow = editor.popupWindow(windowName, contents);
@@ -1209,11 +1229,25 @@ function newDirDialog(dir) {
             currentDir += "/";
         }
     }
+
+    let create = async () => {
+        console.log("Create: ", currentDir + input.value);
+        DEBUG && console.log("popup window: ", popupWindow);
+        popupWindow.remove();
+        await createDir(currentDir + input.value);
+        await loadExplorer(editor.BASE_DIR);
+    }
+
     console.log("New folder: " + currentDir);
     let contents = document.createElement("div");
     let input = document.createElement("input");
     input.type = "text";
     input.placeholder = "Folder name";
+    input.addEventListener("keydown", (e) => {
+        if (e.key == "Enter") {
+            create();
+        }
+    });
     contents.appendChild(input);
     let controls = document.createElement("div");
     controls.style.display = "flex";
@@ -1224,11 +1258,7 @@ function newDirDialog(dir) {
     createButton.innerHTML = "Create";
     createButton.classList.add("meditor-button");
     createButton.addEventListener("click", async () => {
-        console.log("Create: ", currentDir + input.value);
-        DEBUG && console.log("popup window: ", popupWindow);
-        popupWindow.remove();
-        await createDir(currentDir + input.value);
-        await loadExplorer(editor.BASE_DIR);
+        await create();
     });
     controls.appendChild(createButton);
     let popupWindow = editor.popupWindow(windowName, contents);

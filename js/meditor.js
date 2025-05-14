@@ -808,6 +808,7 @@ function renameFileDialog(path) {
     });
     controls.appendChild(renameButton);
     let popupWindow = editor.popupWindow(windowName, contents);
+    input.focus();
 }
 
 
@@ -1173,6 +1174,7 @@ function newFileDialog(dir){
     });
     controls.appendChild(createButton);
     let popupWindow = editor.popupWindow(windowName, contents);
+    input.focus();
 }
 
 
@@ -1262,6 +1264,7 @@ function newDirDialog(dir) {
     });
     controls.appendChild(createButton);
     let popupWindow = editor.popupWindow(windowName, contents);
+    input.focus();
 }
 
     

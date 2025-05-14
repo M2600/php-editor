@@ -16,6 +16,13 @@ class Path {
         }
         return path;
     }
+
+    static joinAsFile(...paths){
+        let path = this.join(...paths);
+        path = path.replace(/\/$/, "");
+        return path;
+    }
+
     
 }
 

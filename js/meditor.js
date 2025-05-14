@@ -291,7 +291,7 @@ async function main(){
     dictMenu.setTitle("GETパラメータ");
     dictMenu.addItem({"": ""});
     dictMenu.addButton();
-    var debugButton = editor.generateButton(dictMenu, "Debug with GET", (e) => {
+    var debugButton = editor.generateButton(dictMenu, "Debug with GET params", (e) => {
         console.log("Debug: ");
         runPhpCgi(CURRENT_FILE.path, dictMenu.getItemsAsObject());
     });

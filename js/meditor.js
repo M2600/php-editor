@@ -1333,6 +1333,7 @@ function renameDirDialog(path) {
     });
     controls.appendChild(renameButton);
     let popupWindow = editor.popupWindow(windowName, contents);
+    input.focus();
 }
 
 async function deleteDir(path) {

@@ -1310,11 +1310,25 @@ function renameDirDialog(path) {
     if (windowExists) {
         return;
     }
+
+    let rename = async () => {
+        console.log("Rename: ", path);
+        DEBUG && console.log("popup window: ", popupWindow);
+        popupWindow.remove();
+        await renameDir(path, input.value);
+        await loadExplorer(editor.BASE_DIR);
+    }
+
     let contents = document.createElement("div");
     let input = document.createElement("input");
     input.type = "text";
     input.placeholder = "Folder name";
     input.value = path;
+    input.addEventListener("keydown", (e) => {
+        if (e.key == "Enter") {
+            rename();
+        }
+    });
     contents.appendChild(input);
     let controls = document.createElement("div");
     controls.style.display = "flex";
@@ -1325,11 +1339,7 @@ function renameDirDialog(path) {
     renameButton.innerHTML = "Rename";
     renameButton.classList.add("meditor-button");
     renameButton.addEventListener("click", async () => {
-        console.log("Rename: ", path);
-        DEBUG && console.log("popup window: ", popupWindow);
-        popupWindow.remove();
-        await renameDir(path, input.value);
-        await loadExplorer(editor.BASE_DIR);
+        await rename();
     });
     controls.appendChild(renameButton);
     let popupWindow = editor.popupWindow(windowName, contents);

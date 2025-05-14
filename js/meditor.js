@@ -807,14 +807,42 @@ function moveFileDialog(file) {
     console.log("parent: ", parent);
     let options = [];
     console.log("Move file: ", file);
+    // If current dir is not root, add ".." to the list
+    if(editor.BASE_DIR != "/"){
+        options.push({
+            text: "../",
+            title: getParentDir(editor.BASE_DIR),
+            clickAction: async (e) => {
+                let newPath = Path.joinAsFile(getParentDir(editor.BASE_DIR), file.name);
+                console.log("Move file to: ", file.path, newPath);
+                await renameFile(file.path, newPath);
+                await loadExplorer(editor.BASE_DIR);
+            }
+        })
+    }
+    // If dir of file is not current dir, add current dir to the list
+    if(getParentDir(file.path) != editor.BASE_DIR){
+        options.push({
+            text: "./",
+            title: editor.BASE_DIR,
+            clickAction: async (e) => {
+                let newPath = Path.joinAsFile(editor.BASE_DIR, file.name);
+                console.log("Move file to: ", file.path, newPath);
+                await renameFile(file.path, newPath);
+                await loadExplorer(editor.BASE_DIR);
+            }
+        });
+    }
     FILE_LIST.files.forEach(f => {
         if (f.type == "dir") {
             options.push({
                 text: "./" + f.name + "/",
                 title: f.path,
-                clickAction: (e) => {
-                    let newPath = Path.join(f.path, file.name);
-                    console.log("Move file to: ", newPath);
+                clickAction: async (e) => {
+                    let newPath = Path.joinAsFile(f.path, file.name);
+                    console.log("Move file to: ", file.path, newPath);
+                    await renameFile(file.path, newPath);
+                    await loadExplorer(editor.BASE_DIR);
                 }
             });
         }

@@ -1572,6 +1572,11 @@ class MEditor {
             this.page.popupWindows = this.page.popupWindows.filter((item) => item != pWindow);
         }
 
+        window.addEventListener("keydown", (e) => {
+            if(e.key == "Escape"){
+                pWindow.remove();
+            }
+        })
 
 
         return pWindow;

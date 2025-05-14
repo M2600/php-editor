@@ -1446,6 +1446,11 @@ class MEditor {
         menu.element.style.left = parentObj.element.getBoundingClientRect().right + window.scrollX + "px";
 
         window.addEventListener("click", this.removePopupMenus.bind(this));
+        window.addEventListener("keydown", (e) => {
+            if(e.key == "Escape"){
+                this.removePopupMenus();
+            }
+        });
 
         this.page.popupMenus.push(menu);
 

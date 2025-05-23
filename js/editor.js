@@ -471,6 +471,57 @@ async function openInOtherWindow() {
     }
 }
 
+async function showQRCode() {
+    console.log("show qr code");
+    if (!FILENAME) {
+        return;
+    }
+    if (!READONLY) {
+        await saveFile(FILENAME, editor.getValue());
+    }
+    
+    let dialog = document.createElement("div");
+    dialog.classList.add("qr-code-dialog");
+    dialog.style.position = "absolute";
+    dialog.style.padding = ".5rem";
+    dialog.style.backgroundColor = "var(--color-bg-alt)";
+    dialog.style.color = "var(--color-text-alt)";
+    dialog.style.border = "1px solid #666";
+    dialog.style.top = "50%";
+    dialog.style.left = "50%";
+    dialog.style.zIndex = "1000";
+    dialog.style.transform = "translate(-50%, -50%)";
+    dialog.style.width = "300px";
+    dialog.style.height = "300px";
+    dialog.style.overflow = "hidden";
+    
+    let url = new URL(window.location.href);
+    console.log(url);
+
+    let qrCode = new QRCode(dialog, url.origin + FILEPAGEBASEURL + USERID + "/" + FILENAME);
+    let closeButton = document.createElement("button");
+    closeButton.innerHTML = "<i class=\"fa-solid fa-xmark\"></i>";
+    closeButton.style.position = "absolute";
+    closeButton.style.top = "0";
+    closeButton.style.right = "0";
+    closeButton.style.backgroundColor = "var(--color-bg-alt)";
+    closeButton.style.color = "var(--color-text-alt)";
+    closeButton.style.border = "1px solid #666";
+    closeButton.style.cursor = "pointer";
+    closeButton.addEventListener("click", () => {
+        dialog.remove();
+    });
+    dialog.appendChild(closeButton);
+    document.body.appendChild(dialog);
+    document.addEventListener("keydown", function a(e){
+        if (e.key == "Escape") {
+            dialog.remove();
+        }
+        document.removeEventListener("keydown", (e) => a);
+
+    });
+}
+
 function editorBlockMessage(message) {
     let mainBody = document.getElementById("main-body");
 
@@ -513,13 +564,14 @@ async function loadFile(path) {
     let fileElement = document.getElementById(path);
     let saveButton = document.getElementById("save-button");
     let runButton = document.getElementById("run-button");
+    let qrCodeButton = document.getElementById("qr-code-button");
     let fileName = document.getElementById("file-name");
     let openOtherWindow = document.getElementById("open-other-window");
 
     openOtherWindow.removeEventListener("click", openInOtherWindow);
     saveButton.removeEventListener("click", pushSaveButton);
     runButton.removeEventListener("click", pushRunButton);
-
+    qrCodeButton.removeEventListener("click", showQRCode);
 
     await fetch("/api/file_manager.php", {
         method: "POST",
@@ -569,6 +621,7 @@ async function loadFile(path) {
         openOtherWindow.addEventListener("click", openInOtherWindow);
         saveButton.addEventListener("click", pushSaveButton);
         runButton.addEventListener("click", pushRunButton);
+        qrCodeButton.addEventListener("click", showQRCode);
         DEBUG && console.log("File loaded");
 
     });

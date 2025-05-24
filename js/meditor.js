@@ -167,6 +167,14 @@ async function main(){
             openInOtherWindow();
         }
     ))
+    editorEditor.menu.left.items.push(editor.generateButton(
+        editorEditor.menu.left,
+        "QR Code",
+        (e) => {
+            console.log("QR Code: " + CURRENT_FILE.path);
+            showQRCode();
+        }
+    ))
 
     editorEditor.menu.right.items.push(editor.generateButton(
         editorEditor.menu.right,
@@ -575,6 +583,42 @@ async function openInOtherWindow() {
 }
 
 
+async function showQRCode() {
+    if (!CURRENT_FILE) {
+        return;
+    }
+    if (!CURRENT_FILE.readonly && CURRENT_FILE.changed) {
+        await saveFile(CURRENT_FILE.path, CURRENT_FILE.aceObj.editor.getValue());
+        mConsole.print("File saved: " + CURRENT_FILE.path, "success");
+    }
+    let url = new URL(window.location.href);
+    url = url.origin + Path.join(FILE_PAGE_BASE_URL, USERID, CURRENT_FILE.path);
+    if(url.endsWith("/")){
+        url = url.substring(0, url.length - 1);
+    }
+
+    let windowName = "QR Code for " + CURRENT_FILE.path;
+    // Check if window already exists
+    let windowExists = false;
+    DEBUG && console.log("popup windows: ", editor.page.popupWindows);
+    editor.page.popupWindows.forEach((popup) => {
+        if (popup.title == windowName) {
+            DEBUG && console.log("popup window already exists");
+            windowExists = true;
+            return;
+        }
+    });
+    if (windowExists) {
+        return;
+    }
+    // Create a popup window
+    let contents = document.createElement("div");
+    contents.style.display = "flex";
+
+    // Create QR code
+    let qrCode = new QRCode(contents, url);
+    let popupWindow = editor.popupWindow(windowName, contents);
+}
 
 
 

@@ -750,6 +750,7 @@ async function pushSaveButton() {
 
 
 async function saveFile(path, content) {
+    DEBUG && console.log("saveFile: ", path, content);
     let body = {
         action: "save",
         path: path,

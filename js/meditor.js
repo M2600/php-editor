@@ -597,7 +597,7 @@ async function showQRCode() {
         url = url.substring(0, url.length - 1);
     }
 
-    let windowName = "QR Code for " + CURRENT_FILE.path;
+    let windowName = "QR Code for " + CURRENT_FILE.name;
     // Check if window already exists
     let windowExists = false;
     DEBUG && console.log("popup windows: ", editor.page.popupWindows);

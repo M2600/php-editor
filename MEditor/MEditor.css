@@ -224,7 +224,7 @@ i {
 .meditor-right {
     position: absolute;
     right: 0;
-    width: calc(20%);
+    width: calc(10%);
     height: 100%;
     border-left: 1px solid var(--me-color-border);
 }

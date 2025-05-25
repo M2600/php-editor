@@ -1474,6 +1474,7 @@ class MEditor {
 
         pWindow.element = document.createElement("div");
         pWindow.element.addEventListener("click", function a(e) {
+            //console.log("popup window clicked");
             this.activatePopupWindow(pWindow);
             //console.log(e);
             if(e.target.tagName == "INPUT" || e.target.tagName == "TEXTAREA"){
@@ -1487,7 +1488,11 @@ class MEditor {
         pWindowTitleBar.element.classList.add(this.CLASS_NAME_PREFIX + "popup-window-title-bar");
         pWindowTitleBar.element.addEventListener("mousedown", function a(e){
             //console.log("window title bar clicked");
-            this.activatePopupWindow(pWindow);
+            //console.log(e);
+            // if the click is on the close button, do not activate the popup window
+            if(!pWindowCloseButton.element.contains(e.target) && e.target !== pWindowCloseButton.element){
+                this.activatePopupWindow(pWindow);
+            }
             if(e.target != e.currentTarget){
                 return;
             }
@@ -1532,9 +1537,9 @@ class MEditor {
         pWindowCloseButton.element.classList.add(this.CLASS_NAME_PREFIX + "popup-window-close-button");
         pWindowCloseButton.element.innerHTML = "×";
         pWindowCloseButton.element.addEventListener("click", (e) => {
+            console.log("popup window close button clicked");
             e.stopPropagation();
-            pWindow.element.remove();
-            this.page.popupWindows = this.page.popupWindows.filter((item) => item != pWindow);
+            pWindow.remove();
         });
         pWindowTitleBarControl.element.appendChild(pWindowCloseButton.element);
 

@@ -148,7 +148,7 @@ class MEditor {
 
     constructor() {
         // script path
-        this.root=document.querySelector('script[src$="MEditor.js"]').outerHTML.match(/\"(.*)MEditor.js\"/)[1]||'./';
+        this.root=document.querySelector('script[src*="MEditor.js"]').outerHTML.match(/\"(.*)MEditor.js(.*)\"/)[1]||'./';
 
 
         // variables

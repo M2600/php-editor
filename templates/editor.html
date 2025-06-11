@@ -58,11 +58,11 @@
     <script src="https://kit.fontawesome.com/e87421e015.js" crossorigin="anonymous"></script>
     
     <!-- MEditor -->
-    <script src="../MEditor/MEditor.js"></script>
+    <script src="../MEditor/MEditor.js?<?php echo date("ymdHis",filemtime("./MEditor/MEditor.js")); ?>"></script>
 
     <!-- js -->
-    <script src="../js/qrcode.js"></script>
-    <script src="../js/api.js"></script>
-    <script src="../js/meditor.js"></script>
+    <script src="../js/qrcode.js?<?php echo date("ymdHis",filemtime("./js/qrcode.js")); ?>"></script>
+    <script src="../js/api.js?<?php echo date("ymdHis",filemtime("./js/api.js")); ?>"></script>
+    <script src="../js/meditor.js?<?php echo date("ymdHis",filemtime("./js/meditor.js")); ?>"></script>
 </body>
 </html>

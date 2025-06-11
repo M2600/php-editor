@@ -679,8 +679,13 @@ async function openFile(file) {
             // Set changed flag to false as default after setValue()
             file.changed = false;
         }
+        else if(!file.changed){
+            DEBUG && console.log("ace already exists, but file changed flag is false");
+            file.aceObj.setValue(apiRet.content);
+            file.changed = false;
+        }
         else{
-            console.log("ace already exists");
+            DEBUG && console.log("ace already exists, and file changed flag is true");
         }
         // set theme
         if(editor.THEME == "dark") {
@@ -732,6 +737,7 @@ async function pushSaveButton() {
             mConsole.print("File save error: " + CURRENT_FILE.path, "error");
             return;
         }
+        CURRENT_FILE.changed = false;
         mConsole.print("File saved: " + CURRENT_FILE.path, "success");
         phpSyntaxCheck(CURRENT_FILE.path);
     });

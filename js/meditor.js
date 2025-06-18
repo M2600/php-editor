@@ -646,7 +646,6 @@ async function loadFile(path) {
     return ret;
 }
 
-
 async function openFile(file) {
     DEBUG && console.log("fileInfo", file);
     apiRet = await loadFile(file.path);
@@ -662,10 +661,6 @@ async function openFile(file) {
             aceDOM.style.height = "100%";
             const ace = new AceWrapper(aceDOM.id);
             ace.loadMySettings();
-            ace.on("change", () => {
-                //console.log("file changed; ", file);
-                file.changed = true;
-            })
             let mode = extToLang(file.path.split(".").pop());
             ace.setMode(mode);
             file.aceObj = ace;
@@ -694,6 +689,15 @@ async function openFile(file) {
         else{
             file.aceObj.editor.setTheme("ace/theme/chrome");
         }
+
+        // reset ace change action
+        function aceChangeAction(e) {
+            file.changed = true;
+            DEBUG && console.log("File changed: ", file.path);
+        }
+        file.aceObj.removeAllListeners("change");
+        file.aceObj.on("change", aceChangeAction);
+
         file.aceObj.show();
         file.aceObj.focus();
     }

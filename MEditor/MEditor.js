@@ -84,6 +84,13 @@ class AceWrapper {
     on(event, job) {
         this.editor.getSession().on(event, job);
     }
+    off(event, job) {
+        this.editor.getSession().off(event, job);
+    }
+    
+    removeAllListeners(event) {
+        this.editor.getSession().removeAllListeners(event);
+    }
 
 
 

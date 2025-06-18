@@ -471,6 +471,19 @@ function aceObjFromAceList(path){
     return aceObj;
 }
 
+function getFromPrevFileList(fileList, path, key) {
+    //DEBUG && console.log("getFromPrevFileList: ", fileList, key);
+    let value = null;
+    fileList.forEach(file => {
+        if (file.path == path) {
+            !value && (value = file[key]);
+        }
+        else if (file.type == "dir") {
+            !value && (value = getFromPrevFileList(file.files, path, key));
+        }
+    });
+    return value;
+}
 
 function mergeAceObjInFileList(fileList, prevFileList) {
     if (prevFileList == undefined || prevFileList == null) {
@@ -486,6 +499,8 @@ function mergeAceObjInFileList(fileList, prevFileList) {
             
             //DEBUG && console.log("file.path: ", file.path);
             file.aceObj = aceObjFromAceList(file.path);
+            file.changed = getFromPrevFileList(prevFileList, file.path, "changed");
+            file.aceChangeAction = getFromPrevFileList(prevFileList, file.path, "aceChangeAction");
         }
     });
     return fileList;
@@ -528,7 +543,7 @@ async function loadExplorer(path) {
         path: path,
     };
     await api("/api/file_manager.php", body=body)
-    .then(data =>  {
+    .then(async data =>  {
         if (data.status === "session_error") {
             sessionError();
             return;
@@ -539,7 +554,7 @@ async function loadExplorer(path) {
         editor.BASE_DIR = path;
         let dir = Path.join(USERID, path);
         editor.explorer.setMenuTitle(dir);
-        editor.explorer.loadExplorer(FILE_LIST);
+        await editor.explorer.loadExplorer(FILE_LIST);
         //console.log("FILE_LIST: ", FILE_LIST);
         //console.log("prevFILE_LIST: ", prevFILE_LIST);
         // file.path は editor.explorer.loadExplorer() 内で定義される
@@ -691,12 +706,15 @@ async function openFile(file) {
         }
 
         // reset ace change action
-        function aceChangeAction(e) {
+        if(file.aceChangeAction != undefined && file.aceChangeAction != null){
+            file.aceObj.off("change", file.aceChangeAction);
+            DEBUG && console.log("removed aceChangeAction:", file.aceChangeAction);
+        }
+        file.aceChangeAction = (e) => {
             file.changed = true;
             DEBUG && console.log("File changed: ", file.path);
-        }
-        file.aceObj.removeAllListeners("change");
-        file.aceObj.on("change", aceChangeAction);
+        };
+        file.aceObj.on("change", file.aceChangeAction);
 
         file.aceObj.show();
         file.aceObj.focus();

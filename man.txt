@@ -55,3 +55,15 @@ phpの機能や関数を追加した場合
                 path/to/user-programs/php.ini
                 disable_functions の項目が禁止関数をしている。ここに含まれていないか確認
                 sudo systemctl restart php{version}-fpm.service
+
+キャッシュコントロール
+    基本的に`/user-programs/`以下のファイルにはキャッシュをかけたくない。
+    開発環境で繰り返し変更実行を行うのにキャッシュがあると邪魔
+    nginxの設定で`/user-programs/`ディレクティブに
+    ```
+    # Cache control
+    add_header Cache-control "no-store";
+    add_header Pragma "no-cache";
+    ```
+    を設定することでブラウザにキャッシュを保存させないように指示できる
+    (cloudflareキャッシュについてもこの方法でバイパスできそう)

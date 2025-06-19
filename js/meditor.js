@@ -691,8 +691,14 @@ async function openFile(file) {
         }
         else if(!file.changed){
             DEBUG && console.log("ace already exists, but file changed flag is false");
+            // Get current cursor position
+            const currentCursor = file.aceObj.editor.getCursorPosition();
+            // Set value to ace editor
             file.aceObj.setValue(apiRet.content);
+            // Make cursor position same as before
+            file.aceObj.editor.gotoLine(currentCursor.row+1, currentCursor.column);
             file.changed = false;
+            mConsole.print("File reloaded: " + file.path, "info");
         }
         else{
             DEBUG && console.log("ace already exists, and file changed flag is true");

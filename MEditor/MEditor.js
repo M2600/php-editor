@@ -101,6 +101,17 @@ class AceWrapper {
         this.mySettings();
         this.myKeybindings();
         this.myEvents();
+        this.setupAIAssistant();
+    }
+
+    /**
+     * Setup AI Assistant for this editor
+     */
+    setupAIAssistant() {
+        // Add AI commands to the editor if AI Assistant is available
+        if (typeof aiAssistant !== 'undefined') {
+            aiAssistant.addAICommands(this.editor);
+        }
     }
 
     /**

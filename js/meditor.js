@@ -176,6 +176,79 @@ async function main(){
         }
     ))
 
+    // AI Assistant buttons
+    editorEditor.menu.right.items.push(editor.generateButton(
+        editorEditor.menu.right,
+        "AI Suggest",
+        async (e) => {
+            if (!CURRENT_FILE || !CURRENT_FILE.aceObj) return;
+            
+            const code = CURRENT_FILE.aceObj.editor.getValue();
+            const cursorPosition = CURRENT_FILE.aceObj.editor.getCursorPosition();
+            const fileType = aiAssistant.getFileType(CURRENT_FILE.aceObj.editor);
+            
+            aiAssistant.showLoadingIndicator();
+            
+            const result = await aiAssistant.getCodeSuggestion(code, cursorPosition, fileType);
+            
+            aiAssistant.hideLoadingIndicator();
+            
+            if (result.status === 'success') {
+                await aiAssistant.showAISuggestion(CURRENT_FILE.aceObj.editor, result.response);
+            } else {
+                mConsole.print('AI提案機能でエラーが発生しました: ' + result.error, 'error');
+            }
+        }
+    ))
+
+    editorEditor.menu.right.items.push(editor.generateButton(
+        editorEditor.menu.right,
+        "AI Explain",
+        async (e) => {
+            if (!CURRENT_FILE || !CURRENT_FILE.aceObj) return;
+            
+            const code = CURRENT_FILE.aceObj.editor.getValue();
+            const selectedCode = CURRENT_FILE.aceObj.editor.getSelectedText();
+            const fileType = aiAssistant.getFileType(CURRENT_FILE.aceObj.editor);
+            
+            aiAssistant.showLoadingIndicator();
+            
+            const result = await aiAssistant.explainCode(code, selectedCode, fileType);
+            
+            aiAssistant.hideLoadingIndicator();
+            
+            if (result.status === 'success') {
+                aiAssistant.showExplanation(result.response);
+            } else {
+                mConsole.print('AI説明機能でエラーが発生しました: ' + result.error, 'error');
+            }
+        }
+    ))
+
+    editorEditor.menu.right.items.push(editor.generateButton(
+        editorEditor.menu.right,
+        "AI Refactor",
+        async (e) => {
+            if (!CURRENT_FILE || !CURRENT_FILE.aceObj) return;
+            
+            const code = CURRENT_FILE.aceObj.editor.getValue();
+            const selectedCode = CURRENT_FILE.aceObj.editor.getSelectedText();
+            const fileType = aiAssistant.getFileType(CURRENT_FILE.aceObj.editor);
+            
+            aiAssistant.showLoadingIndicator();
+            
+            const result = await aiAssistant.refactorCode(code, selectedCode, fileType);
+            
+            aiAssistant.hideLoadingIndicator();
+            
+            if (result.status === 'success') {
+                await aiAssistant.showAISuggestion(CURRENT_FILE.aceObj.editor, result.response);
+            } else {
+                mConsole.print('AIリファクタリング機能でエラーが発生しました: ' + result.error, 'error');
+            }
+        }
+    ))
+
     editorEditor.menu.right.items.push(editor.generateButton(
         editorEditor.menu.right,
         "Debug",

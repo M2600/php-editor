@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>AIアシスタント テスト</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        textarea { width: 100%; height: 200px; margin: 10px 0; font-family: monospace; }
+        button { margin: 5px; padding: 10px 20px; }
+        .result { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+        .config { margin: 20px 0; }
+        .config div { margin: 10px 0; }
+        .config label { display: inline-block; width: 120px; }
+        .config input, .config select { width: 300px; padding: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AIアシスタント テスト</h1>
+        
+        <h2>AIコード支援のテスト</h2>
+        <textarea id="codeInput" placeholder="ここにコードを入力してください...">
+<?php
+function calculateArea($radius) {
+    // この関数を完成させてください
+}
+
+// 円の面積を計算する
+$result = calculateArea(5);
+echo "円の面積: " . $result;
+        </textarea>
+        
+        <div>
+            <button onclick="testSuggestion()">AI提案をテスト</button>
+            <button onclick="testExplanation()">AI説明をテスト</button>
+            <button onclick="testRefactor()">AIリファクタリングをテスト</button>
+        </div>
+        
+        <div id="result" class="result" style="display: none;"></div>
+        
+        <div class="config">
+            <h2>設定</h2>
+            <div>
+                <label>Ollamaサーバー: </label>
+                <input type="text" id="ollamaServer" value="http://localhost:11434">
+            </div>
+            <div>
+                <label>モデル: </label>
+                <select id="ollamaModel">
+                    <option value="codellama:13b">Code Llama 13B</option>
+                    <option value="qwen3:14b" selected>Qwen 3 14B</option>
+                    <option value="deepseek-r1:14b">DeepSeek R1 14B</option>
+                    <option value="mistral">Mistral</option>
+                </select>
+            </div>
+            <div>
+                <button onclick="testConnection()">接続テスト</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function callAI(action, params) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = 'AI処理中...';
+            resultDiv.className = 'result';
+            
+            try {
+                const response = await fetch('/api/ai_assistant.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: action,
+                        ...params
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const extractedCode = extractCodeFromResponse(data.response);
+                    resultDiv.innerHTML = `
+                        <strong>成功:</strong><br>
+                        <div style="margin: 10px 0;">
+                            <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">抽出されたコード</button>
+                            <pre style="display:block; background: #f8f8f8; padding: 10px; border-radius: 4px;"><code>${escapeHtml(extractedCode)}</code></pre>
+                        </div>
+                        <div style="margin: 10px 0;">
+                            <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">元の回答</button>
+                            <pre style="display:none; background: #f0f0f0; padding: 10px; border-radius: 4px;"><code>${escapeHtml(data.response)}</code></pre>
+                        </div>
+                    `;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.innerHTML = '<strong>エラー:</strong><br>' + escapeHtml(data.error);
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<strong>ネットワークエラー:</strong><br>' + escapeHtml(error.message);
+                resultDiv.className = 'result error';
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Extract code from AI response (same as in ai_assistant.js)
+        function extractCodeFromResponse(response) {
+            // Remove <think> tags and content
+            let cleaned = response.replace(/<think>.*?<\/think>/gs, '');
+            
+            // Extract code blocks (```language ... ```)
+            const codeBlockRegex = /```(?:php|javascript|html|css|sql|json)?\s*\n(.*?)\n```/gs;
+            const matches = [];
+            let match;
+            
+            while ((match = codeBlockRegex.exec(cleaned)) !== null) {
+                matches.push(match[1]);
+            }
+            
+            if (matches.length > 0) {
+                return matches.join('\n\n');
+            }
+            
+            // Extract code blocks without language specification
+            const simpleCodeBlockRegex = /```\s*\n(.*?)\n```/gs;
+            const simpleMatches = [];
+            let simpleMatch;
+            
+            while ((simpleMatch = simpleCodeBlockRegex.exec(cleaned)) !== null) {
+                simpleMatches.push(simpleMatch[1]);
+            }
+            
+            if (simpleMatches.length > 0) {
+                return simpleMatches.join('\n\n');
+            }
+            
+            // If no code blocks found, clean the response
+            cleaned = cleaned.trim();
+            
+            // Remove common AI explanation patterns
+            const patterns = [
+                /^.*?以下.*?コード.*?[:：]\s*/s,
+                /^.*?修正.*?[:：]\s*/s,
+                /^.*?リファクタリング.*?[:：]\s*/s,
+                /^.*?提案.*?[:：]\s*/s,
+                /^.*?補完.*?[:：]\s*/s,
+            ];
+            
+            patterns.forEach(pattern => {
+                cleaned = cleaned.replace(pattern, '');
+            });
+            
+            return cleaned.trim();
+        }
+
+        function testSuggestion() {
+            const code = document.getElementById('codeInput').value;
+            callAI('code_suggestion', {
+                code: code,
+                cursor_position: { row: 2, column: 0 },
+                file_type: 'php'
+            });
+        }
+
+        function testExplanation() {
+            const code = document.getElementById('codeInput').value;
+            callAI('code_explanation', {
+                code: code,
+                selected_code: '',
+                file_type: 'php'
+            });
+        }
+
+        function testRefactor() {
+            const code = document.getElementById('codeInput').value;
+            callAI('code_refactor', {
+                code: code,
+                selected_code: '',
+                file_type: 'php'
+            });
+        }
+
+        async function testConnection() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '接続テスト中...';
+            resultDiv.className = 'result';
+            
+            try {
+                const response = await fetch('/api/ai_assistant.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'code_explanation',
+                        code: 'echo "Hello World";',
+                        selected_code: '',
+                        file_type: 'php'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    resultDiv.innerHTML = '<strong>接続成功:</strong><br>Ollamaサーバーに正常に接続できました。';
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.innerHTML = '<strong>接続失敗:</strong><br>' + escapeHtml(data.error);
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<strong>接続エラー:</strong><br>' + escapeHtml(error.message);
+                resultDiv.className = 'result error';
+            }
+        }
+    </script>
+</body>
+</html>

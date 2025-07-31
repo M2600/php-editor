@@ -120,6 +120,14 @@ var mConsole;
 var dictMenu;
 
 async function main(){
+    // ai_api.jsのfetchAIChatをインポート
+    let fetchAIChat;
+    try {
+        // 動的import（ESM対応ブラウザ用）
+        fetchAIChat = (await import('./ai_api.js')).fetchAIChat;
+    } catch(e) {
+        console.error('ai_api.jsの読み込みに失敗:', e);
+    }
     await editor.editor("main");
 
     editor.setChangeThemeAction((theme) => {
@@ -176,78 +184,7 @@ async function main(){
         }
     ))
 
-    // AI Assistant buttons
-    editorEditor.menu.right.items.push(editor.generateButton(
-        editorEditor.menu.right,
-        "AI Suggest",
-        async (e) => {
-            if (!CURRENT_FILE || !CURRENT_FILE.aceObj) return;
-            
-            const code = CURRENT_FILE.aceObj.editor.getValue();
-            const cursorPosition = CURRENT_FILE.aceObj.editor.getCursorPosition();
-            const fileType = aiAssistant.getFileType(CURRENT_FILE.aceObj.editor);
-            
-            aiAssistant.showLoadingIndicator();
-            
-            const result = await aiAssistant.getCodeSuggestion(code, cursorPosition, fileType);
-            
-            aiAssistant.hideLoadingIndicator();
-            
-            if (result.status === 'success') {
-                await aiAssistant.showAISuggestion(CURRENT_FILE.aceObj.editor, result.response);
-            } else {
-                mConsole.print('AI提案機能でエラーが発生しました: ' + result.error, 'error');
-            }
-        }
-    ))
-
-    editorEditor.menu.right.items.push(editor.generateButton(
-        editorEditor.menu.right,
-        "AI Explain",
-        async (e) => {
-            if (!CURRENT_FILE || !CURRENT_FILE.aceObj) return;
-            
-            const code = CURRENT_FILE.aceObj.editor.getValue();
-            const selectedCode = CURRENT_FILE.aceObj.editor.getSelectedText();
-            const fileType = aiAssistant.getFileType(CURRENT_FILE.aceObj.editor);
-            
-            aiAssistant.showLoadingIndicator();
-            
-            const result = await aiAssistant.explainCode(code, selectedCode, fileType);
-            
-            aiAssistant.hideLoadingIndicator();
-            
-            if (result.status === 'success') {
-                aiAssistant.showExplanation(result.response);
-            } else {
-                mConsole.print('AI説明機能でエラーが発生しました: ' + result.error, 'error');
-            }
-        }
-    ))
-
-    editorEditor.menu.right.items.push(editor.generateButton(
-        editorEditor.menu.right,
-        "AI Refactor",
-        async (e) => {
-            if (!CURRENT_FILE || !CURRENT_FILE.aceObj) return;
-            
-            const code = CURRENT_FILE.aceObj.editor.getValue();
-            const selectedCode = CURRENT_FILE.aceObj.editor.getSelectedText();
-            const fileType = aiAssistant.getFileType(CURRENT_FILE.aceObj.editor);
-            
-            aiAssistant.showLoadingIndicator();
-            
-            const result = await aiAssistant.refactorCode(code, selectedCode, fileType);
-            
-            aiAssistant.hideLoadingIndicator();
-            
-            if (result.status === 'success') {
-                await aiAssistant.showAISuggestion(CURRENT_FILE.aceObj.editor, result.response);
-            } else {
-                mConsole.print('AIリファクタリング機能でエラーが発生しました: ' + result.error, 'error');
-            }
-        }
-    ))
+    
 
     editorEditor.menu.right.items.push(editor.generateButton(
         editorEditor.menu.right,
@@ -368,15 +305,196 @@ async function main(){
 
 
     // right window
-    dictMenu = editor.createDictMenu(editor.page.main.right, opt={});
-    dictMenu.setTitle("GETパラメータ");
-    dictMenu.addItem({"": ""});
-    dictMenu.addButton();
-    var debugButton = editor.generateButton(dictMenu, "Debug with GET params", (e) => {
-        console.log("Debug: ");
-        runPhpCgi(CURRENT_FILE.path, dictMenu.getItemsAsObject());
-    });
+    // dictMenu = editor.createDictMenu(editor.page.main.right, opt={});
+    // dictMenu.setTitle("GETパラメータ");
+    // dictMenu.addItem({"": ""});
+    // dictMenu.addButton();
+    // var debugButton = editor.generateButton(dictMenu, "Debug with GET params", (e) => {
+    //     console.log("Debug: ");
+    //     runPhpCgi(CURRENT_FILE.path, dictMenu.getItemsAsObject());
+    // });
     //editor.page.main.right.hide();
+
+
+    chat = editor.createChat(editor.page.main.right, opt={});
+
+    chat.setTitle("AI Chat");
+
+
+
+    // --- チャット履歴クリア機能 ---
+    // chat.clearHistory()で履歴クリア（UIボタンもMEditor.jsで生成）
+    chat.clearHistory = function() {
+        chatHistory = [];
+        if (chat.content && chat.content.element) {
+            chat.content.element.innerHTML = "";
+        }
+        if (Array.isArray(chat.messages)) {
+            chat.messages.length = 0;
+        }
+    };
+
+    // モデルセレクターをchat.createModelSelectorで生成
+    let modelSelect = null;
+    async function loadModelList() {
+        try {
+            const res = await fetch("/api/ai_models.php");
+            if (!res.ok) throw new Error("モデル一覧取得失敗: " + res.status);
+            const data = await res.json();
+            if (!data.data || !Array.isArray(data.data)) throw new Error("モデルデータ不正");
+            modelSelect = chat.createModelSelector({
+                models: data.data,
+                className: "meditor-chat-model-select",
+                style: { marginRight: "0.5em" }
+            });
+        } catch(e) {
+            modelSelect = chat.createModelSelector({
+                models: [],
+                className: "meditor-chat-model-select",
+                style: { marginRight: "0.5em" },
+                placeholder: "モデル取得エラー"
+            });
+            console.error("モデル一覧取得エラー:", e);
+        }
+    }
+    await loadModelList();
+
+
+    // チャット履歴
+    let chatHistory = [];
+    let isStreaming = false;
+    // AIに送信する履歴の最大数（ユーザー・AI両方含めて直近N件）
+    const MAX_CHAT_HISTORY = 10;
+
+    // マークダウンレンダリング用関数（エラーハンドリング追加）
+    function renderMarkdown(md) {
+        try {
+            if(window.marked){
+                return window.marked.parse(md);
+            }
+            // fallback: プレーンテキスト
+            return md.replace(/\n/g, '<br>');
+        } catch(e) {
+            console.error("Markdown描画エラー:", e);
+            return '<span style="color:red">Markdown描画エラー: '+e.message+'</span>';
+        }
+    }
+
+
+    // 送信ボタン/EnterでAIにリクエスト（エラーハンドリング追加）
+    chat.inputArea.sendBtn.addEventListener("click", function(){
+        try {
+            sendAIMessage();
+        } catch(e) {
+            console.error("送信ボタンエラー:", e);
+            chat.addMessage('<span style="color:red">送信ボタンエラー: '+e.message+'</span>', "system");
+        }
+    });
+    chat.inputArea.textarea.addEventListener("keydown", function(e){
+        try {
+            if(e.key === "Enter" && !e.shiftKey){
+                e.preventDefault();
+                sendAIMessage();
+            }
+        } catch(e) {
+            console.error("Enterキー送信エラー:", e);
+            chat.addMessage('<span style="color:red">Enterキー送信エラー: '+e.message+'</span>', "system");
+        }
+    });
+
+
+
+    async function sendAIMessage(){
+        try {
+            if(isStreaming) return;
+            const userMsg = chat.inputArea.textarea.value.trim();
+            if(!userMsg) return;
+            chat.inputArea.textarea.value = "";
+            chat.inputArea.textarea.style.height = '';
+            chatHistory.push({role: "user", content: userMsg});
+            isStreaming = true;
+
+            // ローディング表示
+            if (typeof chat.showLoading === 'function') chat.showLoading();
+
+            // AIメッセージ表示用
+            let aiMsg = {text: "", from: "ai", markdown: true};
+            let aiMsgDiv = document.createElement("div");
+            aiMsgDiv.className = "meditor-chat-message meditor-chat-message-ai";
+            chat.content.element.appendChild(aiMsgDiv);
+            chat.content.element.scrollTop = chat.content.element.scrollHeight;
+
+            // 送信履歴を直近MAX_CHAT_HISTORY件に制限
+            const limitedHistory = chatHistory.slice(-MAX_CHAT_HISTORY);
+
+            // ファイル内容を送信するか判定（重複チェックせず常に送信）
+            let fileContext = null;
+            if (CURRENT_FILE && CURRENT_FILE.aceObj && typeof CURRENT_FILE.aceObj.editor.getValue === 'function') {
+                const fileContent = CURRENT_FILE.aceObj.editor.getValue();
+                if (fileContent && fileContent.length > 0) {
+                    console.log("Sending file context:", CURRENT_FILE.path);
+                    fileContext = {
+                        name: CURRENT_FILE.path || 'ファイル',
+                        content: fileContent
+                    };
+                    if (typeof chat.setFileContextInfo === 'function') {
+                        chat.setFileContextInfo({ name: fileContext.name });
+                    }
+                } else {
+                    if (typeof chat.setFileContextInfo === 'function') {
+                        chat.setFileContextInfo(null);
+                    }
+                }
+            } else {
+                if (typeof chat.setFileContextInfo === 'function') {
+                    chat.setFileContextInfo(null);
+                }
+            }
+
+            // ストリーム受信（ai_api.js利用）
+            const controller = new AbortController();
+            const selectedModel = modelSelect.value || undefined;
+            let aiBuffer = "";
+            if (typeof fetchAIChat === 'function') {
+                fetchAIChat({
+                    messages: limitedHistory,
+                    model: selectedModel,
+                    fileContext: fileContext ?? null,
+                    signal: controller.signal,
+                    onDelta: (delta, chunk) => {
+                        aiBuffer += delta;
+                        try {
+                            aiMsgDiv.innerHTML = renderMarkdown(aiBuffer);
+                        } catch(e) {
+                            console.error("AI応答マークダウン描画エラー:", e);
+                            aiMsgDiv.innerHTML = '<span style="color:red">AI応答マークダウン描画エラー: '+e.message+'</span>';
+                        }
+                        chat.content.element.scrollTop = chat.content.element.scrollHeight;
+                    },
+                    onError: (errMsg) => {
+                        aiMsgDiv.innerHTML = '<span style="color:red">AI応答エラー: '+errMsg+'</span>';
+                        isStreaming = false;
+                        if (typeof chat.hideLoading === 'function') chat.hideLoading();
+                        console.error("AI応答エラー:", errMsg);
+                    }
+                }).then(() => {
+                    aiMsg.text = aiBuffer;
+                    chatHistory.push({role: "assistant", content: aiBuffer});
+                    isStreaming = false;
+                    if (typeof chat.hideLoading === 'function') chat.hideLoading();
+                });
+            } else {
+                aiMsgDiv.innerHTML = '<span style="color:red">AI APIモジュールが利用できません</span>';
+                isStreaming = false;
+                if (typeof chat.hideLoading === 'function') chat.hideLoading();
+            }
+        } catch(e) {
+            console.error("AI送信処理エラー:", e);
+            chat.addMessage('<span style="color:red">AI送信処理エラー: '+e.message+'</span>', "system");
+            isStreaming = false;
+            if (typeof chat.hideLoading === 'function') chat.hideLoading();
+        }
+    }
 
 
 

@@ -1400,6 +1400,216 @@ class MEditor {
         return dictMenu;
     }
 
+    /**
+     * 
+     * 
+     * @param {*} parentObj 
+     */
+    chat(parentObj) {
+
+
+        let chat = {};
+        chat.element = document.createElement("div");
+        chat.element.classList.add(this.CLASS_NAME_PREFIX + "chat");
+        parentObj.element.appendChild(chat.element);
+
+        // ファイルコンテキスト表示エリア
+        chat.fileContextInfo = document.createElement("div");
+        chat.fileContextInfo.className = this.CLASS_NAME_PREFIX + "chat-filecontext";
+        chat.fileContextInfo.style.display = "none";
+        chat.element.insertBefore(chat.fileContextInfo, chat.element.firstChild);
+
+        // ファイルコンテキスト表示制御メソッド
+        chat.setFileContextInfo = function(file) {
+            if (file && file.name) {
+                chat.fileContextInfo.innerHTML = `<span class=\"${this.CLASS_NAME_PREFIX}chat-filecontext-label\">ファイルコンテキスト:</span> <span class=\"${this.CLASS_NAME_PREFIX}chat-filecontext-name\">${file.name}</span> をAIに送信します。`;
+                chat.fileContextInfo.style.display = '';
+            } else {
+                chat.fileContextInfo.innerHTML = '';
+                chat.fileContextInfo.style.display = 'none';
+            }
+        };
+
+        // ローディングアイコン
+        chat.loading = {};
+        chat.loading.element = document.createElement("div");
+        chat.loading.element.className = this.CLASS_NAME_PREFIX + "chat-loading";
+        chat.loading.element.style.display = "none";
+        chat.loading.element.innerHTML = '<span class="loader"></span> AI応答中...';
+        // chat.contentが後で生成されるため、appendChildは後で行う
+
+        // ローディング表示/非表示メソッド
+        chat.showLoading = function() {
+            chat.loading.element.style.display = "flex";
+            chat.content.element.scrollTop = chat.content.element.scrollHeight;
+        };
+        chat.hideLoading = function() {
+            chat.loading.element.style.display = "none";
+        };
+
+        // 上部メニュー
+        chat.topMenu = {};
+        chat.topMenu.element = document.createElement("div");
+        chat.topMenu.element.classList.add(this.CLASS_NAME_PREFIX + "chat-top-menu");
+        chat.element.appendChild(chat.topMenu.element);
+
+        chat.topMenu.title = {};
+        chat.topMenu.title.element = document.createElement("div");
+        chat.topMenu.title.element.classList.add(this.CLASS_NAME_PREFIX + "chat-top-menu-title");
+        chat.topMenu.title.element.innerHTML = "Chat";
+        chat.topMenu.element.appendChild(chat.topMenu.title.element);
+
+        // チャット履歴表示エリア
+        chat.content = {};
+        chat.content.element = document.createElement("div");
+        chat.content.element.classList.add(this.CLASS_NAME_PREFIX + "chat-content");
+        chat.element.appendChild(chat.content.element);
+
+        // ローディングアイコンを履歴エリアに追加
+        chat.content.element.appendChild(chat.loading.element);
+
+        // --- チャット履歴クリア機能 ---
+        let clearBtn = document.createElement("button");
+        clearBtn.textContent = "クリア";
+        clearBtn.className = this.CLASS_NAME_PREFIX + "chat-clear-btn";
+        clearBtn.style.marginLeft = "0.5em";
+        chat.topMenu.element.appendChild(clearBtn);
+
+        // 履歴クリア処理
+        chat.clearHistory = function() {
+            // chat.messages（UI履歴）
+            if (Array.isArray(chat.messages)) chat.messages.length = 0;
+            // 画面上の履歴
+            if (chat.content && chat.content.element) chat.content.element.innerHTML = "";
+            // 外部変数の履歴もクリアしたい場合は外部で上書きすること
+        };
+        clearBtn.addEventListener("click", chat.clearHistory);
+
+
+        // 入力エリア
+        chat.inputArea = {};
+        chat.inputArea.element = document.createElement("div");
+        chat.inputArea.element.classList.add(this.CLASS_NAME_PREFIX + "chat-input-area");
+        chat.element.appendChild(chat.inputArea.element);
+
+        // 入力エリアtopmenu
+        chat.inputArea.topMenu = {};
+        chat.inputArea.topMenu.element = document.createElement("div");
+        chat.inputArea.topMenu.element.classList.add(this.CLASS_NAME_PREFIX + "chat-input-top-menu");
+        chat.inputArea.element.appendChild(chat.inputArea.topMenu.element);
+
+        // モデルセレクター生成メソッド
+        chat.createModelSelector = function(options={}) {
+            // options: { onChange, className, style, placeholder, models }
+            let select = document.createElement("select");
+            select.className = options.className || (this.CLASS_NAME_PREFIX + "chat-model-select");
+            if(options.style) Object.assign(select.style, options.style);
+            if(options.placeholder) {
+                let opt = document.createElement("option");
+                opt.value = "";
+                opt.textContent = options.placeholder;
+                select.appendChild(opt);
+            }
+            if(Array.isArray(options.models)) {
+                options.models.forEach(model => {
+                    let opt = document.createElement("option");
+                    opt.value = model.id || model;
+                    opt.textContent = model.id || model;
+                    select.appendChild(opt);
+                });
+            }
+            if(typeof options.onChange === "function") {
+                select.addEventListener("change", options.onChange);
+            }
+            // 既存のセレクターがあれば置き換え
+            if(chat.inputArea.modelSelect && chat.inputArea.modelSelect.parentNode) {
+                chat.inputArea.modelSelect.parentNode.removeChild(chat.inputArea.modelSelect);
+            }
+            chat.inputArea.modelSelect = select;
+            chat.inputArea.element.insertBefore(select, chat.inputArea.textarea);
+            return select;
+        };
+
+        // テキストエリア（入力内容に応じて高さ自動調整）
+        chat.inputArea.textarea = document.createElement("textarea");
+        chat.inputArea.textarea.classList.add(this.CLASS_NAME_PREFIX + "chat-input");
+        chat.inputArea.textarea.placeholder = "メッセージを入力...";
+        chat.inputArea.textarea.addEventListener("input", function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+        chat.inputArea.element.appendChild(chat.inputArea.textarea);
+
+        // 送信ボタン
+        chat.inputArea.sendBtn = document.createElement("button");
+        chat.inputArea.sendBtn.classList.add(this.CLASS_NAME_PREFIX + "chat-send-btn");
+        chat.inputArea.sendBtn.innerHTML = "送信";
+        chat.inputArea.element.appendChild(chat.inputArea.sendBtn);
+
+        // チャット履歴管理
+        chat.messages = [];
+
+        // メッセージ追加メソッド
+        chat.addMessage = (text, from = "user", markdown = false) => {
+            const msg = {};
+            msg.element = document.createElement("div");
+            msg.element.classList.add(this.CLASS_NAME_PREFIX + "chat-message");
+            msg.element.classList.add(this.CLASS_NAME_PREFIX + "chat-message-" + from);
+            msg.element.innerText = text;
+
+            if (markdown) {
+                const html = marked.parse(text);
+                msg.element.innerHTML = html;
+            }
+
+            chat.content.element.appendChild(msg.element);
+            chat.content.element.scrollTop = chat.content.element.scrollHeight;
+            chat.messages.push({ text, from });
+        };
+
+        // 送信処理
+        chat.inputArea.sendBtn.addEventListener("click", () => {
+            const value = chat.inputArea.textarea.value.trim();
+            if (value) {
+                chat.addMessage(value, "user");
+                //chat.inputArea.textarea.value = "";
+                chat.inputArea.textarea.rows = 1;
+                // ここでAIへの送信処理を追加可能
+                // 例: chat.addMessage("AIの返答例", "ai");
+            }
+        });
+
+        // Enterキーで送信（Shift+Enterで改行）
+        chat.inputArea.textarea.addEventListener("keydown", function(e) {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                chat.inputArea.sendBtn.click();
+            }
+        });
+
+        chat.setTitle = (title) => {
+            chat.topMenu.title.element.innerHTML = title;
+        };
+
+        // CSS: loaderアニメーション（必要なら）
+
+
+        return chat;
+    }
+
+    createChat(parentObj, opt={}) {
+        let chat = this.chat(parentObj);
+        chat.options = opt;
+        chat.messages = [];
+
+        return chat;
+    }
+
+
+
+
+
+
     removePopupMenus() {
         for(let i=0; i<this.page.popupMenus.length; i++) {
             this.page.popupMenus[i].element.remove();

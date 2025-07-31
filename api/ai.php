@@ -21,20 +21,24 @@ if (!is_array($messages) || count($messages) === 0) {
 }
 
 // $logDir = __DIR__ . '/../log';
-$logDir = '/var/log/php_editor/';
-$logFile = $logDir . '/chat.log';
-if (!is_dir($logDir)) {
-    mkdir($logDir, 0777, true);
+//$logDir = '/var/log/php_editor';
+$userRoot = $user = posix_getpwuid(posix_getuid())["dir"];
+$LOG_DIR = $userRoot . "/data/php_editor/log/";
+if(!file_exists($LOG_DIR)){
+    mkdir($LOG_DIR, 0777, true);
 }
+$logFile = $LOG_DIR . "chat.log";
 
 // ログ出力関数
 function log_chat_request($logFile, $input, $messages) {
     $ts = date('Y-m-d H:i:s');
     $ip = $_SERVER['REMOTE_ADDR'] ?? '-';
+    $user = isset($_SERVER['PHP_AUTH_USER']) ? $_SERVER['PHP_AUTH_USER'] : (isset($_SERVER['REMOTE_USER']) ? $_SERVER['REMOTE_USER'] : '-');
     $model = $input['model'] ?? 'default';
     $fileContext = isset($input['fileContext']) && !empty($input['fileContext']['content']) ? 'yes' : 'no';
     $log = [
         'time' => $ts,
+        'user' => $user,
         'ip' => $ip,
         'model' => $model,
         'fileContext' => $fileContext,

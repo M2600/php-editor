@@ -1469,11 +1469,12 @@ class MEditor {
         chat.content.element.appendChild(chat.loading.element);
 
         // --- チャット履歴クリア機能 ---
-        let clearBtn = document.createElement("button");
-        clearBtn.textContent = "クリア";
-        clearBtn.className = this.CLASS_NAME_PREFIX + "chat-clear-btn";
-        clearBtn.style.marginLeft = "0.5em";
-        chat.topMenu.element.appendChild(clearBtn);
+        chat.clearBtn = {};
+        chat.clearBtn.element = document.createElement("button");
+        chat.clearBtn.element.textContent = "クリア";
+        chat.clearBtn.element.className = this.CLASS_NAME_PREFIX + "chat-clear-btn";
+        chat.clearBtn.element.style.marginLeft = "0.5em";
+        chat.topMenu.element.appendChild(chat.clearBtn.element);
 
         // 履歴クリア処理
         chat.clearHistory = function() {
@@ -1483,7 +1484,7 @@ class MEditor {
             if (chat.content && chat.content.element) chat.content.element.innerHTML = "";
             // 外部変数の履歴もクリアしたい場合は外部で上書きすること
         };
-        clearBtn.addEventListener("click", chat.clearHistory);
+        chat.clearBtn.element.addEventListener("click", () => chat.clearHistory());
 
 
         // 入力エリア

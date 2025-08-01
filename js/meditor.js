@@ -322,10 +322,37 @@ async function main(){
 
 
 
+    // チャット履歴
+    let chatHistory = [];
+    let isStreaming = false;
+    // AIに送信する履歴の最大数（ユーザー・AI両方含めて直近N件）
+    const MAX_CHAT_HISTORY = 10;
+    const CHAT_STORAGE_KEY = "php-editor-chat-history";
+
+    // チャット履歴をローカルストレージに保存
+    function saveChatHistory() {
+        try {
+            localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chatHistory));
+            DEBUG && console.log("Chat history saved to localStorage");
+        } catch(e) {
+            console.error("Failed to save chat history:", e);
+        }
+    }
+
+    function clearChatHistory(){
+        try{
+            localStorage.removeItem(CHAT_STORAGE_KEY);
+            DEBUG && console.log("Chat history cleared");
+        } catch(e) {
+            console.error("Failed to clear chat history:", e);
+        }
+    }
+
     // --- チャット履歴クリア機能 ---
     // chat.clearHistory()で履歴クリア（UIボタンもMEditor.jsで生成）
     chat.clearHistory = function() {
         chatHistory = [];
+        clearChatHistory();
         if (chat.content && chat.content.element) {
             chat.content.element.innerHTML = "";
         }
@@ -359,12 +386,54 @@ async function main(){
     }
     await loadModelList();
 
+    // チャット履歴をローカルストレージから読み込み
+    function loadChatHistory() {
+        try {
+            const saved = localStorage.getItem(CHAT_STORAGE_KEY);
+            if (saved) {
+                chatHistory = JSON.parse(saved);
+                DEBUG && console.log("Chat history loaded from localStorage");
+                // 読み込んだ履歴をUIに復元
+                restoreChatHistoryToUI();
+            }
+        } catch(e) {
+            console.error("Failed to load chat history:", e);
+            chatHistory = [];
+        }
+    }
 
-    // チャット履歴
-    let chatHistory = [];
-    let isStreaming = false;
-    // AIに送信する履歴の最大数（ユーザー・AI両方含めて直近N件）
-    const MAX_CHAT_HISTORY = 10;
+    // チャット履歴をUIに復元
+    function restoreChatHistoryToUI() {
+        if (!chat.content || !chat.content.element) return;
+        
+        chatHistory.forEach(msg => {
+            if (msg.role === "user") {
+                // ユーザーメッセージを表示
+                let userMsgDiv = document.createElement("div");
+                userMsgDiv.className = "meditor-chat-message meditor-chat-message-user";
+                userMsgDiv.textContent = msg.content;
+                chat.content.element.appendChild(userMsgDiv);
+            } else if (msg.role === "assistant") {
+                // AIメッセージを表示
+                let aiMsgDiv = document.createElement("div");
+                aiMsgDiv.className = "meditor-chat-message meditor-chat-message-ai";
+                try {
+                    aiMsgDiv.innerHTML = renderMarkdown(msg.content);
+                } catch(e) {
+                    aiMsgDiv.innerHTML = msg.content;
+                }
+                chat.content.element.appendChild(aiMsgDiv);
+            }
+        });
+        
+        // スクロールを最下部に
+        if (chat.content.element.scrollHeight > chat.content.element.clientHeight) {
+            chat.content.element.scrollTop = chat.content.element.scrollHeight;
+        }
+    }
+
+    // チャット履歴をローカルストレージから読み込み
+    loadChatHistory();
 
     // マークダウンレンダリング用関数（エラーハンドリング追加）
     function renderMarkdown(md) {
@@ -411,7 +480,10 @@ async function main(){
             if(!userMsg) return;
             chat.inputArea.textarea.value = "";
             chat.inputArea.textarea.style.height = '';
+            
             chatHistory.push({role: "user", content: userMsg});
+            // 履歴を保存
+            saveChatHistory();
             isStreaming = true;
 
             // ローディング表示
@@ -480,6 +552,8 @@ async function main(){
                 }).then(() => {
                     aiMsg.text = aiBuffer;
                     chatHistory.push({role: "assistant", content: aiBuffer});
+                    // 履歴を保存
+                    saveChatHistory();
                     isStreaming = false;
                     if (typeof chat.hideLoading === 'function') chat.hideLoading();
                 });

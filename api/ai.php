@@ -2,9 +2,24 @@
 header('Content-Type: application/json; charset=utf-8');
 
 session_start();
-// 設定
-$LMSTUDIO_API_URL = 'https://kanemune_ai.dolittle.cc/lmstudio/v1/chat/completions'; // lmstudioのAPIエンドポイント
-$API_KEY = '***REMOVED***'; // 必要に応じて環境変数や設定ファイルから取得
+
+// 設定ファイルの読み込み
+$configFile = __DIR__ . '/ai_config.php';
+if (!file_exists($configFile)) {
+    http_response_code(500);
+    echo json_encode(['error' => 'AI設定ファイルが見つかりません。ai_config.sample.phpを参考にai_config.phpを作成してください。']);
+    exit;
+}
+
+$config = require $configFile;
+$LMSTUDIO_API_URL = $config['lmstudio_api_url'] ?? '';
+$API_KEY = $config['api_key'] ?? '';
+
+if (empty($API_KEY) || $API_KEY === 'YOUR_API_KEY_HERE') {
+    http_response_code(500);
+    echo json_encode(['error' => 'APIキーが設定されていません。ai_config.phpで正しいAPIキーを設定してください。']);
+    exit;
+}
 
 // POSTデータ取得
 $input = json_decode(file_get_contents('php://input'), true);

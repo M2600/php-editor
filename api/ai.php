@@ -99,13 +99,45 @@ try {
         throw new Exception('cURL初期化エラー');
     }
     curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         'Content-Type: application/json',
         'x-api-key: ' . $API_KEY
     ]);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-    curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) {
+    curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_FAILONERROR, false); // HTTPエラーでも継続
+    
+    // エラーハンドリング用のバッファ
+    $errorBuffer = '';
+    $hasStreamStarted = false;
+    $responseStarted = false;
+    
+    curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) use (&$errorBuffer, &$hasStreamStarted, &$responseStarted) {
+        $responseStarted = true;
+        
+        // AIサーバーからのエラーレスポンスをチェック
+        if (!$hasStreamStarted) {
+            $errorBuffer .= $data;
+            // JSONエラーレスポンスかチェック
+            if (strpos($data, '{') !== false && strpos($data, 'error') !== false) {
+                $jsonStart = strpos($errorBuffer, '{');
+                if ($jsonStart !== false) {
+                    $jsonPart = substr($errorBuffer, $jsonStart);
+                    $decoded = json_decode($jsonPart, true);
+                    if ($decoded && isset($decoded['error'])) {
+                        // エラーレスポンスをそのまま返す
+                        echo $data;
+                        return strlen($data);
+                    }
+                }
+            }
+            // ストリーム開始の判定
+            if (strpos($data, 'data:') !== false) {
+                $hasStreamStarted = true;
+            }
+        }
         echo $data;
         return strlen($data);
     });
@@ -119,14 +151,35 @@ try {
     flush();
 
     $result = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    
     if ($result === false) {
-        $err = curl_error($ch);
         curl_close($ch);
         http_response_code(500);
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['error' => 'cURL実行エラー: ' . $err]);
+        echo json_encode(['error' => 'AIサーバーとの通信に失敗しました: ' . $curlError]);
         exit;
     }
+    
+    // レスポンスが全く受信されていない場合（サーバーダウン等）
+    if (!$responseStarted) {
+        curl_close($ch);
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['error' => 'AIサーバーから応答がありません。サーバーがダウンしている可能性があります。']);
+        exit;
+    }
+    
+    // HTTPエラーコードのチェック
+    if ($httpCode >= 400) {
+        curl_close($ch);
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['error' => "AIサーバーエラー (HTTP $httpCode)"]);
+        exit;
+    }
+    
     curl_close($ch);
 } catch (Throwable $e) {
     http_response_code(500);

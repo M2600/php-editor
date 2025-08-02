@@ -21,11 +21,25 @@ $LMSTUDIO_DEFAULT_MODEL_URL = 'https://kanemune_ai.dolittle.cc/lmstudio_default.
 // デフォルトモデルID取得
 $defaultModelId = null;
 try {
-    $defaultModelId = @file_get_contents($LMSTUDIO_DEFAULT_MODEL_URL);
-    if ($defaultModelId !== false) {
-        $defaultModelId = trim($defaultModelId);
-    } else {
+    $ch = curl_init($LMSTUDIO_DEFAULT_MODEL_URL);
+    if ($ch === false) {
         $defaultModelId = null;
+    } else {
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HEADER, false);
+        $result = curl_exec($ch);
+        if ($result === false) {
+            curl_close($ch);
+            $defaultModelId = null;
+        } else {
+            $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            if ($status === 200) {
+                $defaultModelId = trim($result);
+            } else {
+                $defaultModelId = null;
+            }
+        }
     }
 } catch (Throwable $e) {
     $defaultModelId = null;
@@ -35,8 +49,8 @@ try {
 try {
     $ch = curl_init($LMSTUDIO_MODELS_URL);
     if ($ch === false) {
-        // エラーは返さない
-        echo json_encode(['data' => []]);
+        http_response_code(500);
+        echo json_encode(['error' => 'モデル一覧の取得に失敗しました。']);
         exit;
     }
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -44,18 +58,21 @@ try {
     $result = curl_exec($ch);
     if ($result === false) {
         curl_close($ch);
-        echo json_encode(['data' => []]);
+        http_response_code(500);
+        echo json_encode(['error' => 'モデル一覧の取得に失敗しました。']);
         exit;
     }
     $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
     if ($status !== 200) {
-        echo json_encode(['data' => []]);
+        http_response_code(500);
+        echo json_encode(['error' => 'モデル一覧の取得に失敗しました。']);
         exit;
     }
     $models = json_decode($result, true);
     if (!isset($models['data']) || !is_array($models['data'])) {
-        echo json_encode(['data' => []]);
+        http_response_code(500);
+        echo json_encode(['error' => 'モデル一覧の取得に失敗しました。']);
         exit;
     }
 
@@ -71,8 +88,8 @@ try {
 
     echo json_encode(['data' => $models['data']]);
 } catch (Throwable $e) {
-    // エラーは返さない
-    echo json_encode(['data' => []]);
+    http_response_code(500);
+    echo json_encode(['error' => 'モデル一覧の取得中にエラーが発生しました。', 'detail' => $e->getMessage()]);
 }
 
 

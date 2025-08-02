@@ -12,7 +12,7 @@ if (!file_exists($configFile)) {
 }
 
 $config = require $configFile;
-$LMSTUDIO_API_URL = $config['lmstudio_api_url'] ?? '';
+$LMSTUDIO_API_URL = $config['lmstudio_base_url'] ?? '';
 $API_KEY = $config['api_key'] ?? '';
 
 if (empty($API_KEY) || $API_KEY === 'YOUR_API_KEY_HERE') {
@@ -93,7 +93,8 @@ $payload = [
 // cURL処理は下のtryブロックでのみ実行
 
 try {
-    $ch = curl_init($LMSTUDIO_API_URL);
+    $chat_url = $LMSTUDIO_API_URL . '/chat/completions';
+    $ch = curl_init($chat_url);
     if ($ch === false) {
         throw new Exception('cURL初期化エラー');
     }

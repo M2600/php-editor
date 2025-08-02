@@ -105,7 +105,7 @@ try {
         'x-api-key: ' . $API_KEY
     ]);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-    curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 600); // タイムアウトを600秒に設定
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
     curl_setopt($ch, CURLOPT_FAILONERROR, false); // HTTPエラーでも継続
     

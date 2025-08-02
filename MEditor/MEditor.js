@@ -1501,7 +1501,7 @@ class MEditor {
 
         // モデルセレクター生成メソッド
         chat.createModelSelector = function(options={}) {
-            // options: { onChange, className, style, placeholder, models }
+            // options: { onChange, className, style, placeholder, models, defaultValue }
             let select = document.createElement("select");
             select.className = options.className || (this.CLASS_NAME_PREFIX + "chat-model-select");
             if(options.style) Object.assign(select.style, options.style);
@@ -1511,11 +1511,16 @@ class MEditor {
                 opt.textContent = options.placeholder;
                 select.appendChild(opt);
             }
+            let defaultValue = options.defaultValue;
             if(Array.isArray(options.models)) {
                 options.models.forEach(model => {
                     let opt = document.createElement("option");
                     opt.value = model.id || model;
-                    opt.textContent = model.id || model;
+                    // name項目があればそれを表示、なければid
+                    opt.textContent = model.name || model.id || model;
+                    if (defaultValue !== undefined && opt.value === defaultValue) {
+                        opt.selected = true;
+                    }
                     select.appendChild(opt);
                 });
             }

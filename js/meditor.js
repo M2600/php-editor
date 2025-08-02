@@ -369,10 +369,16 @@ async function main(){
             if (!res.ok) throw new Error("モデル一覧取得失敗: " + res.status);
             const data = await res.json();
             if (!data.data || !Array.isArray(data.data)) throw new Error("モデルデータ不正");
+            // nameを表示名に使う
+            const models = data.data.map(m => ({ id: m.id, name: m.name }));
+            // デフォルトモデル（nameが"Default("で始まるもの）を探す
+            let defaultModel = models.find(m => m.name && m.name.startsWith("Default("));
+            let defaultValue = defaultModel ? defaultModel.id : undefined;
             modelSelect = chat.createModelSelector({
-                models: data.data,
+                models: models,
                 className: "meditor-chat-model-select",
-                style: { marginRight: "0.5em" }
+                style: { marginRight: "0.5em" },
+                defaultValue: defaultValue
             });
         } catch(e) {
             modelSelect = chat.createModelSelector({

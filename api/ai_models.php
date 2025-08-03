@@ -13,6 +13,7 @@ if (!file_exists($configFile)) {
 $config = require $configFile;
 $LMSTUDIO_API_URL = $config['lmstudio_base_url'] ?? '';
 $LMSTUDIO_MODELS_URL = $LMSTUDIO_API_URL . '/models'; // lmstudioのモデル一覧API
+$EXCLUDED_MODELS = $config['execluded_models'] ?? []; // 除外するモデルリスト
 
 // 別途用意したデフォルトモデルのURL
 $LMSTUDIO_DEFAULT_MODEL_URL = 'https://kanemune_ai.dolittle.cc/lmstudio_default.html';
@@ -76,17 +77,23 @@ try {
         exit;
     }
 
-    // name項目を追加
-    foreach ($models['data'] as &$model) {
+    // name項目を追加し、除外モデルをフィルタリング
+    $filteredModels = [];
+    foreach ($models['data'] as $model) {
+        // 除外モデルをスキップ
+        if (in_array($model['id'], $EXCLUDED_MODELS, true)) {
+            continue;
+        }
+        
         if ($defaultModelId && $model['id'] === $defaultModelId) {
             $model['name'] = "Default({$defaultModelId})";
         } else {
             $model['name'] = $model['id'];
         }
+        $filteredModels[] = $model;
     }
-    unset($model);
 
-    echo json_encode(['data' => $models['data']]);
+    echo json_encode(['data' => $filteredModels]);
 } catch (Throwable $e) {
     http_response_code(500);
     echo json_encode(['error' => 'モデル一覧の取得中にエラーが発生しました。', 'detail' => $e->getMessage()]);

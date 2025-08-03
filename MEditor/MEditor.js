@@ -239,6 +239,56 @@ class MEditor {
         }
     }
 
+    // localStorage キー
+    STORAGE_KEYS = {
+        leftWidth: 'meditor-left-width',
+        rightWidth: 'meditor-right-width',
+        bottomHeight: 'meditor-bottom-height'
+    }
+
+    // パネルサイズをlocalStorageに保存
+    savePanelSizes() {
+        if (!this.page || !this.page.main) return;
+        
+        const leftWidth = this.page.main.left.element.clientWidth;
+        const rightWidth = this.page.main.right.element.clientWidth;
+        const bottomHeight = this.page.main.mid.container.bottom.element.clientHeight;
+        
+        localStorage.setItem(this.STORAGE_KEYS.leftWidth, leftWidth.toString());
+        localStorage.setItem(this.STORAGE_KEYS.rightWidth, rightWidth.toString());
+        localStorage.setItem(this.STORAGE_KEYS.bottomHeight, bottomHeight.toString());
+    }
+
+    // localStorageからパネルサイズを復元
+    restorePanelSizes() {
+        if (!this.page || !this.page.main) return;
+        
+        const savedLeftWidth = localStorage.getItem(this.STORAGE_KEYS.leftWidth);
+        const savedRightWidth = localStorage.getItem(this.STORAGE_KEYS.rightWidth);
+        const savedBottomHeight = localStorage.getItem(this.STORAGE_KEYS.bottomHeight);
+        
+        if (savedLeftWidth) {
+            const leftWidth = parseInt(savedLeftWidth);
+            if (leftWidth >= this.pageSettings.split.minWidth) {
+                this.page.main.left.element.style.width = leftWidth + 'px';
+            }
+        }
+        
+        if (savedRightWidth) {
+            const rightWidth = parseInt(savedRightWidth);
+            if (rightWidth >= this.pageSettings.split.minWidth) {
+                this.page.main.right.element.style.width = rightWidth + 'px';
+            }
+        }
+        
+        if (savedBottomHeight) {
+            const bottomHeight = parseInt(savedBottomHeight);
+            if (bottomHeight >= this.pageSettings.split.minHeight) {
+                this.page.main.mid.container.bottom.element.style.height = bottomHeight + 'px';
+            }
+        }
+    }
+
     
 
 
@@ -289,7 +339,9 @@ class MEditor {
             window.addEventListener("mouseup", function a (e){
                 window.removeEventListener("mousemove", leftSashMove);
                 window.removeEventListener("mouseup", a);
-            });
+                // サイズ変更完了時にlocalStorageに保存
+                this.savePanelSizes();
+            }.bind(this));
         });
         parentObj.main.element.appendChild(leftSash.element);
         parentObj.main.left.sash = leftSash;
@@ -352,7 +404,9 @@ class MEditor {
             window.addEventListener("mouseup", function a(e) {
                 window.removeEventListener("mousemove", midSashMove);
                 window.removeEventListener("mouseup", a);
-            });
+                // サイズ変更完了時にlocalStorageに保存
+                this.savePanelSizes();
+            }.bind(this));
         });
         parentObj.main.mid.container.element.appendChild(mainSash.element);
         parentObj.main.mid.container.bottom.sash = mainSash;
@@ -396,7 +450,9 @@ class MEditor {
             window.addEventListener("mouseup", function a(e) {
                 window.removeEventListener("mousemove", rightSashMove);
                 window.removeEventListener("mouseup", a);
-            });
+                // サイズ変更完了時にlocalStorageに保存
+                this.savePanelSizes();
+            }.bind(this));
         });
         parentObj.main.element.appendChild(rightSash.element);
         parentObj.main.right.sash = rightSash;
@@ -500,6 +556,10 @@ class MEditor {
 
         this.generateHeader(parentObj.header, "PHP Editor");
         //this.generateExplorer(parentObj.main.left);
+        
+        // パネルサイズをlocalStorageから復元
+        this.restorePanelSizes();
+        
         return;
     }
 

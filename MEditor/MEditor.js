@@ -191,6 +191,14 @@ class MEditor {
             popupWindows: [],
         };
 
+        (function() {
+            document.addEventListener('keydown', (e) => {
+                if ((e.key === 'Enter' && e.isComposing) || e.keyCode === 229) {
+                    e.stopPropagation();
+                }
+            }, { capture: true });
+        })();
+
     }
 
     async editor(containerId) {

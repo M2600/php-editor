@@ -3,6 +3,49 @@ header('Content-Type: application/json; charset=utf-8');
 
 session_start();
 
+// フォーマットされたプロンプトメッセージを生成する関数
+function formatPromptMessages($messages) {
+    /*
+    メッセージはuserとassistantのロールを交互に持つ必要があります。
+    例:
+    [
+        ['role' => 'user', 'content' => 'ユーザーのメッセージ'],
+        ['role' => 'assistant', 'content' => 'AIの応答'],
+        ['role' => 'user', 'content' => '次のユーザーのメッセージ'],
+        // ...
+    ] 
+    この関数では、メッセージのロールが正しく交互になっているかをチェックし、必要に応じてフォーマットします。
+
+    */
+    // まずメッセージのはじめがuserでない場合は、最初がuserになるまで先頭を削除
+    while ($messages) {
+        if ($messages[0]['role'] === 'user'){
+            break;
+        }
+        else{
+            array_shift($messages);
+        }
+    }
+
+    //交互に並んでいるかチェックし、連続している箇所があれば連続しているもののうち、古いものを削除
+    $formatted = [];
+    $lastRole = null;
+    foreach (array_reverse($messages) as $message) {
+        if (!isset($message['role']) || !isset($message['content'])) {
+            continue; // ロールまたはコンテンツがないメッセージはスキップ
+        }
+        if ($message['role'] !== $lastRole || $lastRole === null) {
+            $formatted[] = $message; // ロールが変わった場合のみ追加
+            $lastRole = $message['role'];
+        } else {
+            // 連続している場合は、古いものを削除
+            continue;
+        }
+    }
+    $formatted = array_reverse($formatted); // 元の順序に戻す
+    return $formatted;
+}
+
 // 設定ファイルの読み込み
 $configFile = __DIR__ . '/ai_config.php';
 if (!file_exists($configFile)) {
@@ -35,6 +78,8 @@ if (!is_array($messages) || count($messages) === 0) {
     echo json_encode(['error' => 'No messages']);
     exit;
 }
+$messages = formatPromptMessages($messages);
+
 
 // $logDir = __DIR__ . '/../log';
 //$logDir = '/var/log/php_editor';
@@ -157,7 +202,6 @@ try {
     if ($result === false) {
         curl_close($ch);
         http_response_code(500);
-        header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['error' => 'AIサーバーとの通信に失敗しました: ' . $curlError]);
         exit;
     }
@@ -166,7 +210,6 @@ try {
     if (!$responseStarted) {
         curl_close($ch);
         http_response_code(500);
-        header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['error' => 'AIサーバーから応答がありません。サーバーがダウンしている可能性があります。']);
         exit;
     }
@@ -175,7 +218,6 @@ try {
     if ($httpCode >= 400) {
         curl_close($ch);
         http_response_code(500);
-        header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['error' => "AIサーバーエラー (HTTP $httpCode)"]);
         exit;
     }
@@ -183,7 +225,6 @@ try {
     curl_close($ch);
 } catch (Throwable $e) {
     http_response_code(500);
-    header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['error' => 'サーバーエラー: ' . $e->getMessage()]);
     exit;
 }

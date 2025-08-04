@@ -14,6 +14,7 @@ $config = require $configFile;
 $LMSTUDIO_API_URL = $config['lmstudio_base_url'] ?? '';
 $LMSTUDIO_MODELS_URL = $LMSTUDIO_API_URL . '/models'; // lmstudioのモデル一覧API
 $EXCLUDED_MODELS = $config['excluded_models'] ?? []; // 除外するモデルリスト
+$LMSTUDIO_API_KEY = $config['api_key'] ?? '';
 
 // 別途用意したデフォルトモデルのURL
 $LMSTUDIO_DEFAULT_MODEL_URL = 'https://kanemune_ai.dolittle.cc/lmstudio_default.html';
@@ -54,6 +55,9 @@ try {
         echo json_encode(['error' => 'モデル一覧の取得に失敗しました。']);
         exit;
     }
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'x-api-key: ' . $LMSTUDIO_API_KEY, // APIキーをヘッダーに追加
+    ]);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HEADER, false);
     $result = curl_exec($ch);

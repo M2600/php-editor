@@ -257,11 +257,15 @@ class MEditor {
     // パネルサイズをlocalStorageに保存
     savePanelSizes() {
         if (!this.page || !this.page.main) return;
-        
-        const leftWidth = this.page.main.left.element.clientWidth;
-        const rightWidth = this.page.main.right.element.clientWidth;
-        const bottomHeight = this.page.main.mid.container.bottom.element.clientHeight;
-        
+        const left = this.page.main.left.element;
+        const right = this.page.main.right.element;
+        const mid = this.page.main.mid.element;
+        const midMain = this.page.main.mid.container.main.element;
+        const midBottom = this.page.main.mid.container.bottom.element;
+        // 幅・高さを取得
+        const leftWidth = left.offsetWidth;
+        const rightWidth = right.offsetWidth;
+        const bottomHeight = midBottom.offsetHeight;
         localStorage.setItem(this.STORAGE_KEYS.leftWidth, leftWidth.toString());
         localStorage.setItem(this.STORAGE_KEYS.rightWidth, rightWidth.toString());
         localStorage.setItem(this.STORAGE_KEYS.bottomHeight, bottomHeight.toString());
@@ -270,31 +274,52 @@ class MEditor {
     // localStorageからパネルサイズを復元
     restorePanelSizes() {
         if (!this.page || !this.page.main) return;
+        const parentElement = this.page.element;
+        const left = this.page.main.left.element;
+        const right = this.page.main.right.element;
+        const mid = this.page.main.mid.element;
+        const midMain = this.page.main.mid.container.main.element;
+        const midBottom = this.page.main.mid.container.bottom.element;
         
         const savedLeftWidth = localStorage.getItem(this.STORAGE_KEYS.leftWidth);
         const savedRightWidth = localStorage.getItem(this.STORAGE_KEYS.rightWidth);
         const savedBottomHeight = localStorage.getItem(this.STORAGE_KEYS.bottomHeight);
         
+        // まず左右・下部のサイズをセット
+        let leftWidth = left.offsetWidth;
+        let rightWidth = right.offsetWidth;
+        let bottomHeight = midBottom.offsetHeight;
         if (savedLeftWidth) {
-            const leftWidth = parseInt(savedLeftWidth);
-            if (leftWidth >= this.pageSettings.split.minWidth) {
-                this.page.main.left.element.style.width = leftWidth + 'px';
+            const w = parseInt(savedLeftWidth);
+            if (w >= this.pageSettings.split.minWidth) leftWidth = w;
             }
-        }
-        
         if (savedRightWidth) {
-            const rightWidth = parseInt(savedRightWidth);
-            if (rightWidth >= this.pageSettings.split.minWidth) {
-                this.page.main.right.element.style.width = rightWidth + 'px';
+            const w = parseInt(savedRightWidth);
+            if (w >= this.pageSettings.split.minWidth) rightWidth = w;
             }
-        }
-        
         if (savedBottomHeight) {
-            const bottomHeight = parseInt(savedBottomHeight);
-            if (bottomHeight >= this.pageSettings.split.minHeight) {
-                this.page.main.mid.container.bottom.element.style.height = bottomHeight + 'px';
-            }
+            const h = parseInt(savedBottomHeight);
+            if (h >= this.pageSettings.split.minHeight) bottomHeight = h;
         }
+        // パネル幅・高さを反映
+        left.style.width = leftWidth + 'px';
+        right.style.width = rightWidth + 'px';
+        midBottom.style.height = bottomHeight + 'px';
+
+        // midパネルの幅・高さを再計算
+        const totalWidth = parentElement.clientWidth;
+        const midWidth = totalWidth - leftWidth - rightWidth;
+        mid.style.width = midWidth + 'px';
+        mid.style.left = leftWidth + 'px';
+
+        // midMainの高さ
+        const totalHeight = mid.offsetHeight;
+        const midMainHeight = totalHeight - bottomHeight;
+        midMain.style.height = midMainHeight + 'px';
+        midBottom.style.top = midMainHeight + 'px';
+
+        // 最後に全体再調整
+        this.adjustPage();
     }
 
     

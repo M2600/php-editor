@@ -280,11 +280,11 @@ class MEditor {
         const mid = this.page.main.mid.element;
         const midMain = this.page.main.mid.container.main.element;
         const midBottom = this.page.main.mid.container.bottom.element;
-        
+
         const savedLeftWidth = localStorage.getItem(this.STORAGE_KEYS.leftWidth);
         const savedRightWidth = localStorage.getItem(this.STORAGE_KEYS.rightWidth);
         const savedBottomHeight = localStorage.getItem(this.STORAGE_KEYS.bottomHeight);
-        
+
         // まず左右・下部のサイズをセット
         let leftWidth = left.offsetWidth;
         let rightWidth = right.offsetWidth;
@@ -292,11 +292,11 @@ class MEditor {
         if (savedLeftWidth) {
             const w = parseInt(savedLeftWidth);
             if (w >= this.pageSettings.split.minWidth) leftWidth = w;
-            }
+        }
         if (savedRightWidth) {
             const w = parseInt(savedRightWidth);
             if (w >= this.pageSettings.split.minWidth) rightWidth = w;
-            }
+        }
         if (savedBottomHeight) {
             const h = parseInt(savedBottomHeight);
             if (h >= this.pageSettings.split.minHeight) bottomHeight = h;
@@ -368,10 +368,14 @@ class MEditor {
         leftSash.element.classList.add(this.CLASS_NAME_PREFIX + "sash-v");
         leftSash.element.style.width = this.pageSettings.splitSash.width + "px";
         leftSash.element.addEventListener("mousedown", (e) => {
+            // テキスト選択防止
+            const prevUserSelect = document.body.style.userSelect;
+            document.body.style.userSelect = "none";
             window.addEventListener("mousemove", leftSashMove);
             window.addEventListener("mouseup", function a (e){
                 window.removeEventListener("mousemove", leftSashMove);
                 window.removeEventListener("mouseup", a);
+                document.body.style.userSelect = prevUserSelect;
                 // サイズ変更完了時にlocalStorageに保存
                 this.savePanelSizes();
             }.bind(this));
@@ -433,10 +437,14 @@ class MEditor {
         mainSash.element.classList.add(this.CLASS_NAME_PREFIX + "sash-h");
         mainSash.element.style.height = this.pageSettings.splitSash.width + "px";
         mainSash.element.addEventListener("mousedown", (e) => {
+            // テキスト選択防止
+            const prevUserSelect = document.body.style.userSelect;
+            document.body.style.userSelect = "none";
             window.addEventListener("mousemove", midSashMove);
             window.addEventListener("mouseup", function a(e) {
                 window.removeEventListener("mousemove", midSashMove);
                 window.removeEventListener("mouseup", a);
+                document.body.style.userSelect = prevUserSelect;
                 // サイズ変更完了時にlocalStorageに保存
                 this.savePanelSizes();
             }.bind(this));
@@ -479,10 +487,14 @@ class MEditor {
         rightSash.element.classList.add(this.CLASS_NAME_PREFIX + "sash-v");
         rightSash.element.style.width = this.pageSettings.splitSash.width + "px";
         rightSash.element.addEventListener("mousedown", (e) => {
+            // テキスト選択防止
+            const prevUserSelect = document.body.style.userSelect;
+            document.body.style.userSelect = "none";
             window.addEventListener("mousemove", rightSashMove);
             window.addEventListener("mouseup", function a(e) {
                 window.removeEventListener("mousemove", rightSashMove);
                 window.removeEventListener("mouseup", a);
+                document.body.style.userSelect = prevUserSelect;
                 // サイズ変更完了時にlocalStorageに保存
                 this.savePanelSizes();
             }.bind(this));

@@ -382,7 +382,7 @@ async function main(){
             });
         } catch(e) {
             modelSelect = chat.createModelSelector({
-                models: [],
+                models: ['モデル取得エラー'],
                 className: "meditor-chat-model-selector",
                 style: { marginRight: "0.5em" },
                 placeholder: "モデル取得エラー"

@@ -376,14 +376,14 @@ async function main(){
             let defaultValue = defaultModel ? defaultModel.id : undefined;
             modelSelect = chat.createModelSelector({
                 models: models,
-                className: "meditor-chat-model-select",
+                className: "meditor-chat-model-selector",
                 style: { marginRight: "0.5em" },
                 defaultValue: defaultValue
             });
         } catch(e) {
             modelSelect = chat.createModelSelector({
                 models: [],
-                className: "meditor-chat-model-select",
+                className: "meditor-chat-model-selector",
                 style: { marginRight: "0.5em" },
                 placeholder: "モデル取得エラー"
             });
@@ -531,7 +531,7 @@ async function main(){
 
             // ストリーム受信（ai_api.js利用）
             const controller = new AbortController();
-            const selectedModel = modelSelect.value || undefined;
+            const selectedModel = modelSelect.getValue() || undefined;
             let aiBuffer = "";
             if (typeof fetchAIChat === 'function') {
                 fetchAIChat({

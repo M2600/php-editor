@@ -1573,6 +1573,47 @@ class MEditor {
         // ローディングアイコンを履歴エリアに追加
         chat.content.element.appendChild(chat.loading.element);
 
+
+        // 入力エリア
+        chat.inputArea = {};
+        chat.inputArea.element = document.createElement("div");
+        chat.inputArea.element.classList.add(this.CLASS_NAME_PREFIX + "chat-input-area");
+        chat.element.appendChild(chat.inputArea.element);
+
+        // モデルセレクター生成メソッド
+        // 旧: chat.inputArea.topMenu.element に追加していたものを chat.topMenu.element に移動
+        chat.createModelSelector = function(options={}) {
+            // 既存のセレクターがあれば削除
+            if (chat.modelSelector && chat.modelSelector.element && chat.modelSelector.element.parentNode) {
+                chat.modelSelector.element.parentNode.removeChild(chat.modelSelector.element);
+            }
+            // セレクター生成
+            let selector = {};
+            selector.element = document.createElement("select");
+            selector.element.classList.add(this.CLASS_NAME_PREFIX + "chat-model-selector");
+            if (options.models && Array.isArray(options.models)) {
+                options.models.forEach((model) => {
+                    let opt = document.createElement("option");
+                    opt.value = model.id || model.value || model;
+                    opt.textContent = model.name || model.label || model.id || model;
+                    selector.element.appendChild(opt);
+                });
+            }
+            if (options.onChange) {
+                selector.element.addEventListener("change", (e) => {
+                    options.onChange(e.target.value);
+                });
+            }
+            // トップメニューに追加
+            chat.topMenu.element.appendChild(selector.element);
+            chat.modelSelector = selector;
+
+            selector.getValue = function() {
+                return this.element.value;
+            }
+            return selector;
+        }.bind(this);
+
         // --- チャット履歴クリア機能 ---
         chat.clearBtn = {};
         chat.clearBtn.element = document.createElement("button");
@@ -1590,56 +1631,6 @@ class MEditor {
             // 外部変数の履歴もクリアしたい場合は外部で上書きすること
         };
         chat.clearBtn.element.addEventListener("click", () => chat.clearHistory());
-
-
-        // 入力エリア
-        chat.inputArea = {};
-        chat.inputArea.element = document.createElement("div");
-        chat.inputArea.element.classList.add(this.CLASS_NAME_PREFIX + "chat-input-area");
-        chat.element.appendChild(chat.inputArea.element);
-
-        // 入力エリアtopmenu
-        chat.inputArea.topMenu = {};
-        chat.inputArea.topMenu.element = document.createElement("div");
-        chat.inputArea.topMenu.element.classList.add(this.CLASS_NAME_PREFIX + "chat-input-top-menu");
-        chat.inputArea.element.appendChild(chat.inputArea.topMenu.element);
-
-        // モデルセレクター生成メソッド
-        chat.createModelSelector = function(options={}) {
-            // options: { onChange, className, style, placeholder, models, defaultValue }
-            let select = document.createElement("select");
-            select.className = options.className || (this.CLASS_NAME_PREFIX + "chat-model-select");
-            if(options.style) Object.assign(select.style, options.style);
-            if(options.placeholder) {
-                let opt = document.createElement("option");
-                opt.value = "";
-                opt.textContent = options.placeholder;
-                select.appendChild(opt);
-            }
-            let defaultValue = options.defaultValue;
-            if(Array.isArray(options.models)) {
-                options.models.forEach(model => {
-                    let opt = document.createElement("option");
-                    opt.value = model.id || model;
-                    // name項目があればそれを表示、なければid
-                    opt.textContent = model.name || model.id || model;
-                    if (defaultValue !== undefined && opt.value === defaultValue) {
-                        opt.selected = true;
-                    }
-                    select.appendChild(opt);
-                });
-            }
-            if(typeof options.onChange === "function") {
-                select.addEventListener("change", options.onChange);
-            }
-            // 既存のセレクターがあれば置き換え
-            if(chat.inputArea.modelSelect && chat.inputArea.modelSelect.parentNode) {
-                chat.inputArea.modelSelect.parentNode.removeChild(chat.inputArea.modelSelect);
-            }
-            chat.inputArea.modelSelect = select;
-            chat.inputArea.element.insertBefore(select, chat.inputArea.textarea);
-            return select;
-        };
 
         // テキストエリア（入力内容に応じて高さ自動調整）
         chat.inputArea.textarea = document.createElement("textarea");

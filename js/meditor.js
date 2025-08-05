@@ -1022,6 +1022,10 @@ async function pushSaveButton() {
 
 
 async function saveFile(path, content) {
+    if (CURRENT_FILE.aceObj.editor.isDiffView) {
+        mConsole.print("差分表示中は保存できません。", "warning");
+        return;
+    }
     DEBUG && console.log("saveFile: ", path, content);
     let body = {
         action: "save",

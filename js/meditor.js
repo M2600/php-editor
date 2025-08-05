@@ -816,8 +816,7 @@ async function openInOtherWindow() {
         return;
     }
     if (!CURRENT_FILE.readonly && CURRENT_FILE.changed) {
-        await saveFile(CURRENT_FILE.path, CURRENT_FILE.aceObj.editor.getValue());
-        mConsole.print("File saved: " + CURRENT_FILE.path, "success");
+        saveFile(CURRENT_FILE.path, CURRENT_FILE.aceObj.editor.getValue());
     }
     console.log(RUN_BROWSER_TAB);
     let url = Path.join(FILE_PAGE_BASE_URL, USERID, CURRENT_FILE.path);
@@ -1024,7 +1023,7 @@ async function pushSaveButton() {
 async function saveFile(path, content) {
     if (CURRENT_FILE.aceObj.editor.isDiffView) {
         mConsole.print("差分表示中は保存できません。", "warning");
-        return;
+        return 0;
     }
     DEBUG && console.log("saveFile: ", path, content);
     let body = {
@@ -1032,16 +1031,19 @@ async function saveFile(path, content) {
         path: path,
         content: content
     };
-    let ret = await api("/api/file_manager.php", body=body)
+    let ret = 0;
+    await api("/api/file_manager.php", body=body)
     .then(data => {
         if (data.status === "error") {
             console.error(data.error);
             mConsole.print("File save error: " + path, "error");
-            return 1;
+            ret = 0;
+            return;
         }
         if (data.status === "session_error") {
             sessionError();
-            return 0;
+            ret = 0;
+            return;
         }
         DEBUG && console.log("File saved");
         // 保存成功時のUI更新
@@ -1053,7 +1055,8 @@ async function saveFile(path, content) {
             mConsole.print("File saved: " + CURRENT_FILE.path, "success");
             phpSyntaxCheck(CURRENT_FILE.path);
         }
-    })
+        ret = 1;
+    });
     return ret;
 }
 
@@ -1297,8 +1300,10 @@ async function runPhp(path){
     }
 
     if(!CURRENT_FILE.readonly){
-        await saveFile(path, CURRENT_FILE.aceObj.editor.getValue());
-        mConsole.print("File saved: " + path, "success");
+        let res = await saveFile(path, CURRENT_FILE.aceObj.editor.getValue());
+        if(res) {
+            mConsole.print("File saved: " + path, "success");
+        }
     }
 
 
@@ -1353,8 +1358,10 @@ async function runPhpCgi(path, GETParams={}) {
     }
 
     if(!CURRENT_FILE.readonly){
-        await saveFile(path, CURRENT_FILE.aceObj.editor.getValue());
-        mConsole.print("File saved: " + path, "success");
+        let res = await saveFile(path, CURRENT_FILE.aceObj.editor.getValue());
+        if(res) {
+            mConsole.print("File saved: " + path, "success");
+        }
     }
 
     let ret;

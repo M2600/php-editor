@@ -218,7 +218,7 @@ class MEditor {
      * @param {string} proposed 変更後の内容
      * @returns {function} diffを消すための関数
      */
-    showDiffInEditor(aceEditor, original, proposed) {
+    _showDiffInEditor(aceEditor, original, proposed) {
         if (typeof Diff === 'undefined') {
             alert('jsdiff(Diff)が読み込まれていません');
             return;
@@ -260,7 +260,7 @@ class MEditor {
      * @param {string} proposed 変更後の内容
      * @returns {function} diff表示を解除し元に戻す関数
      */
-    showDiffUnifiedInEditor(aceEditor, original, proposed) {
+    _showDiffUnifiedInEditor(aceEditor, original, proposed) {
         aceEditor.isDiffView = true;
         if (typeof Diff === 'undefined') {
             alert('jsdiff(Diff)が読み込まれていません');
@@ -312,8 +312,30 @@ class MEditor {
         };
     }
 
-
-
+    /**
+     * 現在のファイルと変更予定ファイルの差分を表示する
+     * @param {object} file ファイルオブジェクト
+     * @param {string} proposed 変更後の内容
+     * @returns {function} diff表示を解除し元に戻す関数
+     */
+    showDiff(file, proposed) {
+        const aceEditor = file.aceObj.editor;
+        if (aceEditor.isDiffView) {
+            // 既にdiff表示中なら何もしない
+            return;
+        }
+        const original = aceEditor.getValue();
+        const clear = this._showDiffUnifiedInEditor(aceEditor, original, proposed);
+        // diff表示を解除するための関数を返す
+        return () => {
+            // エディタのdiff表示を解除
+            clear();
+            //　変更なしに設定
+            file.changed = false;
+            // エクスプローラーのアイコンを元に戻す
+            this.setFileIcon(file.path, null);
+        };
+    }
 
     changeThemeAction = (theme) => {
         console.log("Theme changed to: " + theme);

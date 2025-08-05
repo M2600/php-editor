@@ -1069,12 +1069,77 @@ class MEditor {
         fileName.element.innerHTML = file.name;
         file.element.appendChild(fileName.element);
         file.nameElm = fileName;
-        
+
+        // 追加アイコン表示（例: 未保存*や警告など）
+        file.iconElm = null;
+        if (fileInfo.icon) {
+            let iconElm = document.createElement("span");
+            iconElm.classList.add(this.CLASS_NAME_PREFIX + "file-icon");
+            // icon: 文字列（例: "*"）、または {text, title, class} 形式も許容
+            if (typeof fileInfo.icon === "string") {
+                iconElm.textContent = fileInfo.icon;
+            } else if (typeof fileInfo.icon === "object") {
+                iconElm.textContent = fileInfo.icon.text || "";
+                if (fileInfo.icon.title) iconElm.title = fileInfo.icon.title;
+                if (fileInfo.icon.class) iconElm.classList.add(fileInfo.icon.class);
+            }
+            fileName.element.appendChild(iconElm);
+            file.iconElm = iconElm;
+        }
+
         let fileControl = this.fileControl(file, fileInfo);
         file.control = fileControl;
 
         parentObj.content.element.appendChild(file.element);
         parentObj.files.push(file);
+    }
+
+    /**
+     * ファイルパスを指定してエクスプローラのファイルアイコンを外部から追加・更新・削除する
+     * @param {string} path ファイルの絶対パス（explorerFileで設定されるfile.pathと同じ）
+     * @param {string|object|null} icon 追加したいアイコン（"*"や{ text, title, class }）。null/空で非表示
+     */
+    setFileIcon(path, icon) {
+        // ファイル要素を取得
+        const fileBtn = document.getElementById(path);
+        if (!fileBtn) return false;
+        // ファイル名要素
+        const fileNameDiv = fileBtn.querySelector('.' + this.CLASS_NAME_PREFIX + 'file-name');
+        if (!fileNameDiv) return false;
+        // 既存アイコン要素
+        let iconElm = fileNameDiv.querySelector('.' + this.CLASS_NAME_PREFIX + 'file-icon');
+        if (iconElm) {
+            if (!icon) {
+                iconElm.remove();
+                return true;
+            }
+            // 更新
+            if (typeof icon === "string") {
+                iconElm.textContent = icon;
+                iconElm.title = "";
+                iconElm.className = this.CLASS_NAME_PREFIX + "file-icon";
+            } else if (typeof icon === "object") {
+                iconElm.textContent = icon.text || "";
+                iconElm.title = icon.title || "";
+                iconElm.className = this.CLASS_NAME_PREFIX + "file-icon";
+                if (icon.class) iconElm.classList.add(icon.class);
+            }
+            return true;
+        } else if (icon) {
+            // 新規追加
+            iconElm = document.createElement("span");
+            iconElm.classList.add(this.CLASS_NAME_PREFIX + "file-icon");
+            if (typeof icon === "string") {
+                iconElm.textContent = icon;
+            } else if (typeof icon === "object") {
+                iconElm.textContent = icon.text || "";
+                if (icon.title) iconElm.title = icon.title;
+                if (icon.class) iconElm.classList.add(icon.class);
+            }
+            fileNameDiv.appendChild(iconElm);
+            return true;
+        }
+        return false;
     }
 
     dirControl(parentObj, dirInfo){

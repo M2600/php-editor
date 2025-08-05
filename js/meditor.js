@@ -955,8 +955,18 @@ async function openFile(file) {
         file.aceChangeAction = (e) => {
             file.changed = true;
             DEBUG && console.log("File changed: ", file.path);
+            if(typeof editor.setFileIcon === 'function'){
+                editor.setFileIcon(file.path, '*');
+            }
         };
         file.aceObj.on("change", file.aceChangeAction);
+
+        // 初期状態で未保存なら*表示、そうでなければ消す
+        if(file.changed && typeof editor.setFileIcon === 'function'){
+            editor.setFileIcon(file.path, '*');
+        } else if(typeof editor.setFileIcon === 'function'){
+            editor.setFileIcon(file.path, null);
+        }
 
         file.aceObj.show();
         file.aceObj.focus();
@@ -996,15 +1006,7 @@ async function pushSaveButton() {
         return;
     }
     let content = CURRENT_FILE.aceObj.editor.getValue();
-    saveFile(CURRENT_FILE.path, content).then((status) => {
-        if(status == 1){
-            mConsole.print("File save error: " + CURRENT_FILE.path, "error");
-            return;
-        }
-        CURRENT_FILE.changed = false;
-        mConsole.print("File saved: " + CURRENT_FILE.path, "success");
-        phpSyntaxCheck(CURRENT_FILE.path);
-    });
+    saveFile(CURRENT_FILE.path, content);
 }
 
 // async function pushRunButton() {
@@ -1030,6 +1032,7 @@ async function saveFile(path, content) {
     .then(data => {
         if (data.status === "error") {
             console.error(data.error);
+            mConsole.print("File save error: " + path, "error");
             return 1;
         }
         if (data.status === "session_error") {
@@ -1037,7 +1040,15 @@ async function saveFile(path, content) {
             return 0;
         }
         DEBUG && console.log("File saved");
-        // *console out 
+        // 保存成功時のUI更新
+        if (CURRENT_FILE && CURRENT_FILE.path === path) {
+            CURRENT_FILE.changed = false;
+            if(typeof editor.setFileIcon === 'function'){
+                editor.setFileIcon(CURRENT_FILE.path, null);
+            }
+            mConsole.print("File saved: " + CURRENT_FILE.path, "success");
+            phpSyntaxCheck(CURRENT_FILE.path);
+        }
     })
     return ret;
 }

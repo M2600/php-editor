@@ -1172,10 +1172,29 @@ i {
 }
 
 
+/* --- Ace diff marker: 追加行 --- */
+.meditor-diff-marker-added {
+    position: absolute;
+    background: #d4f7d4 !important;
+    z-index: 20;
+    pointer-events: none;
+}
 
-
-
-
+/* --- Ace unified diff表示用 --- */
+.meditor-diff-line-added {
+    position: absolute !important;
+    background: #e6ffe6 !important;
+    color: #228b22 !important;
+    z-index: 20;
+    pointer-events: none;
+}
+.meditor-diff-line-removed {
+    position: absolute !important;
+    background: #ffeaea !important;
+    color: #b22222 !important;
+    z-index: 20;
+    pointer-events: none;
+}
 
 
 

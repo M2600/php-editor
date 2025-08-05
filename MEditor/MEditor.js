@@ -157,6 +157,7 @@ class AceWrapper {
 
 
 class MEditor {
+    
 
     EDITOR_NAME = "MEditor";
     CLASS_NAME_PREFIX = "meditor-";
@@ -208,6 +209,109 @@ class MEditor {
         await this.pageLayout(this.page);
         return;
     }
+
+
+    /**
+     * Aceエディタ本体上にインラインで差分をハイライト表示する（カスタムマーカー利用）
+     * @param {object} aceEditor Aceエディタインスタンス（ace.edit()の戻り値）
+     * @param {string} original 元の内容
+     * @param {string} proposed 変更後の内容
+     * @returns {function} diffを消すための関数
+     */
+    showDiffInEditor(aceEditor, original, proposed) {
+        if (typeof Diff === 'undefined') {
+            alert('jsdiff(Diff)が読み込まれていません');
+            return;
+        }
+        // Rangeクラスを取得
+        const Range = ace.require('ace/range').Range;
+        const session = aceEditor.getSession();
+        const markerIds = [];
+        const diff = Diff.diffLines(original, proposed);
+        let origLine = 0;
+        let propLine = 0;
+        diff.forEach(part => {
+            const lines = part.value.split('\n');
+            const lineCount = lines.length - (lines[lines.length-1] === '' ? 1 : 0);
+            if (part.added) {
+                for (let i = 0; i < lineCount; i++) {
+                    const range = new Range(propLine + i, 0, propLine + i, 1e5);
+                    const id = session.addMarker(range, 'meditor-diff-marker-added', 'fullLine');
+                    markerIds.push(id);
+                }
+                propLine += lineCount;
+            } else if (part.removed) {
+                origLine += lineCount;
+            } else {
+                origLine += lineCount;
+                propLine += lineCount;
+            }
+        });
+
+        return function clearDiffMarkers() {
+            markerIds.forEach(id => session.removeMarker(id));
+        };
+    }
+
+    /**
+     * Aceエディタ本体上にunified diff風に変更前(-)・変更後(+)行を挿入して表示する
+     * @param {object} aceEditor Aceエディタインスタンス（ace.edit()の戻り値）
+     * @param {string} original 元の内容
+     * @param {string} proposed 変更後の内容
+     * @returns {function} diff表示を解除し元に戻す関数
+     */
+    showDiffUnifiedInEditor(aceEditor, original, proposed) {
+        aceEditor.isDiffView = true;
+        if (typeof Diff === 'undefined') {
+            alert('jsdiff(Diff)が読み込まれていません');
+            return;
+        }
+        const Range = ace.require('ace/range').Range;
+        const session = aceEditor.getSession();
+        // 元の内容とreadOnly状態を退避
+        const originalContent = session.getValue();
+        const wasReadOnly = aceEditor.getReadOnly();
+        // unified diff用テキスト生成
+        const diff = Diff.diffLines(original, proposed);
+        let lines = [];
+        let lineTypes = [];
+        diff.forEach(part => {
+            const partLines = part.value.split('\n');
+            if (partLines[partLines.length-1] === '') partLines.pop();
+            if (part.added) {
+                partLines.forEach(l => { lines.push('+ ' + l); lineTypes.push('added'); });
+            } else if (part.removed) {
+                partLines.forEach(l => { lines.push('- ' + l); lineTypes.push('removed'); });
+            } else {
+                partLines.forEach(l => { lines.push('  ' + l); lineTypes.push('context'); });
+            }
+        });
+        session.setValue(lines.join('\n'));
+        aceEditor.setReadOnly(true);
+
+        // マーカーを追加
+        const markerIds = [];
+        for (let i = 0; i < lineTypes.length; i++) {
+            if (lineTypes[i] === 'added') {
+                const range = new Range(i, 0, i, 1e5);
+                const id = session.addMarker(range, 'meditor-diff-line-added', 'fullLine');
+                markerIds.push(id);
+            } else if (lineTypes[i] === 'removed') {
+                const range = new Range(i, 0, i, 1e5);
+                const id = session.addMarker(range, 'meditor-diff-line-removed', 'fullLine');
+                markerIds.push(id);
+            }
+        }
+
+        // diff表示解除用
+        return () => {
+            session.setValue(originalContent);
+            aceEditor.setReadOnly(wasReadOnly);
+            markerIds.forEach(id => session.removeMarker(id));
+            aceEditor.isDiffView = false;
+        };
+    }
+
 
 
 

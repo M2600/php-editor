@@ -419,7 +419,7 @@ Please provide the merged code only, without any additional text or explanations
     let chatHistory = [];
     let isStreaming = false;
     // AIに送信する履歴の最大数（ユーザー・AI両方含めて直近N件）
-    const MAX_CHAT_HISTORY = 10;
+    const MAX_CHAT_HISTORY = 6; //0 = 無限
     const CHAT_STORAGE_KEY = "php-editor-chat-history";
 
     // チャット履歴をローカルストレージに保存
@@ -573,7 +573,12 @@ Please provide the merged code only, without any additional text or explanations
             }, 0);
 
             // 送信履歴を直近MAX_CHAT_HISTORY件に制限
-            const limitedHistory = chatHistory.slice(-MAX_CHAT_HISTORY);
+            if (MAX_CHAT_HISTORY > 0) {
+                chatHistory = chatHistory.slice(-MAX_CHAT_HISTORY);
+            }
+            else {
+                chatHistory = chatHistory.slice(-1000); // 1000件以上は保存しない
+            }
 
             // ファイル内容を送信するか判定（重複チェックせず常に送信）
             let fileContext = null;
@@ -604,7 +609,7 @@ Please provide the merged code only, without any additional text or explanations
             const selectedModel = modelSelect.getValue() || undefined;
             if (typeof fetchAIChat === 'function') {
                 fetchAIChat({
-                    messages: limitedHistory,
+                    messages: chatHistory,
                     model: selectedModel,
                     fileContext: fileContext ?? null,
                     signal: controller.signal,

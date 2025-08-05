@@ -1651,6 +1651,39 @@ class MEditor {
         // チャット履歴管理
         chat.messages = [];
 
+        // コードブロックにコピーアイコンを追加する共通関数
+        function addCopyButtonsToCodeBlocks(rootElement) {
+            const codeBlocks = rootElement.querySelectorAll("pre");
+            codeBlocks.forEach((block) => {
+                // 既にメニューがあればスキップ
+                if (block.querySelector('.' + this.CLASS_NAME_PREFIX + 'chat-code-menu')) return;
+                const codeMenu = document.createElement("div");
+                codeMenu.classList.add(this.CLASS_NAME_PREFIX + "chat-code-menu");  
+                const copyBtn = document.createElement("button");
+                copyBtn.classList.add(this.CLASS_NAME_PREFIX + "chat-code-copy-btn");
+                copyBtn.innerHTML = "コピー";
+                copyBtn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const code = block.querySelector("code");
+                    if (!code) {
+                        console.warn("コードブロック内に <code> タグが見つかりません。");
+                        return;
+                    }
+                    const codeText = code.innerText || code.textContent;
+                    navigator.clipboard.writeText(codeText).then(() => {
+                        copyBtn.innerHTML = "コピー済み";
+                        setTimeout(() => {
+                            copyBtn.innerHTML = "コピー";
+                        }, 2000);
+                    }).catch(err => {
+                        console.error("コードのコピーに失敗しました:", err);
+                    });
+                });
+                codeMenu.appendChild(copyBtn);
+                block.before(codeMenu);
+            });
+        }
+
         // メッセージ追加メソッド
         chat.addMessage = (text, from = "user", markdown = false) => {
             const msg = {};
@@ -1662,11 +1695,27 @@ class MEditor {
             if (markdown) {
                 const html = marked.parse(text);
                 msg.element.innerHTML = html;
+                addCopyButtonsToCodeBlocks.call(this, msg.element);
             }
 
             chat.content.element.appendChild(msg.element);
             chat.content.element.scrollTop = chat.content.element.scrollHeight;
             chat.messages.push({ text, from });
+        };
+
+        // ストリーム用: 直近のAIメッセージをリアルタイムで更新
+        chat.updateLastAIMessage = (text, markdown = false) => {
+            // 直近のAIメッセージ要素を取得
+            const aiMsgs = chat.content.element.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'chat-message-ai');
+            if (aiMsgs.length === 0) return;
+            const aiMsgDiv = aiMsgs[aiMsgs.length - 1];
+            if (markdown) {
+                aiMsgDiv.innerHTML = marked.parse(text);
+                addCopyButtonsToCodeBlocks.call(this, aiMsgDiv);
+            } else {
+                aiMsgDiv.innerText = text;
+            }
+            chat.content.element.scrollTop = chat.content.element.scrollHeight;
         };
 
         // 送信処理

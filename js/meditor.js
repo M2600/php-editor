@@ -414,21 +414,9 @@ async function main(){
         
         chatHistory.forEach(msg => {
             if (msg.role === "user") {
-                // ユーザーメッセージを表示
-                let userMsgDiv = document.createElement("div");
-                userMsgDiv.className = "meditor-chat-message meditor-chat-message-user";
-                userMsgDiv.textContent = msg.content;
-                chat.content.element.appendChild(userMsgDiv);
+                chat.addMessage(msg.content, "user");
             } else if (msg.role === "assistant") {
-                // AIメッセージを表示
-                let aiMsgDiv = document.createElement("div");
-                aiMsgDiv.className = "meditor-chat-message meditor-chat-message-ai";
-                try {
-                    aiMsgDiv.innerHTML = renderMarkdown(msg.content);
-                } catch(e) {
-                    aiMsgDiv.innerHTML = msg.content;
-                }
-                chat.content.element.appendChild(aiMsgDiv);
+                chat.addMessage(msg.content, "ai", true);
             }
         });
         
@@ -440,20 +428,6 @@ async function main(){
 
     // チャット履歴をローカルストレージから読み込み
     loadChatHistory();
-
-    // マークダウンレンダリング用関数（エラーハンドリング追加）
-    function renderMarkdown(md) {
-        try {
-            if(window.marked){
-                return window.marked.parse(md);
-            }
-            // fallback: プレーンテキスト
-            return md.replace(/\n/g, '<br>');
-        } catch(e) {
-            console.error("Markdown描画エラー:", e);
-            return '<span style="color:red">Markdown描画エラー: '+e.message+'</span>';
-        }
-    }
 
 
     // 送信ボタン/EnterでAIにリクエスト（エラーハンドリング追加）
@@ -496,11 +470,9 @@ async function main(){
             if (typeof chat.showLoading === 'function') chat.showLoading();
 
             // AIメッセージ表示用
-            let aiMsg = {text: "", from: "ai", markdown: true};
-            let aiMsgDiv = document.createElement("div");
-            aiMsgDiv.className = "meditor-chat-message meditor-chat-message-ai";
-            chat.content.element.appendChild(aiMsgDiv);
-            chat.content.element.scrollTop = chat.content.element.scrollHeight;
+            let aiMsgBuffer = "";
+            // まず空のAIメッセージを追加
+            chat.addMessage("", "ai", true);
 
             // 送信履歴を直近MAX_CHAT_HISTORY件に制限
             const limitedHistory = chatHistory.slice(-MAX_CHAT_HISTORY);
@@ -532,7 +504,6 @@ async function main(){
             // ストリーム受信（ai_api.js利用）
             const controller = new AbortController();
             const selectedModel = modelSelect.getValue() || undefined;
-            let aiBuffer = "";
             if (typeof fetchAIChat === 'function') {
                 fetchAIChat({
                     messages: limitedHistory,
@@ -540,31 +511,25 @@ async function main(){
                     fileContext: fileContext ?? null,
                     signal: controller.signal,
                     onDelta: (delta, chunk) => {
-                        aiBuffer += delta;
-                        try {
-                            aiMsgDiv.innerHTML = renderMarkdown(aiBuffer);
-                        } catch(e) {
-                            console.error("AI応答マークダウン描画エラー:", e);
-                            aiMsgDiv.innerHTML = '<span style="color:red">AI応答マークダウン描画エラー: '+e.message+'</span>';
-                        }
-                        chat.content.element.scrollTop = chat.content.element.scrollHeight;
+                        aiMsgBuffer += delta;
+                        // chatモジュールのストリーム更新メソッドで反映
+                        chat.updateLastAIMessage(aiMsgBuffer, true);
                     },
                     onError: (errMsg) => {
-                        aiMsgDiv.innerHTML = '<span style="color:red">AI応答エラー: '+errMsg+'</span>';
+                        chat.updateLastAIMessage('<span style="color:red">AI応答エラー: '+errMsg+'</span>', true);
                         isStreaming = false;
                         if (typeof chat.hideLoading === 'function') chat.hideLoading();
                         console.error("AI応答エラー:", errMsg);
                     }
                 }).then(() => {
-                    aiMsg.text = aiBuffer;
-                    chatHistory.push({role: "assistant", content: aiBuffer});
+                    chatHistory.push({role: "assistant", content: aiMsgBuffer});
                     // 履歴を保存
                     saveChatHistory();
                     isStreaming = false;
                     if (typeof chat.hideLoading === 'function') chat.hideLoading();
                 });
             } else {
-                aiMsgDiv.innerHTML = '<span style="color:red">AI APIモジュールが利用できません</span>';
+                chat.updateLastAIMessage('<span style="color:red">AI APIモジュールが利用できません</span>', true);
                 isStreaming = false;
                 if (typeof chat.hideLoading === 'function') chat.hideLoading();
             }

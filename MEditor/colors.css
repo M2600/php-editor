@@ -22,6 +22,9 @@ body[theme="dark"] {
 	--me-color-sash: rgb(255, 255, 255, 0.2);
 
 	--me-color-editor-bg: #272822;
+
+	--me-color-editor-bg-added: #335530;
+	--me-color-editor-bg-removed: #5e2e2d;
 }
 
 body[theme="light"] {
@@ -37,4 +40,7 @@ body[theme="light"] {
 	--me-color-sash: rgb(0, 0, 0, 0.2);
 
 	--me-color-editor-bg: #e6e6e6;
+
+	--me-color-editor-bg-added: #e6ffe6;
+	--me-color-editor-bg-removed: #ffe6e6;
 }

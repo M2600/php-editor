@@ -1545,6 +1545,11 @@ class MEditor {
 
         // ローディング表示/非表示メソッド
         chat.showLoading = function() {
+            // 一度削除してから末尾に再追加
+            if (chat.loading.element.parentNode) {
+                chat.loading.element.parentNode.removeChild(chat.loading.element);
+            }
+            chat.content.element.appendChild(chat.loading.element);
             chat.loading.element.style.display = "flex";
             chat.content.element.scrollTop = chat.content.element.scrollHeight;
         };
@@ -1651,6 +1656,18 @@ class MEditor {
         // チャット履歴管理
         chat.messages = [];
 
+        // --- スクロール制御 ---
+        chat.autoScroll = true;
+        chat.content.element.addEventListener('scroll', function() {
+            const el = chat.content.element;
+            // 2px以内なら最下部とみなす
+            if (el.scrollHeight - el.scrollTop - el.clientHeight < 2) {
+                chat.autoScroll = true;
+            } else {
+                chat.autoScroll = false;
+            }
+        });
+
         // コードブロックにコピーアイコンを追加する共通関数
         function addCopyButtonsToCodeBlocks(rootElement) {
             const codeBlocks = rootElement.querySelectorAll("pre");
@@ -1715,7 +1732,14 @@ class MEditor {
             } else {
                 aiMsgDiv.innerText = text;
             }
-            chat.content.element.scrollTop = chat.content.element.scrollHeight;
+            if (chat.loading.element.parentNode) {
+                chat.loading.element.parentNode.removeChild(chat.loading.element);
+            }
+            chat.content.element.appendChild(chat.loading.element);
+            // スクロール位置を更新（autoScrollがtrueのときのみ）
+            if (chat.autoScroll) {
+                chat.content.element.scrollTop = chat.content.element.scrollHeight;
+            }
         };
 
         // 送信処理

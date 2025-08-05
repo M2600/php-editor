@@ -3,8 +3,11 @@
 	--me-color-link: #007bff;
 
 	--me-color-accept: #5cb85c;
+	--me-color-accept-hover: #4cae4c;
 	--me-color-reject: #fd231f;
+	--me-color-reject-hover: #c9302c;
 	--me-color-warning: #f0ad4e;
+	--me-color-warning-hover: #ec971f;
 	
 }
 

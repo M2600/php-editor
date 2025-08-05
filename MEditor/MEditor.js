@@ -211,131 +211,7 @@ class MEditor {
     }
 
 
-    /**
-     * Aceエディタ本体上にインラインで差分をハイライト表示する（カスタムマーカー利用）
-     * @param {object} aceEditor Aceエディタインスタンス（ace.edit()の戻り値）
-     * @param {string} original 元の内容
-     * @param {string} proposed 変更後の内容
-     * @returns {function} diffを消すための関数
-     */
-    _showDiffInEditor(aceEditor, original, proposed) {
-        if (typeof Diff === 'undefined') {
-            alert('jsdiff(Diff)が読み込まれていません');
-            return;
-        }
-        // Rangeクラスを取得
-        const Range = ace.require('ace/range').Range;
-        const session = aceEditor.getSession();
-        const markerIds = [];
-        const diff = Diff.diffLines(original, proposed);
-        let origLine = 0;
-        let propLine = 0;
-        diff.forEach(part => {
-            const lines = part.value.split('\n');
-            const lineCount = lines.length - (lines[lines.length-1] === '' ? 1 : 0);
-            if (part.added) {
-                for (let i = 0; i < lineCount; i++) {
-                    const range = new Range(propLine + i, 0, propLine + i, 1e5);
-                    const id = session.addMarker(range, 'meditor-diff-marker-added', 'fullLine');
-                    markerIds.push(id);
-                }
-                propLine += lineCount;
-            } else if (part.removed) {
-                origLine += lineCount;
-            } else {
-                origLine += lineCount;
-                propLine += lineCount;
-            }
-        });
-
-        return function clearDiffMarkers() {
-            markerIds.forEach(id => session.removeMarker(id));
-        };
-    }
-
-    /**
-     * Aceエディタ本体上にunified diff風に変更前(-)・変更後(+)行を挿入して表示する
-     * @param {object} aceEditor Aceエディタインスタンス（ace.edit()の戻り値）
-     * @param {string} original 元の内容
-     * @param {string} proposed 変更後の内容
-     * @returns {function} diff表示を解除し元に戻す関数
-     */
-    _showDiffUnifiedInEditor(aceEditor, original, proposed) {
-        aceEditor.isDiffView = true;
-        if (typeof Diff === 'undefined') {
-            alert('jsdiff(Diff)が読み込まれていません');
-            return;
-        }
-        const Range = ace.require('ace/range').Range;
-        const session = aceEditor.getSession();
-        // 元の内容とreadOnly状態を退避
-        const originalContent = session.getValue();
-        const wasReadOnly = aceEditor.getReadOnly();
-        // unified diff用テキスト生成
-        const diff = Diff.diffLines(original, proposed);
-        let lines = [];
-        let lineTypes = [];
-        diff.forEach(part => {
-            const partLines = part.value.split('\n');
-            if (partLines[partLines.length-1] === '') partLines.pop();
-            if (part.added) {
-                partLines.forEach(l => { lines.push('+ ' + l); lineTypes.push('added'); });
-            } else if (part.removed) {
-                partLines.forEach(l => { lines.push('- ' + l); lineTypes.push('removed'); });
-            } else {
-                partLines.forEach(l => { lines.push('  ' + l); lineTypes.push('context'); });
-            }
-        });
-        session.setValue(lines.join('\n'));
-        aceEditor.setReadOnly(true);
-
-        // マーカーを追加
-        const markerIds = [];
-        for (let i = 0; i < lineTypes.length; i++) {
-            if (lineTypes[i] === 'added') {
-                const range = new Range(i, 0, i, 1e5);
-                const id = session.addMarker(range, 'meditor-diff-line-added', 'fullLine');
-                markerIds.push(id);
-            } else if (lineTypes[i] === 'removed') {
-                const range = new Range(i, 0, i, 1e5);
-                const id = session.addMarker(range, 'meditor-diff-line-removed', 'fullLine');
-                markerIds.push(id);
-            }
-        }
-
-        // diff表示解除用
-        return () => {
-            session.setValue(originalContent);
-            aceEditor.setReadOnly(wasReadOnly);
-            markerIds.forEach(id => session.removeMarker(id));
-            aceEditor.isDiffView = false;
-        };
-    }
-
-    /**
-     * 現在のファイルと変更予定ファイルの差分を表示する
-     * @param {object} file ファイルオブジェクト
-     * @param {string} proposed 変更後の内容
-     * @returns {function} diff表示を解除し元に戻す関数
-     */
-    showDiff(file, proposed) {
-        const aceEditor = file.aceObj.editor;
-        if (aceEditor.isDiffView) {
-            // 既にdiff表示中なら何もしない
-            return;
-        }
-        const original = aceEditor.getValue();
-        const clear = this._showDiffUnifiedInEditor(aceEditor, original, proposed);
-        // diff表示を解除するための関数を返す
-        return () => {
-            // エディタのdiff表示を解除
-            clear();
-            //　変更なしに設定
-            file.changed = false;
-            // エクスプローラーのアイコンを元に戻す
-            this.setFileIcon(file.path, null);
-        };
-    }
+    
 
     changeThemeAction = (theme) => {
         console.log("Theme changed to: " + theme);
@@ -1892,6 +1768,52 @@ class MEditor {
             });
         }
 
+
+        chat.onApplyToCode = (code, applyBtn) => {
+            // 適用処理をここに追加
+            console.log("コード適用:", code);
+        }
+
+        // コードブロックに「コードに適用」ボタンを追加するメソッド
+        chat.addApplyToCodeButtonsToChat = function (rootElement) {
+            if (!rootElement || !rootElement.querySelector) {
+                console.warn("rootElementが無効です。");
+                return;
+            }
+            const codeBlocks = rootElement.querySelectorAll('pre');
+            codeBlocks.forEach(block => {
+                const codeMenu = block.previousElementSibling;
+                if (!codeMenu) {
+                    console.warn("コードブロックの前にメニューが見つかりません。");
+                    return;
+                }
+                if (codeMenu.querySelector('.' + this.CLASS_NAME_PREFIX + 'chat-code-apply-btn')) return; // 既に存在する場合はスキップ
+                const applyBtn = document.createElement('button');
+                applyBtn.classList.add(this.CLASS_NAME_PREFIX + 'chat-code-apply-btn');
+                applyBtn.innerHTML = 'コードに適用';
+                applyBtn.startLoading = () => {
+                    applyBtn.disabled = true;
+                    applyBtn.innerHTML = '適用中...';
+                };
+                applyBtn.stopLoading = () => {
+                    applyBtn.disabled = false;
+                    applyBtn.innerHTML = 'コードに適用';
+                };
+                applyBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const code = block.querySelector('code');
+                    if (!code) {
+                        console.warn("コードブロック内に <code> タグが見つかりません。");
+                        return;
+                    }
+                    const codeText = code.innerText || code.textContent;
+                    chat.onApplyToCode(codeText, applyBtn); // コード適用処理を呼び出す
+                });
+                codeMenu.appendChild(applyBtn);
+            });
+        };
+
+
         // メッセージ追加メソッド
         chat.addMessage = (text, from = "user", markdown = false) => {
             const msg = {};
@@ -1904,6 +1826,7 @@ class MEditor {
                 const html = marked.parse(text);
                 msg.element.innerHTML = html;
                 addCopyButtonsToCodeBlocks.call(this, msg.element);
+                chat.addApplyToCodeButtonsToChat(msg.element);
             }
 
             chat.content.element.appendChild(msg.element);
@@ -1920,6 +1843,7 @@ class MEditor {
             if (markdown) {
                 aiMsgDiv.innerHTML = marked.parse(text);
                 addCopyButtonsToCodeBlocks.call(this, aiMsgDiv);
+                chat.addApplyToCodeButtonsToChat(aiMsgDiv);
             } else {
                 aiMsgDiv.innerText = text;
             }
@@ -1970,6 +1894,214 @@ class MEditor {
 
         return chat;
     }
+
+
+
+
+    /**
+     * Aceエディタ本体上にインラインで差分をハイライト表示する（カスタムマーカー利用）
+     * @param {object} aceEditor Aceエディタインスタンス（ace.edit()の戻り値）
+     * @param {string} original 元の内容
+     * @param {string} proposed 変更後の内容
+     * @returns {function} diffを消すための関数
+     */
+    _showDiffInEditor(aceEditor, original, proposed) {
+        if (typeof Diff === 'undefined') {
+            alert('jsdiff(Diff)が読み込まれていません');
+            return;
+        }
+        // Rangeクラスを取得
+        const Range = ace.require('ace/range').Range;
+        const session = aceEditor.getSession();
+        const markerIds = [];
+        const diff = Diff.diffLines(original, proposed);
+        let origLine = 0;
+        let propLine = 0;
+        diff.forEach(part => {
+            const lines = part.value.split('\n');
+            const lineCount = lines.length - (lines[lines.length-1] === '' ? 1 : 0);
+            if (part.added) {
+                for (let i = 0; i < lineCount; i++) {
+                    const range = new Range(propLine + i, 0, propLine + i, 1e5);
+                    const id = session.addMarker(range, 'meditor-diff-marker-added', 'fullLine');
+                    markerIds.push(id);
+                }
+                propLine += lineCount;
+            } else if (part.removed) {
+                origLine += lineCount;
+            } else {
+                origLine += lineCount;
+                propLine += lineCount;
+            }
+        });
+
+        return function clearDiffMarkers() {
+            markerIds.forEach(id => session.removeMarker(id));
+        };
+    }
+
+    /**
+     * Aceエディタ本体上にunified diff風に変更前(-)・変更後(+)行を挿入して表示する
+     * @param {object} aceEditor Aceエディタインスタンス（ace.edit()の戻り値）
+     * @param {string} original 元の内容
+     * @param {string} proposed 変更後の内容
+     * @returns {function} diff表示を解除し元に戻す関数
+     */
+    _showDiffUnifiedInEditor(aceEditor, original, proposed) {
+        aceEditor.isDiffView = true;
+        if (typeof Diff === 'undefined') {
+            alert('jsdiff(Diff)が読み込まれていません');
+            return;
+        }
+        const Range = ace.require('ace/range').Range;
+        const session = aceEditor.getSession();
+        // 元の内容とreadOnly状態を退避
+        const originalContent = session.getValue();
+        const wasReadOnly = aceEditor.getReadOnly();
+        // unified diff用テキスト生成
+        const diff = Diff.diffLines(original, proposed);
+        let lines = [];
+        let lineTypes = [];
+        diff.forEach(part => {
+            const partLines = part.value.split('\n');
+            if (partLines[partLines.length-1] === '') partLines.pop();
+            if (part.added) {
+                partLines.forEach(l => { lines.push('+ ' + l); lineTypes.push('added'); });
+            } else if (part.removed) {
+                partLines.forEach(l => { lines.push('- ' + l); lineTypes.push('removed'); });
+            } else {
+                partLines.forEach(l => { lines.push('  ' + l); lineTypes.push('context'); });
+            }
+        });
+        session.setValue(lines.join('\n'));
+        aceEditor.setReadOnly(true);
+
+        // マーカーを追加
+        const markerIds = [];
+        for (let i = 0; i < lineTypes.length; i++) {
+            if (lineTypes[i] === 'added') {
+                const range = new Range(i, 0, i, 1e5);
+                const id = session.addMarker(range, 'meditor-diff-line-added', 'fullLine');
+                markerIds.push(id);
+            } else if (lineTypes[i] === 'removed') {
+                const range = new Range(i, 0, i, 1e5);
+                const id = session.addMarker(range, 'meditor-diff-line-removed', 'fullLine');
+                markerIds.push(id);
+            }
+        }
+
+        // diff表示解除用
+        return () => {
+            session.setValue(originalContent);
+            aceEditor.setReadOnly(wasReadOnly);
+            markerIds.forEach(id => session.removeMarker(id));
+            aceEditor.isDiffView = false;
+        };
+    }
+
+    /**
+     * 現在のファイルと変更予定ファイルの差分を表示する
+     * @param {object} file ファイルオブジェクト
+     * @param {string} proposed 変更後の内容
+     * @returns {function} diff表示を解除し元に戻す関数
+     */
+    showDiff(file, proposed) {
+        const aceEditor = file.aceObj.editor;
+        if (aceEditor.isDiffView) {
+            // 既にdiff表示中なら何もしない
+            return;
+        }
+        const original = aceEditor.getValue();
+        const clear = this._showDiffUnifiedInEditor(aceEditor, original, proposed);
+        // diff表示を解除するための関数を返す
+        return () => {
+            // エディタのdiff表示を解除
+            clear();
+            //　変更なしに設定
+            file.changed = false;
+            // エクスプローラーのアイコンを元に戻す
+            this.setFileIcon(file.path, null);
+        };
+    }
+
+
+
+
+    diffApplyMenu(rootElement, file, proposed, onApply, onIgnore) {
+        // 差分適用確認ダイアログを生成
+        const menu = {};
+        menu.element = document.createElement("div");
+        menu.element.classList.add(this.CLASS_NAME_PREFIX + "diff-apply-menu");
+
+        // メッセージ
+        const msg = document.createElement("div");
+        msg.textContent = "この変更を適用しますか？";
+        msg.classList.add(this.CLASS_NAME_PREFIX + "diff-apply-menu-msg");
+        menu.element.appendChild(msg);
+
+        // ボタンコンテナ
+        const btnContainer = document.createElement("div");
+        btnContainer.classList.add(this.CLASS_NAME_PREFIX + "diff-apply-menu-btns");
+
+        // 適用ボタン
+        const applyBtn = document.createElement("button");
+        applyBtn.textContent = "適用";
+        applyBtn.classList.add(this.CLASS_NAME_PREFIX + "diff-apply-btn");
+        applyBtn.addEventListener("click", () => {
+            // 変更を適用
+            if (typeof onApply === "function") {
+                onApply(file, proposed);
+            } else {
+                console.error("onApply callback is not a function");
+            }
+            if (menu.element.parentNode) menu.element.parentNode.removeChild(menu.element);
+        });
+
+        // 無視ボタン
+        const ignoreBtn = document.createElement("button");
+        ignoreBtn.textContent = "無視";
+        ignoreBtn.classList.add(this.CLASS_NAME_PREFIX + "diff-ignore-btn");
+        ignoreBtn.addEventListener("click", () => {
+            if (typeof onIgnore === "function") {
+                onIgnore(file);
+            }
+            // ダイアログを閉じる
+            if (menu.element.parentNode) menu.element.parentNode.removeChild(menu.element);
+        });
+
+        btnContainer.appendChild(applyBtn);
+        btnContainer.appendChild(ignoreBtn);
+        menu.element.appendChild(btnContainer);
+
+        // 画面に追加
+        rootElement.appendChild(menu.element);
+
+        // ESCキーで閉じる
+        const escHandler = (e) => {
+            if (e.key === "Escape") {
+                if (typeof onIgnore === "function") {
+                    onIgnore(file);
+                }
+                // ダイアログを閉じる
+                if (menu.element.parentNode) menu.element.parentNode.removeChild(menu.element);
+                window.removeEventListener("keydown", escHandler);
+            }
+        };
+        window.addEventListener("keydown", escHandler);
+
+        return menu;
+    }
+
+
+
+
+
+
+
+
+
+
+
 
 
 

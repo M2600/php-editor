@@ -316,10 +316,103 @@ async function main(){
     //editor.page.main.right.hide();
 
 
-    chat = editor.createChat(editor.page.main.right, opt={});
 
+    chat = editor.createChat(editor.page.main.right, opt={});
     chat.setTitle("AI Chat");
 
+
+    // AIからの返答のコードブロックのコードに適用ボタンを押したときの処理
+    chat.onApplyToCode = function(codeText, applyBtn) {
+        if (!CURRENT_FILE || !CURRENT_FILE.aceObj || !CURRENT_FILE.aceObj.editor) {
+            console.error("現在のファイルが無効です。");
+            mConsole.print("マージ先のファイルを開いてください", "error");
+            return;
+        }
+        applyBtn.startLoading();
+        AIMerge(CURRENT_FILE.aceObj.editor.getValue(), codeText).then(() => {
+            applyBtn.stopLoading();
+        });
+    };
+
+
+    // コード適用関連のメソッド
+
+    /**
+     * markdownのコードブロックのコードを抽出する
+     * @param {string} text マークダウンテキスト
+     */
+    function extractMarkdownCodeBlocks(text) {
+        const codeBlockRegex = /```\S*\s(.*?)```/gs;
+        let matches;
+        const codeBlocks = [];
+        while ((matches = codeBlockRegex.exec(text)) !== null) {
+            codeBlocks.push(matches[1].trim());
+        }
+        return codeBlocks;
+    }
+
+    /**
+     * LLMを使ってコードをマージする
+     * @param {string} baseCode マージのベースとなるコード
+     * @param {string} aiCode AIが提案したコード
+     */
+    async function AIMerge(baseCode, aiCode) {
+        // ここにマージ処理を実装
+        prompt = `Merge the following code snippets:
+
+Base Code:
+${baseCode}
+
+AI Suggested Code:
+${aiCode}
+
+Merged Code:
+Please provide the merged code only, without any additional text or explanations.`;
+        
+        const controller = new AbortController();
+        const selectedModel = modelSelect.getValue() || undefined;
+        let buffer = "";
+        let hasValidStream = false;
+        if(typeof fetchAIChat === 'function'){
+            await fetchAIChat({
+                messages: [{ role: "user", content: prompt }],
+                model: selectedModel,
+                signal: controller.signal,
+                onDelta: (delta, chunk) => {
+                    // ストリーム更新処理
+                    buffer += delta;
+                    hasValidStream = true;
+                },
+                onError: (errMsg) => {
+                    console.error("AI応答エラー:", errMsg);
+                }
+            }).then(() => {
+                if (hasValidStream) {
+                    let codeBlocks = extractMarkdownCodeBlocks(buffer);
+                    if (codeBlocks.length === 0) {
+                        mConsole.print("AIからの応答にコードブロックが含まれていません", "error");
+                        return;
+                    }
+                    if (codeBlocks.length > 1) {
+                        mConsole.print("AIからの応答に複数のコードブロックが含まれています。最初のコードブロックを適用します。", "warning");
+                    }
+                    let code = codeBlocks[0];
+                    let clearDiff = editor.showDiff(CURRENT_FILE, code);
+
+                    const applyCode = async (file, code) => {
+                        if (file && file.aceObj && file.aceObj.editor) {
+                            clearDiff();
+                            file.aceObj.editor.setValue(code, -1);
+                            file.changed = true;
+                            editor.setFileIcon(file.path, "*");
+                            mConsole.print("コードを適用しました", "success");
+                        }
+                    };
+                    let applyMenu = editor.diffApplyMenu(editorEditor.element ,CURRENT_FILE, code, applyCode, clearDiff);
+                }
+            })
+        }
+    }
 
 
     // チャット履歴
@@ -417,9 +510,9 @@ async function main(){
                 chat.addMessage(msg.content, "user");
             } else if (msg.role === "assistant") {
                 chat.addMessage(msg.content, "ai", true);
+                
             }
         });
-        
         // スクロールを最下部に
         if (chat.content.element.scrollHeight > chat.content.element.clientHeight) {
             chat.content.element.scrollTop = chat.content.element.scrollHeight;
@@ -473,6 +566,11 @@ async function main(){
             let aiMsgBuffer = "";
             // まず空のAIメッセージを追加
             chat.addMessage("", "ai", true);
+            setTimeout(() => {
+                chat.addApplyToCodeButtonsToChat(async (aiCode) => {
+                    await requestAIMergeAndPreview(aiCode);
+                });
+            }, 0);
 
             // 送信履歴を直近MAX_CHAT_HISTORY件に制限
             const limitedHistory = chatHistory.slice(-MAX_CHAT_HISTORY);

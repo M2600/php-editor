@@ -1,12 +1,76 @@
 // ai_api.js
 // AIチャットAPI通信・ストリーム処理モジュール
 
-export async function fetchAIChat({messages, model, fileContext, onDelta, onError, signal}) {
+/**
+ * スムーズな文字出力を行うクラス
+ */
+class SmoothTextStreamer {
+    constructor(onUpdate, intervalMs = 50) {
+        this.onUpdate = onUpdate;
+        this.intervalMs = intervalMs;
+        this.buffer = '';
+        this.currentText = '';
+        this.timer = null;
+        this.isRunning = false;
+    }
+
+    addText(text) {
+        this.buffer += text;
+        if (!this.isRunning) {
+            this.start();
+        }
+    }
+
+    start() {
+        if (this.isRunning) return;
+        this.isRunning = true;
+        
+        this.timer = setInterval(() => {
+            if (this.buffer.length === 0) {
+                return;
+            }
+
+            // バッファから一度に出力する文字数を計算
+            const remainingBuffer = this.buffer.length;
+            const charsToOutput = Math.max(1, Math.min(10, Math.ceil(remainingBuffer / 5)));
+            
+            // バッファから文字を取り出して出力
+            const outputText = this.buffer.substring(0, charsToOutput);
+            this.buffer = this.buffer.substring(charsToOutput);
+            this.currentText += outputText;
+            
+            this.onUpdate(this.currentText);
+        }, this.intervalMs);
+    }
+
+    stop() {
+        if (this.timer) {
+            clearInterval(this.timer);
+            this.timer = null;
+        }
+        this.isRunning = false;
+        
+        // 残りのバッファを全て出力
+        if (this.buffer.length > 0) {
+            this.currentText += this.buffer;
+            this.buffer = '';
+            this.onUpdate(this.currentText);
+        }
+    }
+
+    clear() {
+        this.stop();
+        this.buffer = '';
+        this.currentText = '';
+    }
+}
+
+export async function fetchAIChat({messages, model, fileContext, dirContext, onDelta, onError, signal, smoothOutput = true}) {
     try {
         const res = await fetch("/api/ai.php", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({messages, model, fileContext: fileContext ?? null}),
+            body: JSON.stringify({messages, model, fileContext: fileContext ?? null, dirContext: dirContext ?? null}),
             signal
         });
         if (!res.ok) {
@@ -24,11 +88,21 @@ export async function fetchAIChat({messages, model, fileContext, onDelta, onErro
             onError && onError("No stream");
             return;
         }
+
+        // スムーズ出力用のストリーマーを初期化
+        let textStreamer = null;
+        if (smoothOutput && onDelta) {
+            textStreamer = new SmoothTextStreamer((text) => {
+                onDelta(text, null, true); // 第3引数でスムーズ出力であることを示す
+            });
+        }
+
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
         let done = false;
         let hasValidStream = false; // ストリーム開始を検出するフラグ
+        let fullText = ""; // 完全なテキストを保持
         
         while (!done) {
             const {done: doneRead, value} = await reader.read();
@@ -75,16 +149,29 @@ export async function fetchAIChat({messages, model, fileContext, onDelta, onErro
                             onError && onError(errMsg);
                             return;
                         }
-                        // delta.contentがあればonDeltaに渡す
+                        // delta.contentがあれば処理
                         const delta = chunk.choices?.[0]?.delta;
                         if (delta && typeof delta.content === "string") {
-                            onDelta && onDelta(delta.content, chunk);
+                            fullText += delta.content;
+                            
+                            if (smoothOutput && textStreamer) {
+                                // スムーズ出力の場合はストリーマーに追加
+                                textStreamer.addText(delta.content);
+                            } else {
+                                // 通常出力の場合は直接コールバック
+                                onDelta && onDelta(delta.content, chunk);
+                            }
                         }
                     } catch(e) {
                         // JSONパースエラーは無視
                     }
                 }
             }
+        }
+
+        // ストリーム終了時の処理
+        if (textStreamer) {
+            textStreamer.stop();
         }
         
         // ストリーム終了後、正常なレスポンスが一度も受信されていない場合

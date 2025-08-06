@@ -1857,6 +1857,14 @@ class MEditor {
             }
         };
 
+        // 最後のAIメッセージのテキストを取得
+        chat.getLastAIMessageText = () => {
+            const aiMsgs = chat.content.element.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'chat-message-ai');
+            if (aiMsgs.length === 0) return '';
+            const lastAiMsg = aiMsgs[aiMsgs.length - 1];
+            return lastAiMsg.innerText || lastAiMsg.textContent || '';
+        };
+
         // 送信処理
         chat.inputArea.sendBtn.addEventListener("click", () => {
             const value = chat.inputArea.textarea.value.trim();

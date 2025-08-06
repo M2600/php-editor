@@ -378,9 +378,16 @@ Please provide the merged code only, without any additional text or explanations
                 messages: [{ role: "user", content: prompt }],
                 model: selectedModel,
                 signal: controller.signal,
-                onDelta: (delta, chunk) => {
+                smoothOutput: true, // スムーズ出力を有効化
+                onDelta: (delta, chunk, isSmooth) => {
                     // ストリーム更新処理
-                    buffer += delta;
+                    if (isSmooth) {
+                        // スムーズ出力の場合はdeltaが完全なテキスト
+                        buffer = delta;
+                    } else {
+                        // 通常の場合は差分テキスト
+                        buffer += delta;
+                    }
                     hasValidStream = true;
                 },
                 onError: (errMsg) => {
@@ -604,19 +611,57 @@ Please provide the merged code only, without any additional text or explanations
                 }
             }
 
+            // ディレクトリコンテキスト（現在のディレクトリの構造）を送信
+            let dirContext = null;
+            if (FILE_LIST && FILE_LIST.files) {
+                // 現在のディレクトリ構造を簡略化して取得
+                const simplifyStructure = (files, maxDepth = 2, currentDepth = 0) => {
+                    if (currentDepth >= maxDepth) return [];
+                    return files.map(file => {
+                        if (file.type === "dir") {
+                            return {
+                                name: file.name,
+                                type: "dir",
+                                files: file.files ? simplifyStructure(file.files, maxDepth, currentDepth + 1) : []
+                            };
+                        } else {
+                            return {
+                                name: file.name,
+                                type: file.type
+                            };
+                        }
+                    });
+                };
+                
+                dirContext = {
+                    currentDir: editor.BASE_DIR || "/",
+                    structure: simplifyStructure(FILE_LIST.files)
+                };
+                console.log("Sending directory context:", dirContext);
+            }
+
             // ストリーム受信（ai_api.js利用）
             const controller = new AbortController();
             const selectedModel = modelSelect.getValue() || undefined;
+            aiMsgBuffer = ""; // 既存の変数を再利用
+            
             if (typeof fetchAIChat === 'function') {
                 fetchAIChat({
                     messages: chatHistory,
                     model: selectedModel,
                     fileContext: fileContext ?? null,
+                    dirContext: dirContext ?? null,
                     signal: controller.signal,
-                    onDelta: (delta, chunk) => {
-                        aiMsgBuffer += delta;
-                        // chatモジュールのストリーム更新メソッドで反映
-                        chat.updateLastAIMessage(aiMsgBuffer, true);
+                    smoothOutput: true, // スムーズ出力を有効化
+                    onDelta: (delta, chunk, isSmooth) => {
+                        if (isSmooth) {
+                            // スムーズ出力の場合はdeltaが完全なテキスト
+                            chat.updateLastAIMessage(delta, true);
+                        } else {
+                            // 通常の場合は差分テキスト
+                            aiMsgBuffer += delta;
+                            chat.updateLastAIMessage(aiMsgBuffer, true);
+                        }
                     },
                     onError: (errMsg) => {
                         chat.updateLastAIMessage('<span style="color:red">AI応答エラー: '+errMsg+'</span>', true);
@@ -625,7 +670,9 @@ Please provide the merged code only, without any additional text or explanations
                         console.error("AI応答エラー:", errMsg);
                     }
                 }).then(() => {
-                    chatHistory.push({role: "assistant", content: aiMsgBuffer});
+                    // 最終的なテキストを履歴に保存
+                    const finalMessage = chat.getLastAIMessageText() || aiMsgBuffer;
+                    chatHistory.push({role: "assistant", content: finalMessage});
                     // 履歴を保存
                     saveChatHistory();
                     isStreaming = false;

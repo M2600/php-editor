@@ -3,6 +3,107 @@ header('Content-Type: application/json; charset=utf-8');
 
 session_start();
 
+// コンテキスト圧縮機能を読み込み
+require_once __DIR__ . '/ai_context_compression.php';
+
+/**
+ * AIサーバーにリクエストを送信してストリーミングレスポンスを処理する
+ */
+function sendAIRequest($apiUrl, $apiKey, $payload) {
+    try {
+        $chat_url = $apiUrl . '/chat/completions';
+        $ch = curl_init($chat_url);
+        if ($ch === false) {
+            throw new Exception('cURL初期化エラー');
+        }
+        
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'x-api-key: ' . $apiKey
+        ]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 600); // タイムアウトを600秒に設定
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_FAILONERROR, false); // HTTPエラーでも継続
+        
+        // エラーハンドリング用のバッファ
+        $errorBuffer = '';
+        $hasStreamStarted = false;
+        $responseStarted = false;
+        
+        curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) use (&$errorBuffer, &$hasStreamStarted, &$responseStarted) {
+            $responseStarted = true;
+            
+            // AIサーバーからのエラーレスポンスをチェック
+            if (!$hasStreamStarted) {
+                $errorBuffer .= $data;
+                // JSONエラーレスポンスかチェック
+                if (strpos($data, '{') !== false && strpos($data, 'error') !== false) {
+                    $jsonStart = strpos($errorBuffer, '{');
+                    if ($jsonStart !== false) {
+                        $jsonPart = substr($errorBuffer, $jsonStart);
+                        $decoded = json_decode($jsonPart, true);
+                        if ($decoded && isset($decoded['error'])) {
+                            // エラーレスポンスをそのまま返す
+                            echo $data;
+                            return strlen($data);
+                        }
+                    }
+                }
+                // ストリーム開始の判定
+                if (strpos($data, 'data:') !== false) {
+                    $hasStreamStarted = true;
+                }
+            }
+            echo $data;
+            return strlen($data);
+        });
+
+        // ストリームで返す
+        curl_setopt($ch, CURLOPT_HEADER, false);
+        @ob_end_clean();
+        header('X-Accel-Buffering: no');
+        header('Cache-Control: no-cache');
+        header('Content-Encoding: none');
+        flush();
+
+        $result = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        
+        if ($result === false) {
+            curl_close($ch);
+            http_response_code(500);
+            echo json_encode(['error' => 'AIサーバーとの通信に失敗しました: ' . $curlError]);
+            exit;
+        }
+        
+        // レスポンスが全く受信されていない場合（サーバーダウン等）
+        if (!$responseStarted) {
+            curl_close($ch);
+            http_response_code(500);
+            echo json_encode(['error' => 'AIサーバーから応答がありません。サーバーがダウンしている可能性があります。']);
+            exit;
+        }
+        
+        // HTTPエラーコードのチェック
+        if ($httpCode >= 400) {
+            curl_close($ch);
+            http_response_code(500);
+            echo json_encode(['error' => "AIサーバーエラー (HTTP $httpCode)"]);
+            exit;
+        }
+        
+        curl_close($ch);
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'サーバーエラー: ' . $e->getMessage()]);
+        exit;
+    }
+}
+
 // フォーマットされたプロンプトメッセージを生成する関数
 function formatPromptMessages($messages) {
     /*
@@ -58,6 +159,8 @@ $config = require $configFile;
 $LMSTUDIO_API_URL = $config['lmstudio_base_url'] ?? '';
 $API_KEY = $config['api_key'] ?? '';
 
+
+
 if (empty($API_KEY) || $API_KEY === 'YOUR_API_KEY_HERE') {
     http_response_code(500);
     echo json_encode(['error' => 'APIキーが設定されていません。ai_config.phpで正しいAPIキーを設定してください。']);
@@ -79,6 +182,9 @@ if (!is_array($messages) || count($messages) === 0) {
     exit;
 }
 $messages = formatPromptMessages($messages);
+
+// コンテキスト圧縮を実行（AI要約機能付き）
+$messages = compressContext($messages, 2500, $LMSTUDIO_API_URL, $API_KEY);
 
 
 // $logDir = __DIR__ . '/../log';
@@ -114,7 +220,47 @@ log_chat_request($logFile, $input, $messages);
 $basePrompt = [
     [
         'role' => 'system',
-        'content' => 'あなたは親切なAIアシスタントです。すべての返答はマークダウン形式で出力してください。'
+        'content' => <<<EOF
+あなたはPHPEditorに組み込まれた開発支援AIアシスタントです。
+プログラミング初心者から中級者向けに、PHP、HTML、CSS、JavaScriptのWeb開発をサポートします。
+
+【PHPEditorについて】
+- PHPEditorは主に初学者を対象としてブラウザ完結のPHP開発環境を提供します。
+- PHPEditorではphpファイル、その他のファイルを作成した時点でwebサーバー上で公開されるので、開発環境の構築等についてはアドバイス不要です。
+- PHPEditorでは作成したPHPファイルや、HTMLファイルを実行する際はRunボタンを押すことで別タブで表示されます。
+- PHPファイルのデバッグログを見たい場合はDebugボタンを押すことで、PHPEditor中央下部に結果が出力されます。
+
+【あなたの役割】
+- PHP、HTML、CSS、JavaScriptのWeb開発をサポート
+- コードレビュー、バグ修正、最適化の提案
+- 開発者の生産性向上を最優先に考える
+
+【重要な制約】
+- サーバーサイドで実行可能な言語はPHPのみ
+- セキュリティを常に考慮した安全なコード提案
+- 実際に動作するコードのみを提案する
+- コードを提案する際はまず初めに提案する完成形のコードを最初に提示し、その後に必要な説明を行う】
+
+【回答形式】
+- すべての返答はマークダウン形式で出力
+- コードブロックには適切な言語指定を付与
+- 複数ファイルの変更が必要な場合は、ファイルパスをコメントで明記
+
+【コード提案時の注意】
+- 既存コードとの互換性を保つ
+- エラーハンドリングを含める
+- 変数名や関数名は分かりやすく命名
+- 必要に応じてコメントを追加
+
+【禁止事項】
+- 実行できないコードの提案
+- セキュリティホールを含む実装
+- 過度に複雑な解決策の提案
+
+現在のファイルコンテキストがある場合は、そのコードを基に具体的で実践的な回答を提供してください。
+ディレクトリコンテキストがある場合は、ディレクトリ内のファイル構成を考慮して回答してください。
+必要であればユーザに追加情報を求めてください。
+EOF
     ]
 ];
 
@@ -129,103 +275,21 @@ if (isset($input['fileContext']) && is_array($input['fileContext']) && !empty($i
     array_unshift($messages, $fileMsg);
 }
 
+// ディレクトリ情報が送信されていればsystemメッセージとして追加
+if (isset($input['dirContext']) && is_array($input['dirContext']) && !empty($input['dirContext']['content'])) {
+    $dirMsg = [
+        'role' => 'system',
+        'content' => '[ディレクトリ情報] ' . ($input['dirContext']['name'] ?? 'ディレクトリ') . "\n" . $input['dirContext']['content']
+    ];
+    array_unshift($messages, $dirMsg);
+}
+
 $payload = [
     'model' => isset($input['model']) ? $input['model'] : 'default',
     'messages' => array_merge($basePrompt, $messages),
     'stream' => true
 ];
 
-// cURL処理は下のtryブロックでのみ実行
-
-try {
-    $chat_url = $LMSTUDIO_API_URL . '/chat/completions';
-    $ch = curl_init($chat_url);
-    if ($ch === false) {
-        throw new Exception('cURL初期化エラー');
-    }
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json',
-        'x-api-key: ' . $API_KEY
-    ]);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-    curl_setopt($ch, CURLOPT_TIMEOUT, 600); // タイムアウトを600秒に設定
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-    curl_setopt($ch, CURLOPT_FAILONERROR, false); // HTTPエラーでも継続
-    
-    // エラーハンドリング用のバッファ
-    $errorBuffer = '';
-    $hasStreamStarted = false;
-    $responseStarted = false;
-    
-    curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) use (&$errorBuffer, &$hasStreamStarted, &$responseStarted) {
-        $responseStarted = true;
-        
-        // AIサーバーからのエラーレスポンスをチェック
-        if (!$hasStreamStarted) {
-            $errorBuffer .= $data;
-            // JSONエラーレスポンスかチェック
-            if (strpos($data, '{') !== false && strpos($data, 'error') !== false) {
-                $jsonStart = strpos($errorBuffer, '{');
-                if ($jsonStart !== false) {
-                    $jsonPart = substr($errorBuffer, $jsonStart);
-                    $decoded = json_decode($jsonPart, true);
-                    if ($decoded && isset($decoded['error'])) {
-                        // エラーレスポンスをそのまま返す
-                        echo $data;
-                        return strlen($data);
-                    }
-                }
-            }
-            // ストリーム開始の判定
-            if (strpos($data, 'data:') !== false) {
-                $hasStreamStarted = true;
-            }
-        }
-        echo $data;
-        return strlen($data);
-    });
-
-    // ストリームで返す
-    curl_setopt($ch, CURLOPT_HEADER, false);
-    @ob_end_clean();
-    header('X-Accel-Buffering: no');
-    header('Cache-Control: no-cache');
-    header('Content-Encoding: none');
-    flush();
-
-    $result = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlError = curl_error($ch);
-    
-    if ($result === false) {
-        curl_close($ch);
-        http_response_code(500);
-        echo json_encode(['error' => 'AIサーバーとの通信に失敗しました: ' . $curlError]);
-        exit;
-    }
-    
-    // レスポンスが全く受信されていない場合（サーバーダウン等）
-    if (!$responseStarted) {
-        curl_close($ch);
-        http_response_code(500);
-        echo json_encode(['error' => 'AIサーバーから応答がありません。サーバーがダウンしている可能性があります。']);
-        exit;
-    }
-    
-    // HTTPエラーコードのチェック
-    if ($httpCode >= 400) {
-        curl_close($ch);
-        http_response_code(500);
-        echo json_encode(['error' => "AIサーバーエラー (HTTP $httpCode)"]);
-        exit;
-    }
-    
-    curl_close($ch);
-} catch (Throwable $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'サーバーエラー: ' . $e->getMessage()]);
-    exit;
-}
+// AIサーバーにリクエストを送信
+sendAIRequest($LMSTUDIO_API_URL, $API_KEY, $payload);
 exit;

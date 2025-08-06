@@ -988,6 +988,7 @@ i {
     white-space: normal;
     max-width: 100%;
     padding: 1em .5em;
+    transition: background 0.2s, color 0.2s;
 }
 
 /* --- AIチャット ローディングアイコン --- */

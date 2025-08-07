@@ -24,10 +24,36 @@ error_log(print_r($_FILES, true));
 if($action == "upload"){
     $filePaths = array();
     try{
-        foreach($files as $file){
-            $serverPath = convertUserPath($path . $file["name"]);
-            move_uploaded_file($file["tmp_name"], $serverPath);
-            $filePaths[] = str_replace(getUserRoot(), "", $serverPath);
+        // 複数ファイルアップロードの正しい処理
+        if(isset($files['files'])){
+            $fileCount = count($files['files']['name']);
+            
+            for($i = 0; $i < $fileCount; $i++){
+                // エラーチェック
+                if($files['files']['error'][$i] !== UPLOAD_ERR_OK){
+                    throw new Exception("ファイルアップロードエラー: " . $files['files']['name'][$i]);
+                }
+                
+                // ファイル名とパスを取得
+                $fileName = $files['files']['name'][$i];
+                $tmpName = $files['files']['tmp_name'][$i];
+                $serverPath = convertUserPath($path . $fileName);
+                
+                // ディレクトリが存在しない場合は作成
+                $directory = dirname($serverPath);
+                if (!is_dir($directory)) {
+                    mkdir($directory, 0755, true);
+                }
+                
+                // ファイルを移動
+                if(move_uploaded_file($tmpName, $serverPath)){
+                    $filePaths[] = str_replace(getUserRoot(), "", $serverPath);
+                } else {
+                    throw new Exception("ファイルの移動に失敗しました: " . $fileName);
+                }
+            }
+        } else {
+            throw new Exception("アップロードファイルが見つかりません");
         }
         echo(json_encode(array("status" => "success", "paths" => $filePaths)));
     }

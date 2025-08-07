@@ -4,6 +4,7 @@
 
 import { hideAllPreviewer } from '../utils/helpers.js';
 import { extToLang, loadFile } from '../core/file-manager.js';
+import { Path } from '../utils/api.js';
 
 export function aceKeybinds(ace, pushSaveButton, openInOtherWindow){
     ace.commands.addCommand({
@@ -152,19 +153,26 @@ export async function openInOtherWindow(currentFile, saveFile, runBrowserTab, fi
     if (!currentFile.readonly && currentFile.changed) {
         await saveFile(currentFile.path, currentFile.aceObj.editor.getValue());
     }
-    console.log(runBrowserTab);
+    
     let url = Path.join(filePageBaseUrl, userId, currentFile.path);
     if(url.endsWith("/")){
         url = url.substring(0, url.length - 1);
     }
-    if (!runBrowserTab || runBrowserTab.closed) {
-        runBrowserTab = window.open(url);
+    
+    console.log("Opening URL:", url);
+    
+    // 固定のウィンドウ名を使用して既存のタブを再利用
+    const windowName = 'phpeditor_run_tab';
+    
+    // 既存のタブがある場合は再利用、なければ新しいタブを開く
+    const targetTab = window.open(url, windowName);
+    
+    if (targetTab) {
+        // フォーカスをタブに移す
+        targetTab.focus();
     }
-    else {
-        runBrowserTab.location.href = url;
-        runBrowserTab.focus();
-    }
-    return runBrowserTab;
+    
+    return targetTab;
 }
 
 export async function showQRCode(currentFile, saveFile, editor, filePageBaseUrl, userId, mConsole, DEBUG) {

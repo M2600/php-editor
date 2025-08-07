@@ -63,7 +63,7 @@ Please provide the merged code only, without any additional text or explanations
                     return;
                 }
                 if (codeBlocks.length > 1) {
-                    mConsole.print("AIからの応答に複数のコードブロックが含まれています。最初のコードブロックを適用します。", "warning");
+                    mConsole.print("AIからの応答に複数のコードブロックが含まれています。最初のコードブロックを適用します", "warning");
                 }
                 let code = codeBlocks[0];
                 let clearDiff = editor.showDiff(currentFile, code);

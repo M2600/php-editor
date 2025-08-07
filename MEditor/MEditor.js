@@ -1736,7 +1736,7 @@ class MEditor {
         });
 
         // コードブロックにコピーアイコンを追加する共通関数
-        function addCopyButtonsToCodeBlocks(rootElement) {
+        const addCopyButtonsToCodeBlocks = (rootElement) => {
             const codeBlocks = rootElement.querySelectorAll("pre");
             codeBlocks.forEach((block) => {
                 // 既にメニューがあればスキップ
@@ -1766,7 +1766,7 @@ class MEditor {
                 codeMenu.appendChild(copyBtn);
                 block.before(codeMenu);
             });
-        }
+        };
 
 
         chat.onApplyToCode = (code, applyBtn) => {
@@ -1791,13 +1791,46 @@ class MEditor {
                 const applyBtn = document.createElement('button');
                 applyBtn.classList.add(this.CLASS_NAME_PREFIX + 'chat-code-apply-btn');
                 applyBtn.innerHTML = 'コードに適用';
+                
+                
+                // ローディング状態管理の強化
                 applyBtn.startLoading = () => {
                     applyBtn.disabled = true;
+                    applyBtn.classList.add('loading');
                     applyBtn.innerHTML = '適用中...';
                 };
+                
                 applyBtn.stopLoading = () => {
                     applyBtn.disabled = false;
+                    applyBtn.classList.remove('loading');
                     applyBtn.innerHTML = 'コードに適用';
+                };
+                
+                // 成功状態表示
+                applyBtn.showSuccess = () => {
+                    applyBtn.classList.remove('loading');
+                    applyBtn.classList.add('success');
+                    applyBtn.innerHTML = '適用完了';
+                    
+                    // 2秒後に元に戻す
+                    setTimeout(() => {
+                        applyBtn.classList.remove('success');
+                        applyBtn.innerHTML = 'コードに適用';
+                    }, 2000);
+                };
+                
+                // エラー状態表示
+                applyBtn.showError = () => {
+                    applyBtn.classList.remove('loading');
+                    applyBtn.classList.add('error');
+                    applyBtn.innerHTML = 'エラー';
+                    console.log('Error state - classes:', applyBtn.className);
+                    
+                    // 2秒後に元に戻す
+                    setTimeout(() => {
+                        applyBtn.classList.remove('error');
+                        applyBtn.innerHTML = 'コードに適用';
+                    }, 2000);
                 };
                 applyBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -1811,7 +1844,7 @@ class MEditor {
                 });
                 codeMenu.appendChild(applyBtn);
             });
-        };
+        }.bind(this);
 
 
         // メッセージ追加メソッド
@@ -1825,7 +1858,7 @@ class MEditor {
             if (markdown) {
                 const html = marked.parse(text);
                 msg.element.innerHTML = html;
-                addCopyButtonsToCodeBlocks.call(this, msg.element);
+                addCopyButtonsToCodeBlocks(msg.element);
                 chat.addApplyToCodeButtonsToChat(msg.element);
             }
 
@@ -1842,7 +1875,7 @@ class MEditor {
             const aiMsgDiv = aiMsgs[aiMsgs.length - 1];
             if (markdown) {
                 aiMsgDiv.innerHTML = marked.parse(text);
-                addCopyButtonsToCodeBlocks.call(this, aiMsgDiv);
+                addCopyButtonsToCodeBlocks(aiMsgDiv);
                 chat.addApplyToCodeButtonsToChat(aiMsgDiv);
             } else {
                 aiMsgDiv.innerText = text;

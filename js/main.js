@@ -270,9 +270,15 @@ async function main(){
         if (!APP_STATE.CURRENT_FILE || !APP_STATE.CURRENT_FILE.aceObj || !APP_STATE.CURRENT_FILE.aceObj.editor) {
             console.error("現在のファイルが無効です。");
             mConsole.print("マージ先のファイルを開いてください", "error");
+            // エラー状態表示
+            applyBtn.showError();
             return;
         }
+        
+        // 適用開始のフィードバック
         applyBtn.startLoading();
+        mConsole.print("コードをマージ中...", "info");
+        
         AIMerge(
             APP_STATE.CURRENT_FILE.aceObj.editor.getValue(), 
             codeText, 
@@ -284,6 +290,15 @@ async function main(){
             editorEditor
         ).then(() => {
             applyBtn.stopLoading();
+            // 成功フィードバック
+            mConsole.print("コードを適用", "success");
+            applyBtn.showSuccess();
+        }).catch((error) => {
+            applyBtn.stopLoading();
+            // エラーフィードバック
+            console.error("コード適用エラー:", error);
+            mConsole.print("コードの適用エラー: " + (error.message || error), "error");
+            applyBtn.showError();
         });
     };
 

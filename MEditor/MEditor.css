@@ -510,18 +510,87 @@ i {
 
 .meditor-console-line-info {
     color: var(--me-color-text);
+    animation: console-fade-in 0.3s ease-out;
 }
 
 .meditor-console-line-accept {
     color: var(--me-color-accept);
+    font-weight: bold;
+    animation: console-success-flash 0.5s ease-out;
 }
 
 .meditor-console-line-warning {
     color: var(--me-color-warning);
+    font-weight: bold;
+    animation: console-warning-pulse 0.4s ease-out;
 }
 
 .meditor-console-line-error {
     color: var(--me-color-reject);
+    font-weight: bold;
+    animation: console-error-shake 0.5s ease-out;
+}
+
+/* コンソールメッセージのアニメーション */
+@keyframes console-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(-3px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes console-success-flash {
+    0% {
+        opacity: 0;
+        background-color: rgba(40, 167, 69, 0.2);
+        transform: scale(1.02);
+    }
+    50% {
+        background-color: rgba(40, 167, 69, 0.1);
+    }
+    100% {
+        opacity: 1;
+        background-color: transparent;
+        transform: scale(1);
+    }
+}
+
+@keyframes console-warning-pulse {
+    0% {
+        opacity: 0;
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.01);
+        background-color: rgba(255, 193, 7, 0.1);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+        background-color: transparent;
+    }
+}
+
+@keyframes console-error-shake {
+    0%, 100% {
+        transform: translateX(0);
+        opacity: 0.8;
+    }
+    20%, 60% {
+        transform: translateX(-2px);
+        background-color: rgba(220, 53, 69, 0.1);
+    }
+    40%, 80% {
+        transform: translateX(2px);
+    }
+    100% {
+        opacity: 1;
+        background-color: transparent;
+    }
 }
 
 
@@ -1344,4 +1413,85 @@ i {
     display: flex;
     flex-direction: row-reverse;
     margin-top: .2rem;
+}
+
+/* コード適用ボタンのアニメーション */
+@keyframes loading-pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes success-bounce {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes error-shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-3px);
+    }
+    75% {
+        transform: translateX(3px);
+    }
+}
+
+/* コード適用ボタンの詳細なスタイル */
+.meditor-chat-code-apply-btn {
+    /* 基本スタイル - 既存のチャットボタンを継承 */
+    color: var(--me-color-text, #333);
+    border: 1px solid var(--me-color-border, #bbb);
+    background: var(--me-color-bg, #f5f5f5);
+    padding: 0.3em 0.6em;
+    margin: 0.2em 0;
+    border-radius: 0.3em;
+    font-size: 0.95em;
+    cursor: pointer;
+    width: fit-content;
+    
+    /* 拡張スタイル */
+    position: relative;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.meditor-chat-code-apply-btn:hover {
+    background: var(--me-color-bg-active, #e0e0e0);
+    transform: scale(1.02);
+}
+
+/* ローディング状態 */
+.meditor-chat-code-apply-btn.loading {
+    background-color: #6c757d !important;
+    color: white !important;
+    cursor: not-allowed !important;
+    animation: loading-pulse 1.5s infinite !important;
+    transform: none !important;
+}
+
+/* 成功状態 */
+.meditor-chat-code-apply-btn.success {
+    background-color: #28a745 !important;
+    color: white !important;
+    animation: success-bounce 0.6s ease-out !important;
+}
+
+/* エラー状態 */
+.meditor-chat-code-apply-btn.error {
+    background-color: #dc3545 !important;
+    color: white !important;
+    animation: error-shake 0.5s ease-out !important;
 }

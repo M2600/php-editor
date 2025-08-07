@@ -656,6 +656,7 @@ Please provide the merged code only, without any additional text or explanations
                     onDelta: (delta, chunk, isSmooth) => {
                         if (isSmooth) {
                             // スムーズ出力の場合はdeltaが完全なテキスト
+                            aiMsgBuffer = delta;
                             chat.updateLastAIMessage(delta, true);
                         } else {
                             // 通常の場合は差分テキスト
@@ -671,8 +672,8 @@ Please provide the merged code only, without any additional text or explanations
                     }
                 }).then(() => {
                     // 最終的なテキストを履歴に保存
-                    const finalMessage = chat.getLastAIMessageText() || aiMsgBuffer;
-                    chatHistory.push({role: "assistant", content: finalMessage});
+                    //const finalMessage = chat.getLastAIMessageText() || aiMsgBuffer;
+                    chatHistory.push({role: "assistant", content: aiMsgBuffer});
                     // 履歴を保存
                     saveChatHistory();
                     isStreaming = false;

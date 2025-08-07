@@ -7,6 +7,52 @@ php editor for programming education
 - AI-powered coding assistance with LMStudio integration
 - Interactive AI chat with file context awareness
 - Persistent chat history across browser sessions
+- **Modular JavaScript Architecture**: Organized codebase with ES6 modules for better maintainability
+
+## Architecture
+
+### JavaScript Module Structure
+The application has been refactored into a modular ES6 architecture:
+
+```
+js/
+├── main.js                    # Main application entry point
+├── modules/
+│   ├── core/
+│   │   ├── config.js         # Configuration and app state management
+│   │   └── file-manager.js   # File operations and API calls
+│   ├── ui/
+│   │   └── dialogs.js        # UI dialogs and popup management
+│   ├── editor/
+│   │   └── ace-editor.js     # ACE editor integration and file handling
+│   ├── ai/
+│   │   ├── ai-api.js         # AI streaming API communication
+│   │   ├── ai-chat.js        # AI chat functionality and history management
+│   │   ├── ai-tool.js        # AI tool integration
+│   │   └── ai_tools/
+│   │       └── fileEditor.js # File editing tools for AI
+│   └── utils/
+│       ├── helpers.js        # Utility helper functions
+│       └── api.js           # API communication utilities
+├── qrcode.js                 # QR code generation (external library)
+└── meditor.js.backup         # Backup of original monolithic file
+```
+
+### Module Benefits
+- **Maintainability**: Each module handles specific functionality
+- **Reusability**: Functions can be easily imported across modules
+- **Testing**: Individual modules can be tested in isolation
+- **Team Development**: Multiple developers can work on different modules
+- **Performance**: Improved tree-shaking and lazy loading potential
+
+### Migration Notes
+- All AI-related files (`ai_api.js`, `ai_tool.js`, `ai_tools/`) moved to `js/modules/ai/`
+- Original `meditor.js` has been backed up as `meditor.js.backup`
+- Legacy `api.js` removed and replaced with modular `utils/api.js`
+- New modular code maintains full backward compatibility
+- All existing functionality preserved with improved organization
+- Uses ES6 modules with proper import/export statements
+- HTML templates updated to use new module structure
 - #### Complete Setup Commands
 
 **1. Create Nginx Configuration**:

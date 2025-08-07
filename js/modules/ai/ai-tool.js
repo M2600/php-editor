@@ -1,7 +1,7 @@
 
-// ai_tools.js
+// ai-tool.js
 // ai用のツールモジュール
-import './ai_tools/fileEditor.js';
+import { createFile, editFile } from './ai_tools/fileEditor.js';
 
 
 export class AITool {
@@ -15,21 +15,17 @@ export class AITool {
      * @returns {any} - ツール関数の戻り値
      */
     async callTool(toolName, args) {
-        if (typeof fileEditor[toolName] === 'function') {
-            try {
-                if (toolName === 'createFile') {
-                    return await createFile(args.filename, args.content);
-                } else if (toolName === 'editFile') {
-                    return await editFile(args.filename, args.needle, args.replacement);
-                } else {
-                    throw new Error('未対応のツール: ' + toolName);
-                }
-            } catch (e) {
-                console.error('ファイルツール実行エラー:', e);
-                return { error: e.message };
+        try {
+            if (toolName === 'createFile') {
+                return await createFile(args.filename, args.content);
+            } else if (toolName === 'editFile') {
+                return await editFile(args.filename, args.needle, args.replacement);
+            } else {
+                throw new Error('未対応のツール: ' + toolName);
             }
-        } else {
-            return { error: 'ツールが見つかりません: ' + toolName };
+        } catch (e) {
+            console.error('ファイルツール実行エラー:', e);
+            return { error: e.message };
         }
     }
 

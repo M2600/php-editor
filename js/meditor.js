@@ -632,10 +632,23 @@ Please provide the merged code only, without any additional text or explanations
                         }
                     });
                 };
+                //　現在のディレクトリ構造をテキスト形式で取得
+                // 例: file1.txt, dir/file2.txt
+                const subFiles = (files, maxDepth = 2, currentDepth = 0) => {
+                    if (currentDepth >= maxDepth) return [];
+                    return files.map(file => {
+                        if (file.type === "dir") {
+                            return subFiles(file.files || [], maxDepth, currentDepth + 1);
+                        } else {
+                            return `${file.path}`;
+                        }
+                    });
+                };
                 
+
                 dirContext = {
                     currentDir: editor.BASE_DIR || "/",
-                    structure: simplifyStructure(FILE_LIST.files)
+                    structure: subFiles(FILE_LIST.files, 5),
                 };
                 console.log("Sending directory context:", dirContext);
             }

@@ -104,6 +104,20 @@ function sendAIRequest($apiUrl, $apiKey, $payload) {
     }
 }
 
+// オブジェクト(辞書形式)をjson形式のテキストに変換する関数
+function objectToJsonText($obj) {
+    if (is_array($obj) || is_object($obj)) {
+        $json = json_encode($obj, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($json === false) {
+            return 'JSONエンコードエラー: ' . json_last_error_msg();
+        }
+        return $json;
+    } else {
+        return (string)$obj; // 文字列に変換
+    }
+}
+
+
 // フォーマットされたプロンプトメッセージを生成する関数
 function formatPromptMessages($messages) {
     /*
@@ -197,26 +211,22 @@ if(!file_exists($LOG_DIR)){
 $logFile = $LOG_DIR . "chat.log";
 
 // ログ出力関数
-function log_chat_request($logFile, $input, $messages) {
+function log_chat_request($logFile, $content) {
     $ts = date('Y-m-d H:i:s');
     $ip = $_SERVER['REMOTE_ADDR'] ?? '-';
     $user = isset($_SESSION['id']) ? $_SESSION['id'] : '-';
-    $model = $input['model'] ?? 'default';
-    $fileContext = isset($input['fileContext']) && !empty($input['fileContext']['content']) ? 'yes' : 'no';
+    $request = $content ? $content : '';
     $log = [
-        'time' => $ts,
+        'timestamp' => $ts,
         'user' => $user,
         'ip' => $ip,
-        'model' => $model,
-        'fileContext' => $fileContext,
-        'messages' => $messages
+        'request' => $request
     ];
-    $line = json_encode($log, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) . "\n";
+
+    $line = json_encode($log, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
     file_put_contents($logFile, $line, FILE_APPEND|LOCK_EX);
 }
 
-// ログ保存
-log_chat_request($logFile, $input, $messages);
 $basePrompt = [
     [
         'role' => 'system',
@@ -276,10 +286,10 @@ if (isset($input['fileContext']) && is_array($input['fileContext']) && !empty($i
 }
 
 // ディレクトリ情報が送信されていればsystemメッセージとして追加
-if (isset($input['dirContext']) && is_array($input['dirContext']) && !empty($input['dirContext']['content'])) {
+if (isset($input['dirContext']) && !empty($input['dirContext']['structure'])) {
     $dirMsg = [
         'role' => 'system',
-        'content' => '[ディレクトリ情報] ' . ($input['dirContext']['name'] ?? 'ディレクトリ') . "\n" . $input['dirContext']['content']
+        'content' => '[ディレクトリ情報]: ' . objectToJsonText($input['dirContext']['structure']),
     ];
     array_unshift($messages, $dirMsg);
 }
@@ -289,6 +299,9 @@ $payload = [
     'messages' => array_merge($basePrompt, $messages),
     'stream' => true
 ];
+
+// ログ保存
+log_chat_request($logFile, $payload);
 
 // AIサーバーにリクエストを送信
 sendAIRequest($LMSTUDIO_API_URL, $API_KEY, $payload);

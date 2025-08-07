@@ -179,7 +179,7 @@ export function newFileDialog(dir, editor, api, mConsole, currentFile, saveFile,
         DEBUG && console.log("popup window: ", popupWindow);
         popupWindow.remove();
         if(currentFile && !currentFile.readonly){
-            await saveFile(currentFile.path, currentFile.aceObj.editor.getValue(), api, currentFile, mConsole, DEBUG);
+            await saveFile(currentFile.path, currentFile.aceObj.editor.getValue());
             mConsole.print("File saved: " + currentFile.path, "success");
         }
         hideAllPreviewer();

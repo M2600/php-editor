@@ -97,7 +97,7 @@ async function main(){
         (e) => {
             console.log("Save: " + APP_STATE.CURRENT_FILE.path);
             pushSaveButton(APP_STATE.CURRENT_FILE, (path, content) => 
-                saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck)
+                saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor)
             );
         }
     ));
@@ -110,7 +110,7 @@ async function main(){
             console.log("Run: " + APP_STATE.CURRENT_FILE.path);
             APP_STATE.RUN_BROWSER_TAB = openInOtherWindow(
                 APP_STATE.CURRENT_FILE, 
-                (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck),
+                (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor),
                 APP_STATE.RUN_BROWSER_TAB,
                 CONFIG.FILE_PAGE_BASE_URL,
                 APP_STATE.USER_ID
@@ -126,7 +126,7 @@ async function main(){
             console.log("QR Code: " + APP_STATE.CURRENT_FILE.path);
             showQRCode(
                 APP_STATE.CURRENT_FILE,
-                (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck),
+                (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor),
                 editor,
                 CONFIG.FILE_PAGE_BASE_URL,
                 APP_STATE.USER_ID,
@@ -146,7 +146,7 @@ async function main(){
                 APP_STATE.CURRENT_FILE.path,
                 api,
                 APP_STATE.CURRENT_FILE,
-                (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck),
+                (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor),
                 mConsole
             );
         },
@@ -166,7 +166,8 @@ async function main(){
                 APP_STATE.CURRENT_FILE,
                 mConsole,
                 CONFIG.DEBUG,
-                phpSyntaxCheck
+                phpSyntaxCheck,
+                editor
             );
         }
         APP_STATE.CURRENT_FILE = await openFile(
@@ -178,12 +179,12 @@ async function main(){
             CONFIG.DEBUG,
             (ace) => aceKeybinds(ace, 
                 () => pushSaveButton(APP_STATE.CURRENT_FILE, (path, content) => 
-                    saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck)
+                    saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor)
                 ),
                 () => {
                     APP_STATE.RUN_BROWSER_TAB = openInOtherWindow(
                         APP_STATE.CURRENT_FILE, 
-                        (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck),
+                        (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor),
                         APP_STATE.RUN_BROWSER_TAB,
                         CONFIG.FILE_PAGE_BASE_URL,
                         APP_STATE.USER_ID
@@ -211,7 +212,7 @@ async function main(){
             api, 
             mConsole, 
             APP_STATE.CURRENT_FILE,
-            (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck),
+            (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor),
             CONFIG.DEBUG
         );
     });

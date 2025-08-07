@@ -3,6 +3,7 @@
  */
 
 import { sessionError } from '../utils/helpers.js';
+import { Path } from '../utils/api.js';
 
 export function aceObjFromFileList(fileList, path) {
     //DEBUG && console.log("aceObjFromFileList: ", fileList, path);
@@ -153,7 +154,7 @@ export async function loadFile(path, api) {
     return ret;
 }
 
-export async function saveFile(path, content, api, currentFile, mConsole, DEBUG, phpSyntaxCheck) {
+export async function saveFile(path, content, api, currentFile, mConsole, DEBUG, phpSyntaxCheck, editor) {
     if (currentFile.aceObj.editor.isDiffView) {
         mConsole.print("差分表示中は保存できません。", "warning");
         return 0;
@@ -182,11 +183,11 @@ export async function saveFile(path, content, api, currentFile, mConsole, DEBUG,
         // 保存成功時のUI更新
         if (currentFile && currentFile.path === path) {
             currentFile.changed = false;
-            if(typeof editor.setFileIcon === 'function'){
+            if(editor && typeof editor.setFileIcon === 'function'){
                 editor.setFileIcon(currentFile.path, null);
             }
             mConsole.print("File saved: " + currentFile.path, "success");
-            phpSyntaxCheck(currentFile.path);
+            phpSyntaxCheck(currentFile.path, api, DEBUG);
         }
         ret = 1;
     });

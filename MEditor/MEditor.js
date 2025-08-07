@@ -1410,7 +1410,7 @@ class MEditor {
             out.appendChild(document.createElement("br"));
 
             if(mConsole.autoScroll) {
-                DEBUG && console.log("scrolling", out);
+                this.DEBUG && console.log("scrolling", out);
                 out.scrollTop = out.scrollHeight;
             }
         }

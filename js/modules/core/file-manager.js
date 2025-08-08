@@ -23,15 +23,62 @@ export function aceObjFromFileList(fileList, path) {
 }
 
 export function aceObjFromAceList(aceList, path){
-    //DEBUG && console.log("aceObjFromAceList: ", path);
     let aceObj = null;
-    aceList.forEach(file => {
-        if (file.filePath == path) {
-            aceObj = file.aceObj;
+    aceList.forEach(ace => {
+        if (ace.filePath == path) {
+            aceObj = ace.aceObj;
         }
     });
-    //console.log("aceObj: ", aceObj);
     return aceObj;
+}
+
+/**
+ * 削除されたファイルのAceインスタンスをクリーンアップする
+ * @param {string} deletedFilePath 削除されたファイルのパス
+ * @param {Array} aceList Aceインスタンスのリスト
+ */
+export function cleanupAceInstance(deletedFilePath, aceList) {
+    const index = aceList.findIndex(ace => ace.filePath === deletedFilePath);
+    if (index !== -1) {
+        // Aceエディタインスタンスを破棄
+        if (aceList[index].aceObj && aceList[index].aceObj.destroy) {
+            aceList[index].aceObj.destroy();
+        } else if (aceList[index].aceObj && aceList[index].aceObj.editor) {
+            aceList[index].aceObj.editor.destroy();
+        }
+        // リストから削除
+        aceList.splice(index, 1);
+        return true;
+    }
+    return false;
+}
+
+/**
+ * ACE_LIST から指定されたパスのAceインスタンスを削除する
+ * @param {Array} aceList - Aceインスタンスのリスト
+ * @param {string} path - 削除するファイルのパス
+ * @returns {boolean} - 削除が成功したかどうか
+ */
+export function removeAceFromList(aceList, path) {
+    console.log("removeAceFromList: removing ace instance for", path);
+    const index = aceList.findIndex(ace => ace.filePath === path);
+    if (index !== -1) {
+        const aceInstance = aceList[index];
+        // Aceエディタを適切に破棄
+        if (aceInstance.aceObj && aceInstance.aceObj.destroy) {
+            aceInstance.aceObj.destroy();
+            console.log("Destroyed ace instance for:", path);
+        } else if (aceInstance.aceObj && aceInstance.aceObj.editor) {
+            aceInstance.aceObj.editor.destroy();
+            console.log("Destroyed ace editor for:", path);
+        }
+        // リストから削除
+        aceList.splice(index, 1);
+        console.log("Removed ace from list for:", path, "Remaining instances:", aceList.length);
+        return true;
+    }
+    console.log("No ace instance found for:", path);
+    return false;
 }
 
 export function getFromPrevFileList(fileList, path, key) {
@@ -52,15 +99,18 @@ export function mergeAceObjInFileList(fileList, prevFileList, aceList) {
     if (prevFileList == undefined || prevFileList == null) {
         return fileList;
     }
-    //DEBUG && console.log("merging aceObj in fileList", fileList, prevFileList);
     fileList.forEach(file => {
-        //DEBUG && console.log("file: ", file);
         if (file.type == "dir") {
             file.files = mergeAceObjInFileList(file.files, prevFileList, aceList);
         }
         else {
-            //DEBUG && console.log("file.path: ", file.path);
-            file.aceObj = aceObjFromAceList(aceList, file.path);
+            if (!file.path) {
+                return; // Skip files without path
+            }
+            let prevAceObj = aceObjFromAceList(aceList, file.path);
+            if (prevAceObj) {
+                file.aceObj = prevAceObj;
+            }
             file.changed = getFromPrevFileList(prevFileList, file.path, "changed");
             file.aceChangeAction = getFromPrevFileList(prevFileList, file.path, "aceChangeAction");
         }
@@ -111,12 +161,14 @@ export async function loadExplorer(path, api, appState, editor) {
         editor.BASE_DIR = path;
         let dir = Path.join(appState.USER_ID, path);
         editor.explorer.setMenuTitle(dir);
+        
+        // エクスプローラー表示でファイルパスを設定
         await editor.explorer.loadExplorer(appState.FILE_LIST);
-        //console.log("FILE_LIST: ", FILE_LIST);
-        //console.log("prevFILE_LIST: ", prevFILE_LIST);
-        // file.path は editor.explorer.loadExplorer() 内で定義される
-        // mergeAceObjInFileList() は file.path を使用する
-        appState.FILE_LIST.files = mergeAceObjInFileList(appState.FILE_LIST.files, prevFILE_LIST.files, appState.ACE_LIST);
+        
+        // ファイルパス設定後にAceインスタンスをマージ
+        if (prevFILE_LIST && prevFILE_LIST.files) {
+            appState.FILE_LIST.files = mergeAceObjInFileList(appState.FILE_LIST.files, prevFILE_LIST.files, appState.ACE_LIST);
+        }
     });
 }
 

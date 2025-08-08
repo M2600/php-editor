@@ -3,6 +3,7 @@
  */
 
 import { hideAllPreviewer, getParentDir, getCurrentPath } from '../utils/helpers.js';
+import { APP_STATE } from '../core/config.js';
 import { 
     renameFile, 
     deleteFile, 
@@ -11,7 +12,8 @@ import {
     renameDir, 
     deleteDir, 
     uploadFiles,
-    loadExplorer 
+    loadExplorer,
+    cleanupAceInstance
 } from '../core/file-manager.js';
 
 // ポップアップ重複チェック関数
@@ -40,7 +42,7 @@ export function renameFileDialog(path, editor, api, mConsole, DEBUG) {
         popupWindow.remove();
         hideAllPreviewer();
         await renameFile(path, input.value, api, mConsole);
-        await loadExplorer(editor.BASE_DIR, api, {FILE_LIST: editor.FILE_LIST, USER_ID: editor.USER_ID}, editor);
+        await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
     }
 
     let contents = document.createElement("div");
@@ -86,7 +88,7 @@ export function moveFileDialog(file, editor, api, mConsole, fileList) {
                 let newPath = Path.joinAsFile(getParentDir(editor.BASE_DIR), file.name);
                 console.log("Move file to: ", file.path, newPath);
                 await renameFile(file.path, newPath, api, mConsole);
-                await loadExplorer(editor.BASE_DIR, api, {FILE_LIST: fileList, USER_ID: editor.USER_ID}, editor);
+                await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
             }
         })
     }
@@ -100,7 +102,7 @@ export function moveFileDialog(file, editor, api, mConsole, fileList) {
                 let newPath = Path.joinAsFile(editor.BASE_DIR, file.name);
                 console.log("Move file to: ", file.path, newPath);
                 await renameFile(file.path, newPath, api, mConsole);
-                await loadExplorer(editor.BASE_DIR, api, {FILE_LIST: fileList, USER_ID: editor.USER_ID}, editor);
+                await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
             }
         });
     }
@@ -114,7 +116,7 @@ export function moveFileDialog(file, editor, api, mConsole, fileList) {
                     let newPath = Path.joinAsFile(f.path, file.name);
                     console.log("Move file to: ", file.path, newPath);
                     await renameFile(file.path, newPath, api, mConsole);
-                    await loadExplorer(editor.BASE_DIR, api, {FILE_LIST: fileList, USER_ID: editor.USER_ID}, editor);
+                    await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
                 }
             });
         }
@@ -146,12 +148,16 @@ export function deleteFileDialog(path, editor, api, mConsole, currentFile, DEBUG
         console.log("Delete: ", path);
         DEBUG && console.log("popup window: ", popupWindow);
         popupWindow.remove();
+        
+        // 削除前にAceインスタンスをクリーンアップ
+        cleanupAceInstance(path, APP_STATE.ACE_LIST);
+        
         await deleteFile(path, api, mConsole);
         if(currentFile.path == path){
             currentFile = false;
             hideAllPreviewer();
         }
-        await loadExplorer(editor.BASE_DIR, api, {FILE_LIST: editor.FILE_LIST, USER_ID: editor.USER_ID}, editor);
+        await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
     });
     controls.appendChild(deleteButton);
     let popupWindow = editor.popupWindow(windowName, contents);
@@ -184,7 +190,7 @@ export function newFileDialog(dir, editor, api, mConsole, currentFile, saveFile,
         }
         hideAllPreviewer();
         await createFile(currentDir + input.value, api, mConsole);
-        await loadExplorer(editor.BASE_DIR, api, {FILE_LIST: editor.FILE_LIST, USER_ID: editor.USER_ID}, editor);
+        await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
     }
 
     console.log("New file: " + currentDir);
@@ -237,7 +243,7 @@ export function newDirDialog(dir, editor, api, mConsole, DEBUG) {
         DEBUG && console.log("popup window: ", popupWindow);
         popupWindow.remove();
         await createDir(currentDir + input.value, api, mConsole);
-        await loadExplorer(editor.BASE_DIR, api, {FILE_LIST: editor.FILE_LIST, USER_ID: editor.USER_ID}, editor);
+        await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
     }
 
     console.log("New folder: " + currentDir);
@@ -278,7 +284,7 @@ export function renameDirDialog(path, editor, api, mConsole, DEBUG) {
         DEBUG && console.log("popup window: ", popupWindow);
         popupWindow.remove();
         await renameDir(path, input.value, api, mConsole);
-        await loadExplorer(editor.BASE_DIR, api, {FILE_LIST: editor.FILE_LIST, USER_ID: editor.USER_ID}, editor);
+        await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
     }
 
     let contents = document.createElement("div");
@@ -331,7 +337,7 @@ export function deleteDirDialog(path, editor, api, mConsole, DEBUG) {
         DEBUG && console.log("popup window: ", popupWindow);
         popupWindow.remove();
         await deleteDir(path, api, mConsole);
-        await loadExplorer(editor.BASE_DIR, api, {FILE_LIST: editor.FILE_LIST, USER_ID: editor.USER_ID}, editor);
+        await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
     });
     controls.appendChild(deleteButton);
     let popupWindow = editor.popupWindow(windowName, contents);
@@ -374,7 +380,7 @@ export function fileUploadDialog(dir, editor, api, mConsole, DEBUG) {
         DEBUG && console.log("popup window: ", popupWindow);
         popupWindow.remove();
         await uploadFiles(fileInput, path, api, mConsole);
-        await loadExplorer(editor.BASE_DIR, api, {FILE_LIST: editor.FILE_LIST, USER_ID: editor.USER_ID}, editor);
+        await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
     });
     controls.appendChild(uploadButton);
     

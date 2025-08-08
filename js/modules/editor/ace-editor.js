@@ -56,7 +56,7 @@ export async function openFile(file, aceList, editor, mConsole, extLangMap, DEBU
             aceList.push({
                 aceObj: ace,
                 filePath: file.path,
-            })
+            });
             aceKeybinds(file.aceObj.editor);
             file.aceObj.setValue(apiRet.content);
             file.aceObj.editor.gotoLine(0);

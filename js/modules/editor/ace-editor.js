@@ -42,26 +42,37 @@ export async function openFile(file, aceList, editor, mConsole, extLangMap, DEBU
     if(file.type == "text"){
         file.readonly = false;
         if(file.aceObj == undefined || file.aceObj == null){
-            let aceDOM = document.createElement("div");
-            editor.wp.content.element.appendChild(aceDOM);
-            aceDOM.id = "ace-" + file.path;
-            aceDOM.classList.add("viewer");
-            aceDOM.style.width = "100%";
-            aceDOM.style.height = "100%";
-            const ace = new AceWrapper(aceDOM.id);
-            ace.loadMySettings();
-            let mode = extToLang(file.path.split(".").pop(), extLangMap);
-            ace.setMode(mode);
-            file.aceObj = ace;
-            aceList.push({
-                aceObj: ace,
-                filePath: file.path,
-            });
-            aceKeybinds(file.aceObj.editor);
-            file.aceObj.setValue(apiRet.content);
-            file.aceObj.editor.gotoLine(0);
-            // Set changed flag to false as default after setValue()
-            file.changed = false;
+            // 既存ACE_LISTに同パスのインスタンスがあれば再利用
+            const existing = Array.isArray(aceList) ? aceList.find(a => a.filePath === file.path) : null;
+            if (existing && existing.aceObj) {
+                // 既存を再利用（内容・Undo履歴も保持）
+                file.aceObj = existing.aceObj;
+                // モードだけは現在の拡張子に合わせ直す
+                let mode = extToLang(file.path.split(".").pop(), extLangMap);
+                file.aceObj.setMode(mode);
+            } else {
+                // 新規にDOMとAceインスタンスを作成
+                let aceDOM = document.createElement("div");
+                editor.wp.content.element.appendChild(aceDOM);
+                aceDOM.id = "ace-" + file.path;
+                aceDOM.classList.add("viewer");
+                aceDOM.style.width = "100%";
+                aceDOM.style.height = "100%";
+                const ace = new AceWrapper(aceDOM.id);
+                ace.loadMySettings();
+                let mode = extToLang(file.path.split(".").pop(), extLangMap);
+                ace.setMode(mode);
+                file.aceObj = ace;
+                aceList.push({
+                    aceObj: ace,
+                    filePath: file.path,
+                });
+                aceKeybinds(file.aceObj.editor);
+                file.aceObj.setValue(apiRet.content);
+                file.aceObj.editor.gotoLine(0);
+                // Set changed flag to false as default after setValue()
+                file.changed = false;
+            }
         }
         else if(!file.changed){
             DEBUG && console.log("ace already exists, but file changed flag is false");

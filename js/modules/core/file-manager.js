@@ -46,11 +46,83 @@ export function cleanupAceInstance(deletedFilePath, aceList) {
         } else if (aceList[index].aceObj && aceList[index].aceObj.editor) {
             aceList[index].aceObj.editor.destroy();
         }
+        // 関連するDOMノードも削除
+        try {
+            const domId = "ace-" + deletedFilePath;
+            const node = document.getElementById(domId);
+            if (node && node.parentNode) {
+                node.parentNode.removeChild(node);
+            }
+        } catch (e) {
+            console.error("Failed to remove ACE DOM for:", deletedFilePath, e);
+        }
         // リストから削除
         aceList.splice(index, 1);
         return true;
     }
     return false;
+}
+
+/**
+ * 指定ディレクトリ配下のAceインスタンスを一括クリーンアップ
+ */
+export function cleanupAceInstancesInDir(dirPath, aceList) {
+    if (!dirPath) return 0;
+    // 末尾にスラッシュを確実に付与
+    const base = dirPath.endsWith('/') ? dirPath : dirPath + '/';
+    let count = 0;
+    // 後方から削除（インデックス崩れ防止）
+    for (let i = aceList.length - 1; i >= 0; i--) {
+        const fp = aceList[i].filePath || '';
+        if (fp.startsWith(base)) {
+            cleanupAceInstance(fp, aceList);
+            count++;
+        }
+    }
+    return count;
+}
+
+/**
+ * 現在のファイル一覧に存在しないAceインスタンスをACE_LISTから除去
+ */
+export function pruneAceList(aceList, rootFileList) {
+    if (!rootFileList || !rootFileList.files || !Array.isArray(aceList)) return aceList;
+    const valid = new Set();
+    const walk = (files) => {
+        files.forEach(f => {
+            if (f.type === 'dir') {
+                walk(f.files || []);
+            } else if (f.path) {
+                valid.add(f.path);
+            }
+        });
+    };
+    walk(rootFileList.files);
+    for (let i = aceList.length - 1; i >= 0; i--) {
+        const fp = aceList[i].filePath;
+        if (!valid.has(fp)) {
+            cleanupAceInstance(fp, aceList);
+        }
+    }
+    return aceList;
+}
+
+/**
+ * 同一パスに対するAceインスタンスの重複を排除（最後の1つだけ残す）
+ */
+export function dedupeAceListByPath(aceList) {
+    if (!Array.isArray(aceList)) return aceList;
+    const kept = new Set();
+    for (let i = aceList.length - 1; i >= 0; i--) {
+        const fp = aceList[i].filePath;
+        if (kept.has(fp)) {
+            // 先頭側の重複を削除
+            cleanupAceInstance(fp, aceList);
+        } else {
+            kept.add(fp);
+        }
+    }
+    return aceList;
 }
 
 /**
@@ -165,10 +237,14 @@ export async function loadExplorer(path, api, appState, editor) {
         // エクスプローラー表示でファイルパスを設定
         await editor.explorer.loadExplorer(appState.FILE_LIST);
         
-        // ファイルパス設定後にAceインスタンスをマージ
+    // ファイルパス設定後にAceインスタンスをマージ
         if (prevFILE_LIST && prevFILE_LIST.files) {
             appState.FILE_LIST.files = mergeAceObjInFileList(appState.FILE_LIST.files, prevFILE_LIST.files, appState.ACE_LIST);
         }
+    // 現在のツリーに存在しないAceを掃除（削除済みや移動済みの孤立インスタンス）
+    pruneAceList(appState.ACE_LIST, appState.FILE_LIST);
+    // 同一パスの重複Aceを排除
+    dedupeAceListByPath(appState.ACE_LIST);
     });
 }
 

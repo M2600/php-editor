@@ -13,7 +13,8 @@ import {
     deleteDir, 
     uploadFiles,
     loadExplorer,
-    cleanupAceInstance
+    cleanupAceInstance,
+    cleanupAceInstancesInDir
 } from '../core/file-manager.js';
 
 // ポップアップ重複チェック関数
@@ -336,6 +337,8 @@ export function deleteDirDialog(path, editor, api, mConsole, DEBUG) {
         console.log("Delete: ", path);
         DEBUG && console.log("popup window: ", popupWindow);
         popupWindow.remove();
+    // ディレクトリ配下のAceを事前にクリーンアップ
+    cleanupAceInstancesInDir(path, APP_STATE.ACE_LIST);
         await deleteDir(path, api, mConsole);
         await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
     });

@@ -85,6 +85,10 @@ export const CONFIG = {
         {
             ext: ["txt"],
             lang: "text"
+        },
+        {
+            ext: ["md"],
+            lang: "markdown"
         }
     ]
 };

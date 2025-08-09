@@ -286,6 +286,8 @@ function compressContext($messages, $maxTokens = 2500, $apiUrl = null, $apiKey =
         if ($estimatedTokens > $maxTokens * 0.8) {
             // AIによる要約を試行（API情報が提供されている場合）
             if ($apiUrl && $apiKey) {
+                error_log("AIによるコンテキスト圧縮を試行: トークン数 {$estimatedTokens} > {$maxTokens}");
+                // AIを使用してメッセージを圧縮
                 $messages = compressMessagesWithAI($messages, $apiUrl, $apiKey);
             } else {
                 // フォールバック: 従来の圧縮方法

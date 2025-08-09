@@ -18,6 +18,20 @@ export function extractMarkdownCodeBlocks(text) {
     return codeBlocks;
 }
 
+// チャット内リンクを必ず新規タブで開く
+export function ensureLinksOpenInNewTab(container) {
+    try {
+        if (!container) return;
+        const anchors = container.querySelectorAll('a[href]');
+        anchors.forEach(a => {
+            a.setAttribute('target', '_blank');
+            a.setAttribute('rel', 'noopener noreferrer');
+        });
+    } catch (e) {
+        console.error('リンク属性設定エラー:', e);
+    }
+}
+
 export async function AIMerge(baseCode, aiCode, modelSelect, fetchAIChat, editor, currentFile, mConsole, editorEditor) {
     const prompt = `Merge the following code snippets:
 
@@ -169,6 +183,8 @@ export function restoreChatHistoryToUI(chatHistory, chat) {
     if (chat.content.element.scrollHeight > chat.content.element.clientHeight) {
         chat.content.element.scrollTop = chat.content.element.scrollHeight;
     }
+    // 復元後にリンク属性を調整
+    ensureLinksOpenInNewTab(chat.content.element);
 }
 
 export async function loadModelList(chat) {
@@ -317,11 +333,13 @@ export async function sendAIMessage({
                     if (isSmooth) {
                         // スムーズ出力の場合はdeltaが完全なテキスト
                         aiMsgBuffer = delta;
-                        chat.updateLastAIMessage(delta, true);
+            chat.updateLastAIMessage(delta, true);
+            ensureLinksOpenInNewTab(chat?.content?.element);
                     } else {
                         // 通常の場合は差分テキスト
                         aiMsgBuffer += delta;
-                        chat.updateLastAIMessage(aiMsgBuffer, true);
+            chat.updateLastAIMessage(aiMsgBuffer, true);
+            ensureLinksOpenInNewTab(chat?.content?.element);
                     }
                 },
                 onError: (errMsg) => {
@@ -335,6 +353,7 @@ export async function sendAIMessage({
                 historyManager.addMessage("assistant", aiMsgBuffer);
                 historyManager.setStreaming(false);
                 if (typeof chat.hideLoading === 'function') chat.hideLoading();
+        ensureLinksOpenInNewTab(chat?.content?.element);
             });
         } else {
             chat.updateLastAIMessage('<span style="color:red">AI APIモジュールが利用できません</span>', true);

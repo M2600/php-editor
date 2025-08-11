@@ -32,6 +32,65 @@ export function ensureLinksOpenInNewTab(container) {
     }
 }
 
+
+// 入力欄で上/下矢印によりユーザー送信履歴を遡れるようにする
+export function setupInputHistoryHotkeys(chat, historyManager) {
+    const ta = chat?.inputArea?.textarea;
+    if (!ta || ta._historyBound) return;
+    ta._historyBound = true;
+    // -1: draft（履歴外）/ 0..n: 最新=0 の逆順インデックス
+    ta._historyCursor = -1;
+    ta._historyDraft = '';
+
+    const getUserMsgs = () => historyManager
+        .getHistory()
+        .filter(m => m.role === 'user')
+        .map(m => m.content);
+
+    const setValueAndMoveEnd = (v) => {
+        ta.value = v ?? '';
+        // 入力イベントを発火（オートリサイズ等のUI連動用）
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+        // キャレットを末尾へ
+        try {
+            ta.selectionStart = ta.selectionEnd = ta.value.length;
+        } catch(_) {}
+    };
+
+    ta.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowUp') {
+            // テキスト先頭でのみ履歴ナビ発動（通常のキャレット移動を阻害しない）
+            const atStart = ta.selectionStart === 0 && ta.selectionEnd === 0;
+            if (!atStart) return;
+            const msgs = getUserMsgs();
+            if (!msgs.length) return;
+            e.preventDefault();
+            if (ta._historyCursor === -1) {
+                ta._historyDraft = ta.value;
+                ta._historyCursor = 0;
+            } else if (ta._historyCursor < msgs.length - 1) {
+                ta._historyCursor += 1;
+            }
+            setValueAndMoveEnd(msgs[msgs.length - 1 - ta._historyCursor]);
+        } else if (e.key === 'ArrowDown') {
+            // テキスト末尾でのみ履歴ナビ（通常のキャレット移動を阻害しない）
+            const atEnd = ta.selectionStart === ta.value.length && ta.selectionEnd === ta.value.length;
+            if (!atEnd) return;
+            if (ta._historyCursor === -1) return; // 履歴ナビ未開始
+            const msgs = getUserMsgs();
+            e.preventDefault();
+            if (ta._historyCursor > 0) {
+                ta._historyCursor -= 1;
+                setValueAndMoveEnd(msgs[msgs.length - 1 - ta._historyCursor]);
+            } else {
+                // draftへ復帰
+                ta._historyCursor = -1;
+                setValueAndMoveEnd(ta._historyDraft);
+            }
+        }
+    });
+}
+
 export async function AIMerge(baseCode, aiCode, modelSelect, fetchAIChat, editor, currentFile, mConsole, editorEditor) {
     const prompt = `Merge the following code snippets:
 
@@ -262,11 +321,16 @@ export async function sendAIMessage({
 }) {
     try {
         if(historyManager.getStreaming()) return;
+        // 入力履歴ナビを初期化（初回のみバインド）
+        setupInputHistoryHotkeys(chat, historyManager);
         const userMsg = chat.inputArea.textarea.value.trim();
         if(!userMsg) return;
         chat.inputArea.textarea.value = "";
         chat.inputArea.textarea.style.height = '';
-        
+        // 履歴カーソルをリセット
+        chat.inputArea.textarea._historyCursor = -1;
+        chat.inputArea.textarea._historyDraft = '';
+
         historyManager.addMessage("user", userMsg);
         historyManager.setStreaming(true);
 

@@ -247,6 +247,7 @@ $basePrompt = [
 - ディレクトリの場合は3点メニューに「New File」や「New Directory」が表示され、ファイルやディレクトリの作成ができます。
 - PHPEditorでは作成したPHPファイルや、HTMLファイルを実行する際はRunボタンを押すことで別タブで表示されます。
 - PHPファイルのデバッグログを見たい場合はDebugボタンを押すことで、PHPEditor中央下部に結果が出力されます。
+詳しいユーザ向けマニュアルは https://php.dolittle.cc/user-programs/wiki/index.md にあります。
 
 【あなたの役割】
 - PHP、HTML、CSS、JavaScriptのWeb開発をサポート
@@ -299,7 +300,7 @@ if (isset($input['fileContext']) && is_array($input['fileContext']) && !empty($i
 if (isset($input['dirContext']) && !empty($input['dirContext']['structure'])) {
     $dirMsg = [
         'role' => 'system',
-        'content' => '[ディレクトリ情報]: ' . objectToJsonText($input['dirContext']['structure']),
+        'content' => '[PHPエディタのカレントディレクトリ]: ' . objectToJsonText($input['dirContext']['structure']),
     ];
     array_unshift($messages, $dirMsg);
 }

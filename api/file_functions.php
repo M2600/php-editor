@@ -1,31 +1,23 @@
 <?php
 
+// 強化されたログシステムを読み込み
+require_once(__DIR__ . '/logger.php');
 
 //$iniConf = parse_ini_file("../config.ini");
 //error_log(print_r($iniConf, true));
 
 $userRoot = $user = posix_getpwuid(posix_getuid())["dir"];
 
-
 $LOG_DIR = $userRoot . "/data/php_editor/log/";
 if(!file_exists($LOG_DIR)){
     mkdir($LOG_DIR, 0777, true);
 }
-$LOG_PATH = $LOG_DIR . "php_editor.log";
-
 
 $FILE_ROOT = $userRoot . "/data/php_editor/sandbox/";
 $USER_SCRIPT_PHP_INI = $userRoot . "/data/php_editor/sandbox/php.ini";
 //error_log($FILE_ROOT);
 
-
-
-function myLog($message){
-    global $LOG_PATH;
-    $date = date("Y-m-d H:i:s");
-    $log = $date . " " . $message . "\n";
-    file_put_contents($LOG_PATH, $log, FILE_APPEND);
-}
+// 既存のmyLog関数は logger.php で定義済み（後方互換性のため）
 
 
 // make safe file name
@@ -64,6 +56,13 @@ function shellEscape($str){
 
 // get file type text | image | other
 function getFileType($serverPath){
+    // 拡張子による明示的判定を先に実行
+    $pathExt = strtolower(pathinfo($serverPath, PATHINFO_EXTENSION));
+    $textExtensions = array('txt', 'css', 'js', 'html', 'htm', 'xml', 'json', 'md', 'php', 'py', 'java', 'c', 'cpp', 'h', 'hpp', 'sql', 'csv', 'tsv', 'log', 'conf', 'ini', 'yaml', 'yml');
+    if(in_array($pathExt, $textExtensions)){
+        return "text";
+    }
+    
     $finfo = finfo_open(FILEINFO_MIME);
     $mime = finfo_file($finfo, $serverPath);
     finfo_close($finfo);
@@ -91,9 +90,13 @@ function getFileType($serverPath){
 
 // get file content
 function getFile($userPath){
+    $startTime = logPerformanceStart("getFile");
+    logInfo("File read started", ['path' => $userPath]);
+    
     try{
         $serverPath = convertUserPath($userPath);
         if(!file_exists($serverPath)){
+            logWarning("File not found", ['user_path' => $userPath, 'server_path' => $serverPath]);
             return "";
         }
 
@@ -107,12 +110,17 @@ function getFile($userPath){
         else{
             $file = "";
         }
-        // if($file === false){
-        //     $file = "";
-        // }
+        
+        logPerformanceEnd("getFile", $startTime, [
+            'file_type' => $fileType, 
+            'file_size_bytes' => strlen($file),
+            'path' => $userPath
+        ]);
+        
         return array("file" => $file, "fileType" => $fileType);
     }
     catch(Exception $e){
+        logError("File read failed", ['path' => $userPath, 'error' => $e->getMessage()]);
         echo json_encode(array("status" => "error", "error" => $e->getMessage()));
         exit();
     }
@@ -120,33 +128,61 @@ function getFile($userPath){
 
 // save file content
 function saveFile($userPath, $file){
-    $safeFile = safePHP($file);
+    $startTime = logPerformanceStart("saveFile");
+    
+    // ファイル内容をログ出力（大きいファイルは切り詰め）
+    $contentPreview = strlen($file) > 1000 ? substr($file, 0, 1000) . "... (truncated)" : $file;
+    logInfo("File save started", [
+        'path' => $userPath, 
+        'file_size_bytes' => strlen($file),
+        'content' => $contentPreview
+    ]);
+    
+    //$safeFile = safePHP($file);
     try{
         $serverPath = convertUserPath($userPath);
         $serverDir = dirname($serverPath);
         if(!file_exists($serverDir)){
             mkdir($serverDir, 0777, true);
+            logDebug("Created directory", ['dir' => $serverDir]);
         }
-        myLog("action: saveFile, user: ".$_SESSION["id"].", path: ".$serverPath.", content: ".$file);
+        
+        $writeStart = microtime(true);
         file_put_contents($serverPath, $file, LOCK_EX);
+        $writeEnd = microtime(true);
+        
+        $writeTime = round(($writeEnd - $writeStart) * 1000, 2);
+        logPerformanceEnd("saveFile", $startTime, [
+            'path' => $userPath,
+            'write_time_ms' => $writeTime,
+            'file_size_bytes' => strlen($file)
+        ]);
+        
+        logFileOp("save", $userPath, true, ['file_size_bytes' => strlen($file)]);
     }
     catch(Exception $e){
+        logError("File save failed", ['path' => $userPath, 'error' => $e->getMessage()]);
         echo json_encode(array("status" => "error", "error" => $e->getMessage()));
         exit();
     }
 }
 
 function touchFile($userPath){
+    logInfo("File creation started", ['path' => $userPath]);
     try{
         $serverPath = convertUserPath($userPath);
         $serverDir = dirname($serverPath);
         if(!file_exists($serverDir)){
             mkdir($serverDir, 0777, true);
+            logDebug("Created directory", ['dir' => $serverDir]);
         }
         touch($serverPath);
-        return str_replace(getUserRoot(), "", $serverPath);
+        $resultPath = str_replace(getUserRoot(), "", $serverPath);
+        logFileOp("create", $userPath, true, ['server_path' => $serverPath]);
+        return $resultPath;
     }
     catch(Exception $e){
+        logError("File creation failed", ['path' => $userPath, 'error' => $e->getMessage()]);
         echo json_encode(array("status" => "error", "error" => $e->getMessage()));
         exit();
     }
@@ -400,8 +436,16 @@ function phpRunError($userPath){
 
 
 function phpCgiRun($userPath, $printHttpHeaders=false, $GETParams=array()){
+    $startTime = logPerformanceStart("phpCgiRun");
+    logInfo("PHP CGI execution started", ['path' => $userPath, 'params' => $GETParams]);
+    
     try{
         $serverPath = convertUserPath($userPath);
+        if(!file_exists($serverPath)){
+            logError("PHP CGI file not found", ['user_path' => $userPath, 'server_path' => $serverPath]);
+            return array("status" => true, "message" => array("File not found: " . $userPath));
+        }
+        
         chdir(getUserRoot());
         global $USER_SCRIPT_PHP_INI;
         $command = "php-cgi ";
@@ -417,18 +461,34 @@ function phpCgiRun($userPath, $printHttpHeaders=false, $GETParams=array()){
             $command .= shellEscape($key . "=" . $value) . " ";
         }
         $command .= "2>&1";
-        //error_log($command);
+        
+        logDebug("Executing PHP CGI command", ['command' => $command]);
         exec($command, $output, $return);
+        
         for($i = 0; $i < count($output); $i++){
             $output[$i] = str_replace(getUserRoot(), "", $output[$i]);
             $output[$i] = htmlspecialchars($output[$i], ENT_QUOTES);
         }
+        
         if($return != 0){
+            logError("PHP CGI execution failed", [
+                'path' => $userPath, 
+                'return_code' => $return, 
+                'output' => $output
+            ]);
             return array("status" => true, "message" => $output);
         }
+        
+        logPerformanceEnd("phpCgiRun", $startTime, [
+            'path' => $userPath,
+            'output_lines' => count($output),
+            'return_code' => $return
+        ]);
+        
         return array("status" => false, "message" => $output);
     }
     catch (Exception $e){
+        logCritical("PHP CGI execution exception", ['path' => $userPath, 'error' => $e->getMessage()]);
         echo json_encode(array("status" => "error", "error" => $e->getMessage()));
         exit();
     }

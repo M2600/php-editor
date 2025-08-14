@@ -3,6 +3,13 @@ header('Content-Type: application/json; charset=utf-8');
 
 session_start();
 
+// セッション情報を早期に取得（AI処理前に必要な情報を全て取得）
+$sessionId = session_id();
+$userId = isset($_SESSION['id']) ? $_SESSION['id'] : null;
+
+// セッションの排他ロックを解除（他のリクエストをブロックしないため）
+session_write_close();
+
 // コンテキスト圧縮機能を読み込み
 require_once __DIR__ . '/ai_context_compression.php';
 
@@ -211,10 +218,10 @@ if(!file_exists($LOG_DIR)){
 $logFile = $LOG_DIR . "chat.log";
 
 // ログ出力関数
-function log_chat_request($logFile, $content) {
+function log_chat_request($logFile, $content, $userId = null) {
     $ts = date('Y-m-d H:i:s');
     $ip = $_SERVER['REMOTE_ADDR'] ?? '-';
-    $user = isset($_SESSION['id']) ? $_SESSION['id'] : '-';
+    $user = $userId ?? '-';
     $request = $content ? $content : '';
     $log = [
         'timestamp' => $ts,
@@ -311,8 +318,8 @@ $payload = [
     'stream' => true
 ];
 
-// ログ保存
-log_chat_request($logFile, $payload);
+// ログ保存（早期取得したセッション情報を使用）
+log_chat_request($logFile, $payload, $userId);
 
 // AIサーバーにリクエストを送信
 sendAIRequest($LMSTUDIO_API_URL, $API_KEY, $payload);

@@ -5,8 +5,9 @@
 
 class SessionPulse {
     constructor(options = {}) {
-        this.interval = options.interval || 30000; // 30秒間隔
+        this.interval = options.interval || 60000; // 60秒間隔
         this.endpoint = options.endpoint || '/api/session_check.php';
+        this.onSessionValid = options.onSessionValid || this.onSessionValid;
         this.onSessionExpired = options.onSessionExpired || this.defaultSessionExpiredHandler;
         this.onError = options.onError || this.defaultErrorHandler;
         this.intervalId = null;

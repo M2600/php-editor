@@ -40,10 +40,10 @@ export function sanitizeAIResponse(text) {
         return placeholder;
     });
     
-    // Step 2: コードブロック以外のHTMLをエスケープ
+    // Step 2: 危険なHTMLタグのみをターゲットにして除去
     let sanitized = protectedText
-        // 危険なHTMLタグを完全除去
-        .replace(/<(script|style|iframe|object|embed|form|input|textarea|select|button)[^>]*>.*?<\/\1>/gis, '')
+        // 危険なHTMLタグを完全除去（実行可能なスクリプト関連のみ）
+        .replace(/<(script|style|iframe|object|embed|form)[^>]*>.*?<\/\1>/gis, '')
         .replace(/<(script|style|iframe|object|embed|form|input|textarea|select|button)[^>]*\/?>/gi, '')
         
         // on* イベントハンドラーを除去
@@ -52,23 +52,14 @@ export function sanitizeAIResponse(text) {
         
         // javascript: プロトコルを除去
         .replace(/href\s*=\s*["']javascript:[^"']*["']/gi, 'href="#"')
-        .replace(/src\s*=\s*["']javascript:[^"']*["']/gi, 'src="#"')
-        
-        // 危険なdata: URIを除去（画像以外）
-        .replace(/href\s*=\s*["']data:(?!image\/)[^"']*["']/gi, 'href="#"')
-        .replace(/src\s*=\s*["']data:(?!image\/)[^"']*["']/gi, 'src="#"');
+        .replace(/src\s*=\s*["']javascript:[^"']*["']/gi, 'src="#"');
     
-    // Step 3: その他のHTMLタグをエスケープ（マークダウンレンダリング用の基本タグ以外）
-    const allowedTagsRegex = /^(?:\/?)(?:p|br|strong|b|em|i|u|h[1-6]|ul|ol|li|blockquote|a|span|div|pre|code)(?:\s|>|$)/i;
+    // Step 3: 本当に危険なHTMLタグのみエスケープ（<?php, <think>などは保護）
+    const dangerousTagsRegex = /<(script|style|iframe|object|embed|form|input|textarea|select|button|meta|base|link)[^>]*>/gi;
     
-    sanitized = sanitized.replace(/<[^>]+>/g, function(match) {
-        const tagContent = match.slice(1, -1); // < > を除去
-        if (allowedTagsRegex.test(tagContent)) {
-            return match; // 許可されたタグはそのまま
-        } else {
-            // 許可されていないタグはエスケープ
-            return match.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        }
+    sanitized = sanitized.replace(dangerousTagsRegex, function(match) {
+        // 危険なタグのみエスケープ
+        return match.replace(/</g, '&lt;').replace(/>/g, '&gt;');
     });
     
     // Step 4: コードブロックを復元

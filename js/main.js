@@ -5,6 +5,7 @@
 // Core modules
 import { UserConfig, changeTheme, CONFIG, APP_STATE } from './modules/core/config.js';
 import { loadExplorer } from './modules/core/file-manager.js';
+import { startSessionPulse } from './modules/core/pulse.js';
 
 // UI modules
 import { 
@@ -356,6 +357,27 @@ async function main(){
         theme = "light";
     }
     changeTheme(theme, APP_STATE.CURRENT_FILE, editor, userConfig, CONFIG.DEBUG);
+
+    // セッション生存確認を開始
+    startSessionPulse({
+        interval: 30000, // 30秒間隔
+        onSessionExpired: function(data) {
+            // セッション期限切れ時の処理
+            if (mConsole) {
+                mConsole.print("セッションが期限切れです。再ログインしてください。", "error");
+            }
+            setTimeout(() => {
+                window.location.href = '/login.php';
+            }, 2000);
+        },
+        onError: function(error) {
+            // エラーハンドリング（ネットワークエラーなど）
+            console.warn('セッションチェックエラー:', error);
+            if (CONFIG.DEBUG && mConsole) {
+                mConsole.print("セッションチェックエラー: " + error.message, "warning");
+            }
+        }
+    });
 }
 
 // アプリケーション開始

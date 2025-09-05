@@ -176,19 +176,19 @@ function formatPromptMessages($messages) {
 $configFile = __DIR__ . '/ai_config.php';
 if (!file_exists($configFile)) {
     http_response_code(500);
-    echo json_encode(['error' => 'AI設定ファイルが見つかりません。ai_config.sample.phpを参考にai_config.phpを作成してください。']);
+    echo json_encode(['error' => 'AI configuration error']);
     exit;
 }
 
 $config = require $configFile;
-$LMSTUDIO_API_URL = $config['lmstudio_base_url'] ?? '';
+$API_URL = $config['api_base_url'] ?? '';
 $API_KEY = $config['api_key'] ?? '';
 
 
 
 if (empty($API_KEY) || $API_KEY === 'YOUR_API_KEY_HERE') {
     http_response_code(500);
-    echo json_encode(['error' => 'APIキーが設定されていません。ai_config.phpで正しいAPIキーを設定してください。']);
+    echo json_encode(['error' => 'APIkey is not set']);
     exit;
 }
 
@@ -209,7 +209,7 @@ if (!is_array($messages) || count($messages) === 0) {
 $messages = formatPromptMessages($messages);
 
 // コンテキスト圧縮を実行（AI要約機能付き）
-$messages = compressContext($messages, 2500, $LMSTUDIO_API_URL, $API_KEY);
+$messages = compressContext($messages, 2500, $API_URL, $API_KEY);
 
 
 // $logDir = __DIR__ . '/../log';
@@ -326,5 +326,6 @@ $payload = [
 log_chat_request($logFile, $payload, $userId);
 
 // AIサーバーにリクエストを送信
-sendAIRequest($LMSTUDIO_API_URL, $API_KEY, $payload);
+//sendAIRequest($API_URL, $API_KEY, $payload);
+sendAIRequest($API_URL, $API_KEY, $payload);
 exit;

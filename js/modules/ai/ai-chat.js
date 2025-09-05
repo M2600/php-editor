@@ -18,6 +18,74 @@ export function extractMarkdownCodeBlocks(text) {
     return codeBlocks;
 }
 
+// HTMLエスケープ処理（コードブロック以外のHTMLをエスケープ）
+export function sanitizeAIResponse(text) {
+    if (!text || typeof text !== 'string') return '';
+    
+    // Step 1: コードブロックを一時的に保護
+    const codeBlockPlaceholders = [];
+    let protectedText = text;
+    
+    // バッククォート3個のコードブロックを保護
+    protectedText = protectedText.replace(/```[\s\S]*?```/g, (match) => {
+        const placeholder = `__CODE_BLOCK_${codeBlockPlaceholders.length}__`;
+        codeBlockPlaceholders.push(match);
+        return placeholder;
+    });
+    
+    // インラインコード（バッククォート1個）を保護
+    protectedText = protectedText.replace(/`[^`\n]+`/g, (match) => {
+        const placeholder = `__INLINE_CODE_${codeBlockPlaceholders.length}__`;
+        codeBlockPlaceholders.push(match);
+        return placeholder;
+    });
+    
+    // Step 2: コードブロック以外のHTMLをエスケープ
+    let sanitized = protectedText
+        // 危険なHTMLタグを完全除去
+        .replace(/<(script|style|iframe|object|embed|form|input|textarea|select|button)[^>]*>.*?<\/\1>/gis, '')
+        .replace(/<(script|style|iframe|object|embed|form|input|textarea|select|button)[^>]*\/?>/gi, '')
+        
+        // on* イベントハンドラーを除去
+        .replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '')
+        .replace(/\s+on\w+\s*=\s*[^"'\s>]+/gi, '')
+        
+        // javascript: プロトコルを除去
+        .replace(/href\s*=\s*["']javascript:[^"']*["']/gi, 'href="#"')
+        .replace(/src\s*=\s*["']javascript:[^"']*["']/gi, 'src="#"')
+        
+        // 危険なdata: URIを除去（画像以外）
+        .replace(/href\s*=\s*["']data:(?!image\/)[^"']*["']/gi, 'href="#"')
+        .replace(/src\s*=\s*["']data:(?!image\/)[^"']*["']/gi, 'src="#"');
+    
+    // Step 3: その他のHTMLタグをエスケープ（マークダウンレンダリング用の基本タグ以外）
+    const allowedTagsRegex = /^(?:\/?)(?:p|br|strong|b|em|i|u|h[1-6]|ul|ol|li|blockquote|a|span|div|pre|code)(?:\s|>|$)/i;
+    
+    sanitized = sanitized.replace(/<[^>]+>/g, function(match) {
+        const tagContent = match.slice(1, -1); // < > を除去
+        if (allowedTagsRegex.test(tagContent)) {
+            return match; // 許可されたタグはそのまま
+        } else {
+            // 許可されていないタグはエスケープ
+            return match.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+    });
+    
+    // Step 4: コードブロックを復元
+    codeBlockPlaceholders.forEach((originalCode, index) => {
+        const placeholder = `__CODE_BLOCK_${index}__`;
+        const inlinePlaceholder = `__INLINE_CODE_${index}__`;
+        
+        if (sanitized.includes(placeholder)) {
+            sanitized = sanitized.replace(placeholder, originalCode);
+        } else if (sanitized.includes(inlinePlaceholder)) {
+            sanitized = sanitized.replace(inlinePlaceholder, originalCode);
+        }
+    });
+    
+    return sanitized;
+}
+
 // チャット内リンクを必ず新規タブで開く
 export function ensureLinksOpenInNewTab(container) {
     try {
@@ -235,7 +303,9 @@ export function restoreChatHistoryToUI(chatHistory, chat) {
         if (msg.role === "user") {
             chat.addMessage(msg.content, "user");
         } else if (msg.role === "assistant") {
-            chat.addMessage(msg.content, "ai", true);
+            // 履歴復元時もサニタイズを適用
+            const sanitizedContent = sanitizeAIResponse(msg.content);
+            chat.addMessage(sanitizedContent, "ai", true);
         }
     });
     // スクロールを最下部に
@@ -396,14 +466,15 @@ export async function sendAIMessage({
                 onDelta: (delta, chunk, isSmooth) => {
                     if (isSmooth) {
                         // スムーズ出力の場合はdeltaが完全なテキスト
-                        aiMsgBuffer = delta;
-            chat.updateLastAIMessage(delta, true);
-            ensureLinksOpenInNewTab(chat?.content?.element);
+                        aiMsgBuffer = sanitizeAIResponse(delta);
+                        chat.updateLastAIMessage(aiMsgBuffer, true);
+                        ensureLinksOpenInNewTab(chat?.content?.element);
                     } else {
                         // 通常の場合は差分テキスト
                         aiMsgBuffer += delta;
-            chat.updateLastAIMessage(aiMsgBuffer, true);
-            ensureLinksOpenInNewTab(chat?.content?.element);
+                        const sanitizedBuffer = sanitizeAIResponse(aiMsgBuffer);
+                        chat.updateLastAIMessage(sanitizedBuffer, true);
+                        ensureLinksOpenInNewTab(chat?.content?.element);
                     }
                 },
                 onError: (errMsg) => {
@@ -413,11 +484,12 @@ export async function sendAIMessage({
                     console.error("AI応答エラー:", errMsg);
                 }
             }).then(() => {
-                // 最終的なテキストを履歴に保存
-                historyManager.addMessage("assistant", aiMsgBuffer);
+                // 最終的なテキストを履歴に保存（サニタイズ済み）
+                const sanitizedFinalBuffer = sanitizeAIResponse(aiMsgBuffer);
+                historyManager.addMessage("assistant", sanitizedFinalBuffer);
                 historyManager.setStreaming(false);
                 if (typeof chat.hideLoading === 'function') chat.hideLoading();
-        ensureLinksOpenInNewTab(chat?.content?.element);
+                ensureLinksOpenInNewTab(chat?.content?.element);
             });
         } else {
             chat.updateLastAIMessage('<span style="color:red">AI APIモジュールが利用できません</span>', true);

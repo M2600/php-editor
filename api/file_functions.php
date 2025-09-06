@@ -409,7 +409,10 @@ function phpRunError($userPath){
         $serverPath = convertUserPath($userPath);
         $realPath = realpath($serverPath);
         $userPath = str_replace(getUserRoot(), "", $serverPath);
-        chdir(getUserRoot());
+
+        // 実行するファイルのディレクトリに移動
+        $fileDirectory = dirname($serverPath);
+        chdir($fileDirectory);
         $command = "php ";
         global $USER_SCRIPT_PHP_INI;
         if(file_exists($USER_SCRIPT_PHP_INI)){
@@ -446,7 +449,10 @@ function phpCgiRun($userPath, $printHttpHeaders=false, $GETParams=array()){
             return array("status" => true, "message" => array("File not found: " . $userPath));
         }
         
-        chdir(getUserRoot());
+        // 実行するファイルのディレクトリに移動
+        $fileDirectory = dirname($serverPath);
+        chdir($fileDirectory);
+        
         global $USER_SCRIPT_PHP_INI;
         $command = "php-cgi ";
         if(!$printHttpHeaders){

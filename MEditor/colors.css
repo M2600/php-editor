@@ -14,6 +14,7 @@
 body[theme="dark"] {
 
 	--me-color-text: #fff;
+	--me-color-text-secondary: #999;
 	--me-color-bg: #333;
 	--me-color-bg-active: #666;
 	--me-color-bg-active-active: #999;
@@ -32,6 +33,7 @@ body[theme="dark"] {
 
 body[theme="light"] {
 	--me-color-text: #333;
+	--me-color-text-secondary: #888;
 	--me-color-bg: #f8f9fa;
 	--me-color-bg-active: #ccc;
 	--me-color-bg-active-active: #ddd;

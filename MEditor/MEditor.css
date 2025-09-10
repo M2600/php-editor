@@ -1243,6 +1243,28 @@ i {
     word-break: break-all;
 }
 
+/* AI Thinking Blocks */
+.meditor-chat-message-ai .ai-think,
+.meditor-chat-message-ai .ai-think-streaming {
+    background-color: var(--me-color-bg, #f5f5f5);
+    border-left: 4px solid var(--me-color-bg-active-active, #cccccc);
+    padding: 0.75em 1em;
+    margin: 0.5em 0;
+    border-radius: 0 4px 4px 0;
+    font-style: italic;
+    color: var(--me-color-text-secondary, #666666);
+    display: block;
+}
+
+.meditor-chat-message-ai .ai-think > *:first-child,
+.meditor-chat-message-ai .ai-think-streaming > *:first-child {
+    margin-top: 0;
+}
+
+.meditor-chat-message-ai .ai-think > *:last-child,
+.meditor-chat-message-ai .ai-think-streaming > *:last-child {
+    margin-bottom: 0;
+}
 
 /* --- Ace diff marker: 追加行 --- */
 .meditor-diff-marker-added {

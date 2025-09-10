@@ -18,31 +18,120 @@ export function extractMarkdownCodeBlocks(text) {
     return codeBlocks;
 }
 
-// HTMLエスケープ処理（コードブロック以外のHTMLをエスケープ）
-export function sanitizeAIResponse(text) {
+// <think>ブロックを抽出・処理する関数（ストリーム対応）
+export function processThinkingBlocks(text) {
+    const thinkingBlocks = [];
+    let processedText = text;
+    
+    // Step 1: 完全な<think>...</think>ブロックを抽出
+    processedText = processedText.replace(/<think[^>]*>([\s\S]*?)<\/think>/gi, (match, content, offset) => {
+        const blockId = `[[[THINKING_${thinkingBlocks.length}]]]`;
+        thinkingBlocks.push({
+            id: blockId,
+            content: content.trim(),
+            fullMatch: match,
+            isComplete: true
+        });
+        return blockId;
+    });
+    
+    // Step 2: 未完了の<think>タグをチェック（ストリーム中）
+    const incompleteThinkMatch = processedText.match(/<think[^>]*>([\s\S]*)$/);
+    if (incompleteThinkMatch) {
+        const blockId = `[[[THINKING_${thinkingBlocks.length}]]]`;
+        const content = incompleteThinkMatch[1];
+        
+        thinkingBlocks.push({
+            id: blockId,
+            content: content,
+            fullMatch: incompleteThinkMatch[0],
+            isComplete: false
+        });
+        
+        // 未完了thinkタグとその内容を置換
+        processedText = processedText.replace(/<think[^>]*>([\s\S]*)$/, blockId);
+    }
+    
+    return {
+        processedText,
+        thinkingBlocks
+    };
+}
+
+// Thinkingブロックを適切なHTMLに変換（ストリーム対応）
+export function renderThinkingBlocks(thinkingBlocks) {
+    return thinkingBlocks.map(block => {
+        // thinking内容もMarkdownとして処理
+        const renderedContent = marked.parse(block.content);
+        
+        // 未完了の場合は特別なクラスを追加
+        const thinkClass = block.isComplete ? 'ai-think' : 'ai-think ai-think-streaming';
+        
+        return {
+            ...block,
+            html: `<div class="${thinkClass}">${renderedContent}</div>`
+        };
+    });
+}
+
+// DOM操作を使った安全なthinking処理（ストリーム対応）
+export function processAIResponseWithDOM(text) {
     if (!text || typeof text !== 'string') return '';
     
-    // Step 1: コードブロックを一時的に保護
-    const codeBlockPlaceholders = [];
-    let protectedText = text;
+    console.log("Processing AI response with DOM:", text.substring(0, 200) + "...");
     
-    // バッククォート3個のコードブロックを保護
-    protectedText = protectedText.replace(/```[\s\S]*?```/g, (match) => {
-        const placeholder = `__CODE_BLOCK_${codeBlockPlaceholders.length}__`;
-        codeBlockPlaceholders.push(match);
-        return placeholder;
+    // Step 1: Thinkingブロックを抽出（完了・未完了両方）
+    const { processedText, thinkingBlocks } = processThinkingBlocks(text);
+    console.log("Extracted thinking blocks:", thinkingBlocks.length);
+    console.log("Thinking blocks:", thinkingBlocks.map(b => ({
+        content: b.content.substring(0, 50) + "...",
+        isComplete: b.isComplete
+    })));
+    
+    if (thinkingBlocks.length === 0) {
+        return sanitizeAIResponse(marked.parse(text));
+    }
+    
+    // Step 2: 通常のMarkdownレンダリング
+    let renderedHtml = marked.parse(processedText);
+    console.log("Rendered HTML before replacement:", renderedHtml);
+    
+    // Step 3: Thinkingブロックをレンダリング
+    const renderedThinking = renderThinkingBlocks(thinkingBlocks);
+    
+    // Step 4: プレースホルダーを置換
+    renderedThinking.forEach((block, index) => {
+        const placeholder = `[[[THINKING_${index}]]]`;
+        
+        console.log(`Replacing ${placeholder} with thinking content (complete: ${block.isComplete}):`, block.content.substring(0, 100));
+        console.log("Thinking HTML:", block.html);
+        console.log("HTML contains placeholder?", renderedHtml.includes(placeholder));
+        
+        // プレースホルダーを置換（段落で囲まれている場合も考慮）
+        const beforeReplace = renderedHtml;
+        renderedHtml = renderedHtml.replace(new RegExp(`<p>\\[\\[\\[THINKING_${index}\\]\\]\\]</p>`, 'g'), block.html);
+        renderedHtml = renderedHtml.replace(new RegExp(`\\[\\[\\[THINKING_${index}\\]\\]\\]`, 'g'), block.html);
+        
+        if (beforeReplace !== renderedHtml) {
+            console.log("Successfully replaced placeholder");
+        } else {
+            console.log("Failed to replace placeholder");
+        }
     });
     
-    // インラインコード（バッククォート1個）を保護
-    protectedText = protectedText.replace(/`[^`\n]+`/g, (match) => {
-        const placeholder = `__INLINE_CODE_${codeBlockPlaceholders.length}__`;
-        codeBlockPlaceholders.push(match);
-        return placeholder;
-    });
+    const result = renderedHtml;
+    console.log("Final result:", result.substring(0, 300) + "...");
     
-    // Step 2: 危険なHTMLタグのみをターゲットにして除去
-    let sanitized = protectedText
-        // 危険なHTMLタグを完全除去（実行可能なスクリプト関連のみ）
+    return sanitizeAIResponse(result);
+}
+
+// HTMLエスケープ処理（既にレンダリング済みHTMLの基本サニタイズ）
+export function sanitizeAIResponse(html) {
+    if (!html || typeof html !== 'string') return '';
+    
+    // 危険なスクリプト系要素を除去
+    let sanitized = html
+        // 危険なHTMLタグを完全除去
         .replace(/<(script|style|iframe|object|embed|form)[^>]*>.*?<\/\1>/gis, '')
         .replace(/<(script|style|iframe|object|embed|form|input|textarea|select|button)[^>]*\/?>/gi, '')
         
@@ -53,26 +142,6 @@ export function sanitizeAIResponse(text) {
         // javascript: プロトコルを除去
         .replace(/href\s*=\s*["']javascript:[^"']*["']/gi, 'href="#"')
         .replace(/src\s*=\s*["']javascript:[^"']*["']/gi, 'src="#"');
-    
-    // Step 3: 本当に危険なHTMLタグのみエスケープ（<?php, <think>などは保護）
-    const dangerousTagsRegex = /<(script|style|iframe|object|embed|form|input|textarea|select|button|meta|base|link)[^>]*>/gi;
-    
-    sanitized = sanitized.replace(dangerousTagsRegex, function(match) {
-        // 危険なタグのみエスケープ
-        return match.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    });
-    
-    // Step 4: コードブロックを復元
-    codeBlockPlaceholders.forEach((originalCode, index) => {
-        const placeholder = `__CODE_BLOCK_${index}__`;
-        const inlinePlaceholder = `__INLINE_CODE_${index}__`;
-        
-        if (sanitized.includes(placeholder)) {
-            sanitized = sanitized.replace(placeholder, originalCode);
-        } else if (sanitized.includes(inlinePlaceholder)) {
-            sanitized = sanitized.replace(inlinePlaceholder, originalCode);
-        }
-    });
     
     return sanitized;
 }
@@ -294,9 +363,10 @@ export function restoreChatHistoryToUI(chatHistory, chat) {
         if (msg.role === "user") {
             chat.addMessage(msg.content, "user");
         } else if (msg.role === "assistant") {
-            // 履歴復元時もサニタイズを適用
-            const sanitizedContent = sanitizeAIResponse(msg.content);
-            chat.addMessage(sanitizedContent, "ai", true);
+            // 履歴復元時も新しい処理を適用
+            const processedContent = processAIResponseWithDOM(msg.content);
+            console.log("Restoring AI message:", processedContent);
+            chat.addMessage(processedContent, "ai", true);
         }
     });
     // スクロールを最下部に
@@ -457,14 +527,15 @@ export async function sendAIMessage({
                 onDelta: (delta, chunk, isSmooth) => {
                     if (isSmooth) {
                         // スムーズ出力の場合はdeltaが完全なテキスト
-                        aiMsgBuffer = sanitizeAIResponse(delta);
-                        chat.updateLastAIMessage(aiMsgBuffer, true);
+                        aiMsgBuffer = delta;
+                        const processedHtml = processAIResponseWithDOM(aiMsgBuffer);
+                        chat.updateLastAIMessage(processedHtml, true);
                         ensureLinksOpenInNewTab(chat?.content?.element);
                     } else {
                         // 通常の場合は差分テキスト
                         aiMsgBuffer += delta;
-                        const sanitizedBuffer = sanitizeAIResponse(aiMsgBuffer);
-                        chat.updateLastAIMessage(sanitizedBuffer, true);
+                        const processedHtml = processAIResponseWithDOM(aiMsgBuffer);
+                        chat.updateLastAIMessage(processedHtml, true);
                         ensureLinksOpenInNewTab(chat?.content?.element);
                     }
                 },
@@ -475,9 +546,9 @@ export async function sendAIMessage({
                     console.error("AI応答エラー:", errMsg);
                 }
             }).then(() => {
-                // 最終的なテキストを履歴に保存（サニタイズ済み）
-                const sanitizedFinalBuffer = sanitizeAIResponse(aiMsgBuffer);
-                historyManager.addMessage("assistant", sanitizedFinalBuffer);
+                // 最終的なテキストを履歴に保存（元のテキスト形式で保存）
+                console.log("Final AI message:", aiMsgBuffer);
+                historyManager.addMessage("assistant", aiMsgBuffer);
                 historyManager.setStreaming(false);
                 if (typeof chat.hideLoading === 'function') chat.hideLoading();
                 ensureLinksOpenInNewTab(chat?.content?.element);

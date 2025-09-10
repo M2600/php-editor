@@ -1856,8 +1856,15 @@ class MEditor {
             msg.element.innerText = text;
 
             if (markdown) {
-                const html = marked.parse(text);
-                msg.element.innerHTML = html;
+                // textが既にHTMLとして処理済みかチェック
+                if (text.includes('<') && text.includes('>')) {
+                    // 既にHTMLとして処理済みの場合は直接設定
+                    msg.element.innerHTML = text;
+                } else {
+                    // まだMarkdown形式の場合は変換
+                    const html = marked.parse(text);
+                    msg.element.innerHTML = html;
+                }
                 addCopyButtonsToCodeBlocks(msg.element);
                 chat.addApplyToCodeButtonsToChat(msg.element);
             }
@@ -1874,7 +1881,14 @@ class MEditor {
             if (aiMsgs.length === 0) return;
             const aiMsgDiv = aiMsgs[aiMsgs.length - 1];
             if (markdown) {
-                aiMsgDiv.innerHTML = marked.parse(text);
+                // textが既にHTMLとして処理済みかチェック
+                if (text.includes('<') && text.includes('>')) {
+                    // 既にHTMLとして処理済みの場合は直接設定
+                    aiMsgDiv.innerHTML = text;
+                } else {
+                    // まだMarkdown形式の場合は変換
+                    aiMsgDiv.innerHTML = marked.parse(text);
+                }
                 addCopyButtonsToCodeBlocks(aiMsgDiv);
                 chat.addApplyToCodeButtonsToChat(aiMsgDiv);
             } else {

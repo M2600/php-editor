@@ -1669,6 +1669,9 @@ class MEditor {
                     opt.value = model.id || model.value || model;
                     opt.textContent = model.name || model.label || model.id || model;
                     selector.element.appendChild(opt);
+                    if(options.defaultValue && (model.id === options.defaultValue || model.value === options.defaultValue || model === options.defaultValue)) {
+                        opt.selected = true;
+                    }
                 });
             }
             if (options.onChange) {

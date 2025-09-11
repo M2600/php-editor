@@ -386,7 +386,8 @@ export async function loadModelList(chat) {
         // nameを表示名に使う
         const models = data.data.map(m => ({ id: m.id, name: m.name }));
         // デフォルトモデル（nameが"Default("で始まるもの）を探す
-        let defaultModel = models.find(m => m.name && m.name.startsWith("Default("));
+        let defaultModel = models.find(m => m.name && m.name.startsWith("Default("))
+            || models.find(m => m.name && m.name.toLowerCase().includes("default"));
         let defaultValue = defaultModel ? defaultModel.id : undefined;
         return chat.createModelSelector({
             models: models,

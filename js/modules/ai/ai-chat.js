@@ -411,7 +411,13 @@ export function setupChatClearHistory(chat, historyManager) {
     chat.clearHistory = function() {
         historyManager.clear();
         if (chat.content && chat.content.element) {
-            chat.content.element.innerHTML = "";
+            // MEditorのCLASS_NAME_PREFIX定数値を直接使用
+            const classNamePrefix = 'meditor-';
+            let historyElements = chat.content.element.querySelectorAll('.' + classNamePrefix + 'chat-message');
+            for(let i=0; i<historyElements.length; i++) {
+                historyElements[i].remove();
+            }
+
         }
         if (Array.isArray(chat.messages)) {
             chat.messages.length = 0;

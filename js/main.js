@@ -265,6 +265,7 @@ async function main(){
     // Chat setup
     chat = editor.createChat(editor.page.main.right, {});
     chat.setTitle("AI Chat");
+    chat.setBackgroundMessage("AIチャットへようこそ!");
 
     // AIからの返答のコードブロックのコードに適用ボタンを押したときの処理
     chat.onApplyToCode = function(codeText, applyBtn) {

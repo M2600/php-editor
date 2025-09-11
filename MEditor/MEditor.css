@@ -995,6 +995,22 @@ i {
     overflow-y: auto;
     padding: .5em;
     background-color: var(--me-color-bg);
+    overflow-x: hidden;
+}
+.meditor-chat-background-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--me-color-text);
+    opacity: 0.3;
+    font-size: 1.1em;
+    pointer-events: none;
+    user-select: none;
+    width: 90%;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    text-align: center;
 }
 .meditor-chat-input-area {
     display: flex;
@@ -1027,7 +1043,7 @@ i {
     border-radius: .3em;
     padding: .5em 1em;
     font-size: 1em;
-    transition: background 0.2s;
+    /*transition: background 0.2s;*/
 }
 .meditor-chat-send-btn:hover {
     background-color: var(--me-color-bg-active);
@@ -1092,7 +1108,7 @@ i {
     margin-left: 0.5em;
     font-size: 0.95em;
     cursor: pointer;
-    transition: background 0.2s, color 0.2s;
+    /*transition: background 0.2s, color 0.2s;*/
     height: 2.2em;
     align-self: center;
 }

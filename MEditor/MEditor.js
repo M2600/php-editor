@@ -1702,7 +1702,11 @@ class MEditor {
             // chat.messages（UI履歴）
             if (Array.isArray(chat.messages)) chat.messages.length = 0;
             // 画面上の履歴
-            if (chat.content && chat.content.element) chat.content.element.innerHTML = "";
+            if (chat.content && chat.content.element) {
+                let historyElements = chat.content.element.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'chat-message');
+                historyElements.forEach(el => el.remove());
+                chat.content.element.scrollTop = chat.content.element.scrollHeight;
+            }
             // 外部変数の履歴もクリアしたい場合は外部で上書きすること
         };
         chat.clearBtn.element.addEventListener("click", () => chat.clearHistory());
@@ -1934,6 +1938,34 @@ class MEditor {
                 chat.inputArea.sendBtn.click();
             }
         });
+
+
+        // 背景メッセージ
+        chat.backgroundMessage = document.createElement("div");
+        chat.backgroundMessage.className = this.CLASS_NAME_PREFIX + "chat-background-message";
+        chat.backgroundMessage.innerHTML = "ここにチャット履歴が表示されます。";
+        chat.content.element.appendChild(chat.backgroundMessage);
+
+        // メッセージがある場合は背景メッセージを非表示にする
+        const observer = new MutationObserver(() => {
+            if (chat.content.element.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'chat-message').length > 0) {
+                chat.backgroundMessage.style.display = "none";
+            } else {
+                chat.backgroundMessage.style.display = "";
+            }
+        });
+        observer.observe(chat.content.element, { childList: true });
+
+        // バックグラウンドメッセージ変更メソッド
+        chat.setBackgroundMessage = (msg) => {
+            chat.backgroundMessage.innerHTML = msg;
+        };
+        chat.addBackgroundMessage = (msg) => {
+            chat.backgroundMessage.innerHTML += msg;
+        };
+
+
+
 
         chat.setTitle = (title) => {
             chat.topMenu.title.element.innerHTML = title;

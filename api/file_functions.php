@@ -6,7 +6,7 @@ require_once(__DIR__ . '/logger.php');
 //$iniConf = parse_ini_file("../config.ini");
 //error_log(print_r($iniConf, true));
 
-$userRoot = $user = posix_getpwuid(posix_getuid())["dir"];
+$userRoot = posix_getpwuid(posix_getuid())["dir"];
 
 $LOG_DIR = $userRoot . "/data/php_editor/log/";
 if(!file_exists($LOG_DIR)){

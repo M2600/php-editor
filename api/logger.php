@@ -2,7 +2,7 @@
 
 /**
  * 強化されたログシステム
- * 日付別ファイル分割とログレベル対応
+ * 日付別ファイル分割とログレベル対応（JSON形式）
  */
 
 // ログレベル定数
@@ -72,34 +72,38 @@ class Logger {
     }
     
     /**
-     * ログメッセージを書き込み
+     * ログメッセージを書き込み（JSON形式）
      */
     public function log($level, $message, $context = []) {
         if ($level < $this->logLevel) {
             return; // ログレベルが設定値未満の場合はスキップ
         }
         
-        $timestamp = date("Y-m-d H:i:s");
-        $levelName = $this->getLevelName($level);
-        $processId = getmypid();
-        
         // セッションIDを安全に取得
         $sessionId = isset($_SESSION["id"]) ? $_SESSION["id"] : 'NO_SESSION';
         
-        // コンテキスト情報があれば追加
-        $contextStr = '';
-        if (!empty($context)) {
-            $contextStr = ' | Context: ' . json_encode($context, JSON_UNESCAPED_UNICODE);
-        }
+        // JSONログエントリを構築
+        $logEntry = [
+            'timestamp' => date("Y-m-d H:i:s"),
+            'level' => $this->getLevelName($level),
+            'level_num' => $level,
+            'pid' => getmypid(),
+            'user_id' => $sessionId,
+            'message' => $message,
+            'context' => $context,
+            'memory_usage' => memory_get_usage(true),
+            'script' => basename($_SERVER['SCRIPT_NAME'] ?? 'unknown')
+        ];
         
-        $logLine = "[{$timestamp}] [{$levelName}] [PID:{$processId}] [User:{$sessionId}] {$message}{$contextStr}\n";
+        // JSON形式で1行にエンコード
+        $logLine = json_encode($logEntry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
         
         $logFile = $this->getTodayLogFile();
         file_put_contents($logFile, $logLine, FILE_APPEND | LOCK_EX);
         
         // 定期的に古いログを削除（10回に1回実行）
         if (rand(1, 10) === 1) {
-            $this->cleanupOldLogs();
+            //$this->cleanupOldLogs();
         }
     }
     

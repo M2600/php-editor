@@ -662,6 +662,59 @@ class MEditor {
         return button;
     }
 
+    generateToggleButton(parentObj, textOn, textOff, initialState=false, toggleAction) {
+        let button = {};
+        button.element = document.createElement("button");
+        button.element.classList.add(this.CLASS_NAME_PREFIX + "button");
+        button.element.classList.add(this.CLASS_NAME_PREFIX + "toggle-button");
+        button.state = initialState;
+        button.toggleAction = toggleAction;
+        if(initialState){
+            button.element.classList.add(this.CLASS_NAME_PREFIX + "toggle-button-on");
+            button.element.innerHTML = textOn;
+        }
+        else{
+            button.element.innerHTML = textOff;
+        }
+
+        button.element.addEventListener("click", (e) => {
+            button.state = !button.state;
+            if(button.state){
+                button.element.classList.add(this.CLASS_NAME_PREFIX + "toggle-button-on");
+                button.element.innerHTML = textOn;
+            }
+            else{
+                button.element.classList.remove(this.CLASS_NAME_PREFIX + "toggle-button-on");
+                button.element.innerHTML = textOff;
+            }
+            if(button.toggleAction){
+                button.toggleAction(button.state);
+            }
+        });
+
+        button.setAction = (func) => {
+            button.toggleAction = func;
+        }
+        button.setState = (state) => {
+            button.state = state;
+            if(button.state){
+                button.element.classList.add(this.CLASS_NAME_PREFIX + "toggle-button-on");
+                button.element.innerHTML = textOn;
+            }
+            else{
+                button.element.classList.remove(this.CLASS_NAME_PREFIX + "toggle-button-on");
+                button.element.innerHTML = textOff;
+            }
+            if(button.toggleAction){
+                button.toggleAction(button.state);
+            }
+        }
+
+        
+        parentObj.element.appendChild(button.element);
+        return button;
+    }
+
 
     generateHeader (parentObj, title="Editor") {
         parentObj.header = {};

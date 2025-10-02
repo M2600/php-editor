@@ -266,7 +266,10 @@ export class MEditor {
     STORAGE_KEYS = {
         leftWidth: 'meditor-left-width',
         rightWidth: 'meditor-right-width',
-        bottomHeight: 'meditor-bottom-height'
+        bottomHeight: 'meditor-bottom-height',
+        leftVisible: 'meditor-left-visible',
+        rightVisible: 'meditor-right-visible',
+        bottomVisible: 'meditor-bottom-visible'
     }
 
     // パネルサイズをlocalStorageに保存
@@ -284,6 +287,17 @@ export class MEditor {
         localStorage.setItem(this.STORAGE_KEYS.leftWidth, leftWidth.toString());
         localStorage.setItem(this.STORAGE_KEYS.rightWidth, rightWidth.toString());
         localStorage.setItem(this.STORAGE_KEYS.bottomHeight, bottomHeight.toString());
+    }
+
+    // パネルの表示状態をlocalStorageに保存
+    savePanelVisibility() {
+        if (!this.page || !this.page.main) return;
+        const leftVisible = this.isPanelVisible('left');
+        const rightVisible = this.isPanelVisible('right');
+        const bottomVisible = this.isPanelVisible('bottom');
+        localStorage.setItem(this.STORAGE_KEYS.leftVisible, leftVisible.toString());
+        localStorage.setItem(this.STORAGE_KEYS.rightVisible, rightVisible.toString());
+        localStorage.setItem(this.STORAGE_KEYS.bottomVisible, bottomVisible.toString());
     }
 
     // localStorageからパネルサイズを復元
@@ -334,6 +348,41 @@ export class MEditor {
         midBottom.style.top = midMainHeight + 'px';
 
         // 最後に全体再調整
+        this.adjustPage();
+    }
+
+    // localStorageからパネルの表示状態を復元
+    restorePanelVisibility() {
+        if (!this.page || !this.page.main) return;
+
+        const savedLeftVisible = localStorage.getItem(this.STORAGE_KEYS.leftVisible);
+        const savedRightVisible = localStorage.getItem(this.STORAGE_KEYS.rightVisible);
+        const savedBottomVisible = localStorage.getItem(this.STORAGE_KEYS.bottomVisible);
+
+        // localStorageに保存された値がない場合はデフォルトで全て表示
+        const leftVisible = savedLeftVisible !== null ? savedLeftVisible === 'true' : true;
+        const rightVisible = savedRightVisible !== null ? savedRightVisible === 'true' : true;
+        const bottomVisible = savedBottomVisible !== null ? savedBottomVisible === 'true' : true;
+
+        // パネルの表示状態を直接設定（adjustPage()は最後に1回だけ呼ぶ）
+        const displayLeft = leftVisible ? '' : 'none';
+        const displayRight = rightVisible ? '' : 'none';
+        const displayBottom = bottomVisible ? '' : 'none';
+
+        if (this.page.main.left) {
+            this.page.main.left.element.style.display = displayLeft;
+            this.setSashVisibility('left', leftVisible);
+        }
+        if (this.page.main.right) {
+            this.page.main.right.element.style.display = displayRight;
+            this.setSashVisibility('right', rightVisible);
+        }
+        if (this.page.main.mid && this.page.main.mid.container && this.page.main.mid.container.bottom) {
+            this.page.main.mid.container.bottom.element.style.display = displayBottom;
+            this.setSashVisibility('bottom', bottomVisible);
+        }
+
+        // 最後に1回だけレイアウト調整
         this.adjustPage();
     }
 
@@ -781,6 +830,11 @@ export class MEditor {
 
         // レイアウトを再調整
         this.adjustPage();
+
+        // 表示状態をlocalStorageに保存（'all'の場合は個別に保存される）
+        if (position !== 'all') {
+            this.savePanelVisibility();
+        }
     }
 
     /**
@@ -855,6 +909,9 @@ export class MEditor {
         
         // パネルサイズをlocalStorageから復元
         this.restorePanelSizes();
+        
+        // パネルの表示状態をlocalStorageから復元
+        this.restorePanelVisibility();
         
         return;
     }

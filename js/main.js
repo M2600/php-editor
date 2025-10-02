@@ -93,7 +93,7 @@ async function main(){
         null,
         "◨",
         "□",
-        true,
+        editor.isPanelVisible('right'),
         (e) => {
             console.log("toggle right panel");
             if(e){
@@ -112,7 +112,7 @@ async function main(){
         null,
         "⬓",
         "□",
-        true,
+        editor.isPanelVisible('bottom'),
         (e) => {
             console.log("toggle bottom panel");
             if(e){
@@ -130,7 +130,7 @@ async function main(){
         null,
         "◧",
         "□",
-        true,
+        editor.isPanelVisible('left'),
         (e) => {
             console.log("toggle left panel");
             if(e){

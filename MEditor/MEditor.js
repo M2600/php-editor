@@ -1,6 +1,6 @@
 // general functions
 
-class Path {
+export class Path {
     constructor(path){
         
     }
@@ -32,7 +32,7 @@ class Path {
 
 ace.require("ace/ext/language_tools");
 
-class AceWrapper {
+export class AceWrapper {
     constructor(HTMLId) {
         this.editorDOM = document.getElementById(HTMLId);
         this.editor = ace.edit(HTMLId);
@@ -1863,7 +1863,7 @@ export class MEditor {
                 if (codeMenu.querySelector('.' + this.CLASS_NAME_PREFIX + 'chat-code-apply-btn')) return; // 既に存在する場合はスキップ
                 const applyBtn = document.createElement('button');
                 applyBtn.classList.add(this.CLASS_NAME_PREFIX + 'chat-code-apply-btn');
-                applyBtn.innerHTML = 'コードに適用';
+                applyBtn.innerHTML = 'コードに適用(試験運用中)';
                 
                 
                 // ローディング状態管理の強化

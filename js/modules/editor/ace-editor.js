@@ -5,6 +5,7 @@
 import { hideAllPreviewer } from '../utils/helpers.js';
 import { extToLang, loadFile } from '../core/file-manager.js';
 import { Path } from '../utils/api.js';
+import { AceWrapper } from '../../../MEditor/MEditor.js';
 
 export function aceKeybinds(ace, pushSaveButton, openInOtherWindow){
     ace.commands.addCommand({

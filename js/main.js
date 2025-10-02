@@ -88,6 +88,62 @@ async function main(){
         (e) => {window.location.href = "/logout.php";}
     ));
 
+    // panel toggle buttonｓ
+    let rightPanelToggle = editor.generateToggleButton(
+        null,
+        "◨",
+        "□",
+        true,
+        (e) => {
+            console.log("toggle right panel");
+            if(e){
+                editor.showPanel('right');
+            }else{
+                editor.hidePanel('right');
+            }
+            hideAllPreviewer();
+        }
+    );
+    editor.page.header.header.menu.items.push(rightPanelToggle);
+    editor.page.header.header.menu.element.prepend(rightPanelToggle.element);
+
+    let bottomPanelToggle = editor.generateToggleButton(
+        null,
+        "⬓",
+        "□",
+        true,
+        (e) => {
+            console.log("toggle bottom panel");
+            if(e){
+                editor.showPanel('bottom');
+            }else{
+                editor.hidePanel('bottom');
+            }
+        }
+    );
+    editor.page.header.header.menu.items.push(bottomPanelToggle);
+    editor.page.header.header.menu.element.prepend(bottomPanelToggle.element);
+
+    let leftPanelToggle = editor.generateToggleButton(
+        null,
+        "◧",
+        "□",
+        true,
+        (e) => {
+            console.log("toggle left panel");
+            if(e){
+                editor.showPanel('left');
+            }else{
+                editor.hidePanel('left');
+                hideAllPreviewer();
+            }
+        }
+    );
+    editor.page.header.header.menu.items.push(leftPanelToggle);
+    editor.page.header.header.menu.element.prepend(leftPanelToggle.element);
+
+    
+
     mConsole = editor.console(editor.page.main.mid.container.bottom);
 
     const editorEditor = editor.workPlace(editor.page.main.mid.container.main);
@@ -391,6 +447,11 @@ async function main(){
 main().catch(error => {
     console.error("Application initialization error:", error);
 });
+
+// デバッグ用：主要なオブジェクトをグローバルに公開
+window.editor = editor;
+window.userConfig = userConfig;
+window.chatHistoryManager = chatHistoryManager;
 
 // api関数をグローバルに定義（既存のコードとの互換性のため）
 window.api = api;

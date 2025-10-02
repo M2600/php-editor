@@ -482,6 +482,7 @@ export class MEditor {
         }
 
 
+
         let rightSashMove = (e) => {
             let parentLeft = parentElement.getBoundingClientRect().left;
             let parentRight = parentElement.getBoundingClientRect().right;
@@ -536,29 +537,35 @@ export class MEditor {
         let mid = this.page.main.mid;
         let right = this.page.main.right;
 
-        let leftWidth = parentElement.clientWidth - mid.element.clientWidth - right.element.clientWidth;
-        let midWidth = parentElement.clientWidth - left.element.clientWidth - right.element.clientWidth;
-        let rightWidth = parentElement.clientWidth - left.element.clientWidth - mid.element.clientWidth;
+        // パネルの表示状態を確認して、非表示の場合は幅を0として扱う
+        let leftVisible = this.isPanelVisible('left');
+        let rightVisible = this.isPanelVisible('right');
+        let leftActualWidth = leftVisible ? left.element.clientWidth : 0;
+        let rightActualWidth = rightVisible ? right.element.clientWidth : 0;
+
+        let leftWidth = parentElement.clientWidth - mid.element.clientWidth - rightActualWidth;
+        let midWidth = parentElement.clientWidth - leftActualWidth - rightActualWidth;
+        let rightWidth = parentElement.clientWidth - leftActualWidth - mid.element.clientWidth;
 
         if(midWidth < this.pageSettings.split.minWidth){
             mid.element.style.width = this.pageSettings.split.minWidth + "px";
             //midWidth = this.pageSettings.split.minWidth;
-            mid.element.style.left = left.element.clientWidth + "px";
+            mid.element.style.left = leftActualWidth + "px";
 
             let delta = this.pageSettings.split.minWidth - midWidth;
-            if(leftWidth >= this.pageSettings.split.minWidth + delta/2 && rightWidth >= this.pageSettings.split.minWidth + delta/2){
+            if(leftVisible && leftWidth >= this.pageSettings.split.minWidth + delta/2 && rightVisible && rightWidth >= this.pageSettings.split.minWidth + delta/2){
                 leftWidth -= delta/2;
                 rightWidth -= delta/2;
                 left.element.style.width = leftWidth + "px";
-                mid.element.style.left = left.element.clientWidth + "px";
+                mid.element.style.left = leftActualWidth + "px";
                 right.element.style.width = rightWidth + "px";
             }
-            else if(leftWidth >= this.pageSettings.split.minWidth + delta){
+            else if(leftVisible && leftWidth >= this.pageSettings.split.minWidth + delta){
                 leftWidth -= delta;
                 left.element.style.width = leftWidth + "px";
-                mid.element.style.left = left.element.clientWidth + "px";
+                mid.element.style.left = leftActualWidth + "px";
             }
-            else if(rightWidth >= this.pageSettings.split.minWidth + delta){
+            else if(rightVisible && rightWidth >= this.pageSettings.split.minWidth + delta){
                 rightWidth -= delta;
                 right.element.style.width = rightWidth + "px";
             }
@@ -566,15 +573,20 @@ export class MEditor {
         }
         else{
             mid.element.style.width = midWidth + "px";
+            mid.element.style.left = leftActualWidth + "px";
         }
-        leftWidth = parentElement.clientWidth - midWidth - right.element.clientWidth;
+        leftWidth = parentElement.clientWidth - midWidth - rightActualWidth;
         
         
         let midMain = mid.container.main;
         let midBottom = mid.container.bottom;
 
-        let midMainHeight = mid.element.offsetHeight - midBottom.element.offsetHeight;
-        let midBottomHeight = midBottom.element.offsetHeight;
+        // 下パネルの表示状態を確認
+        let bottomVisible = this.isPanelVisible('bottom');
+        let bottomActualHeight = bottomVisible ? midBottom.element.offsetHeight : 0;
+
+        let midMainHeight = mid.element.offsetHeight - bottomActualHeight;
+        let midBottomHeight = bottomActualHeight;
 
         if(midMainHeight < this.pageSettings.split.minHeight){
             midMain.element.style.height = this.pageSettings.split.minHeight + "px";
@@ -594,15 +606,239 @@ export class MEditor {
         let mid = this.page.main.mid;
         let right = this.page.main.right;
 
-        left.sash.element.style.left = parentElement.clientLeft + left.element.clientWidth - this.pageSettings.splitSash.width / 2 + "px";
-        mid.container.bottom.sash.element.style.top = mid.container.main.element.clientHeight - this.pageSettings.splitSash.width / 2 + "px";
-        right.sash.element.style.left = parentElement.clientLeft + parentElement.clientWidth - right.element.clientWidth - this.pageSettings.splitSash.width / 2 + "px";
+        // パネルの表示状態を確認
+        let leftVisible = this.isPanelVisible('left');
+        let rightVisible = this.isPanelVisible('right');
+        let bottomVisible = this.isPanelVisible('bottom');
 
+        // 左sash: 左パネルが表示されている場合のみ位置を計算
+        if (leftVisible) {
+            left.sash.element.style.left = parentElement.clientLeft + left.element.clientWidth - this.pageSettings.splitSash.width / 2 + "px";
+        }
+
+        // 右sash: 右パネルが表示されている場合のみ位置を計算
+        if (rightVisible) {
+            right.sash.element.style.left = parentElement.clientLeft + parentElement.clientWidth - right.element.clientWidth - this.pageSettings.splitSash.width / 2 + "px";
+        }
+
+        // 下sash: 下パネルが表示されている場合のみ位置を計算
         let midContainer = mid.container;
         let midMain = midContainer.main;
         let midBottom = midContainer.bottom;
 
-        midBottom.sash.element.style.top = midContainer.element.clientTop + midMain.element.clientHeight - this.pageSettings.splitSash.width / 2 + "px";
+        if (bottomVisible) {
+            mid.container.bottom.sash.element.style.top = mid.container.main.element.clientHeight - this.pageSettings.splitSash.width / 2 + "px";
+            midBottom.sash.element.style.top = midContainer.element.clientTop + midMain.element.clientHeight - this.pageSettings.splitSash.width / 2 + "px";
+        }
+    }
+
+    /**
+     * sash（パネル間の境界線/リサイズハンドル）の表示/非表示を制御
+     * @param {string} position - sashの位置: 'left' | 'right' | 'bottom' | 'all'
+     * @param {boolean} visible - true: 表示, false: 非表示
+     */
+    setSashVisibility(position, visible) {
+        if (!this.page || !this.page.main) return;
+
+        const displayValue = visible ? '' : 'none';
+
+        switch(position) {
+            case 'left':
+                if (this.page.main.left && this.page.main.left.sash) {
+                    this.page.main.left.sash.element.style.display = displayValue;
+                }
+                break;
+            
+            case 'right':
+                if (this.page.main.right && this.page.main.right.sash) {
+                    this.page.main.right.sash.element.style.display = displayValue;
+                }
+                break;
+            
+            case 'bottom':
+                if (this.page.main.mid && 
+                    this.page.main.mid.container && 
+                    this.page.main.mid.container.bottom && 
+                    this.page.main.mid.container.bottom.sash) {
+                    this.page.main.mid.container.bottom.sash.element.style.display = displayValue;
+                }
+                break;
+            
+            case 'all':
+                this.setSashVisibility('left', visible);
+                this.setSashVisibility('right', visible);
+                this.setSashVisibility('bottom', visible);
+                break;
+            
+            default:
+                console.warn(`Unknown sash position: ${position}`);
+                return;
+        }
+    }
+
+    /**
+     * 特定のsashを表示
+     * @param {string} position - 'left' | 'right' | 'bottom' | 'all'
+     */
+    showSash(position) {
+        this.setSashVisibility(position, true);
+    }
+
+    /**
+     * 特定のsashを非表示
+     * @param {string} position - 'left' | 'right' | 'bottom' | 'all'
+     */
+    hideSash(position) {
+        this.setSashVisibility(position, false);
+    }
+
+    /**
+     * sashの表示状態を取得
+     * @param {string} position - 'left' | 'right' | 'bottom'
+     * @returns {boolean} true: 表示, false: 非表示
+     */
+    isSashVisible(position) {
+        if (!this.page || !this.page.main) return false;
+
+        let sashElement = null;
+        
+        switch(position) {
+            case 'left':
+                sashElement = this.page.main.left?.sash?.element;
+                break;
+            case 'right':
+                sashElement = this.page.main.right?.sash?.element;
+                break;
+            case 'bottom':
+                sashElement = this.page.main.mid?.container?.bottom?.sash?.element;
+                break;
+            default:
+                return false;
+        }
+
+        if (!sashElement) return false;
+        return sashElement.style.display !== 'none';
+    }
+
+    /**
+     * sashの表示状態をトグル
+     * @param {string} position - 'left' | 'right' | 'bottom' | 'all'
+     */
+    toggleSash(position) {
+        if (position === 'all') {
+            const currentState = this.isSashVisible('left');
+            this.setSashVisibility('all', !currentState);
+        } else {
+            const currentState = this.isSashVisible(position);
+            this.setSashVisibility(position, !currentState);
+        }
+    }
+
+    /**
+     * パネルの表示/非表示を制御
+     * @param {string} position - パネルの位置: 'left' | 'right' | 'bottom' | 'all'
+     * @param {boolean} visible - true: 表示, false: 非表示
+     */
+    setPanelVisibility(position, visible) {
+        if (!this.page || !this.page.main) return;
+
+        const displayValue = visible ? '' : 'none';
+
+        switch(position) {
+            case 'left':
+                if (this.page.main.left) {
+                    this.page.main.left.element.style.display = displayValue;
+                    this.setSashVisibility('left', visible);
+                }
+                break;
+            
+            case 'right':
+                if (this.page.main.right) {
+                    this.page.main.right.element.style.display = displayValue;
+                    this.setSashVisibility('right', visible);
+                }
+                break;
+            
+            case 'bottom':
+                if (this.page.main.mid && 
+                    this.page.main.mid.container && 
+                    this.page.main.mid.container.bottom) {
+                    this.page.main.mid.container.bottom.element.style.display = displayValue;
+                    this.setSashVisibility('bottom', visible);
+                }
+                break;
+            
+            case 'all':
+                this.setPanelVisibility('left', visible);
+                this.setPanelVisibility('right', visible);
+                this.setPanelVisibility('bottom', visible);
+                break;
+            
+            default:
+                console.warn(`Unknown panel position: ${position}`);
+                return;
+        }
+
+        // レイアウトを再調整
+        this.adjustPage();
+    }
+
+    /**
+     * 特定のパネルを表示
+     * @param {string} position - 'left' | 'right' | 'bottom' | 'all'
+     */
+    showPanel(position) {
+        this.setPanelVisibility(position, true);
+    }
+
+    /**
+     * 特定のパネルを非表示
+     * @param {string} position - 'left' | 'right' | 'bottom' | 'all'
+     */
+    hidePanel(position) {
+        this.setPanelVisibility(position, false);
+    }
+
+    /**
+     * パネルの表示状態を取得
+     * @param {string} position - 'left' | 'right' | 'bottom'
+     * @returns {boolean} true: 表示, false: 非表示
+     */
+    isPanelVisible(position) {
+        if (!this.page || !this.page.main) return false;
+
+        let panelElement = null;
+        
+        switch(position) {
+            case 'left':
+                panelElement = this.page.main.left?.element;
+                break;
+            case 'right':
+                panelElement = this.page.main.right?.element;
+                break;
+            case 'bottom':
+                panelElement = this.page.main.mid?.container?.bottom?.element;
+                break;
+            default:
+                return false;
+        }
+
+        if (!panelElement) return false;
+        return panelElement.style.display !== 'none';
+    }
+
+    /**
+     * パネルの表示状態をトグル
+     * @param {string} position - 'left' | 'right' | 'bottom' | 'all'
+     */
+    togglePanel(position) {
+        if (position === 'all') {
+            const currentState = this.isPanelVisible('left');
+            this.setPanelVisibility('all', !currentState);
+        } else {
+            const currentState = this.isPanelVisible(position);
+            this.setPanelVisibility(position, !currentState);
+        }
     }
 
     async pageLayout(parentObj) {
@@ -723,8 +959,11 @@ export class MEditor {
             }
         }
 
-        
-        parentObj.element.appendChild(button.element);
+        if (parentObj && typeof parentObj.element === "object"){
+            parentObj.element.appendChild(button.element);
+        }else{
+            console.warn("parentObj has no element property");
+        }
         return button;
     }
 

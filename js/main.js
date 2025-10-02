@@ -8,6 +8,8 @@ import { loadExplorer } from './modules/core/file-manager.js';
 import { startSessionPulse } from './modules/core/pulse.js';
 
 // UI modules
+import { MEditor } from '../MEditor/MEditor.js';
+
 import { 
     renameFileDialog, 
     moveFileDialog, 

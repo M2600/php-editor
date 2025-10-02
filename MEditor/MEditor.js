@@ -156,7 +156,7 @@ class AceWrapper {
 
 
 
-class MEditor {
+export class MEditor {
     
 
     EDITOR_NAME = "MEditor";
@@ -165,9 +165,22 @@ class MEditor {
     DEBUG = false;
     
 
-    constructor() {
+    constructor(options = {}) {
         // script path
-        this.root=document.querySelector('script[src*="MEditor.js"]').outerHTML.match(/\"(.*)MEditor.js(.*)\"/)[1]||'./';
+        if (options.rootPath) {
+            // 外部から明示的にルートパスが指定された場合
+            this.root = options.rootPath.endsWith('/') ? options.rootPath : options.rootPath + '/';
+        } else if (typeof import.meta !== 'undefined' && import.meta.url) {
+            // ESモジュールの場合はimport.meta.urlを使用
+            const url = new URL(import.meta.url);
+            // ブラウザ環境では相対パスに変換
+            const currentPath = url.pathname.substring(0, url.pathname.lastIndexOf('/') + 1);
+            const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+            this.root = currentPath.replace(basePath, './').replace(/^\//, './') || './';
+        } else {
+            // 通常のscriptタグの場合は従来通り
+            this.root = document.querySelector('script[src*="MEditor.js"]')?.outerHTML.match(/\"(.*)MEditor.js(.*)\"/)?.[1] || './';
+        }
 
 
         // variables

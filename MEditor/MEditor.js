@@ -890,11 +890,12 @@ export class MEditor {
     }
 
 
-    generateButton(parentObj, text, clickAction) {
+    generateButton(parentObj, text, clickAction, tooltip="") {
         let button = {};
         button.element = document.createElement("button");
         button.element.classList.add(this.CLASS_NAME_PREFIX + "button");
         button.element.innerHTML = text;
+        if(tooltip) button.element.title = tooltip;
         if(clickAction){
             button.element.addEventListener("click", clickAction.bind(this));
         }
@@ -911,13 +912,14 @@ export class MEditor {
         return button;
     }
 
-    generateToggleButton(parentObj, textOn, textOff, initialState=false, toggleAction) {
+    generateToggleButton(parentObj, textOn, textOff, initialState=false, toggleAction, tooltip="") {
         let button = {};
         button.element = document.createElement("button");
         button.element.classList.add(this.CLASS_NAME_PREFIX + "button");
         button.element.classList.add(this.CLASS_NAME_PREFIX + "toggle-button");
         button.state = initialState;
         button.toggleAction = toggleAction;
+        if(tooltip) button.element.title = tooltip;
         if(initialState){
             button.element.classList.add(this.CLASS_NAME_PREFIX + "toggle-button-on");
             button.element.innerHTML = textOn;

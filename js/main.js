@@ -102,7 +102,8 @@ async function main(){
                 editor.hidePanel('right');
             }
             hideAllPreviewer();
-        }
+        },
+        "右パネルの表示/非表示"
     );
     editor.page.header.header.menu.items.push(rightPanelToggle);
     editor.page.header.header.menu.element.prepend(rightPanelToggle.element);
@@ -119,7 +120,8 @@ async function main(){
             }else{
                 editor.hidePanel('bottom');
             }
-        }
+        },
+        "下パネルの表示/非表示"
     );
     editor.page.header.header.menu.items.push(bottomPanelToggle);
     editor.page.header.header.menu.element.prepend(bottomPanelToggle.element);
@@ -137,7 +139,8 @@ async function main(){
                 editor.hidePanel('left');
                 hideAllPreviewer();
             }
-        }
+        },
+        "左パネルの表示/非表示"
     );
     editor.page.header.header.menu.items.push(leftPanelToggle);
     editor.page.header.header.menu.element.prepend(leftPanelToggle.element);

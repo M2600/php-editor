@@ -101,7 +101,7 @@ async function main(){
             }else{
                 editor.hidePanel('right');
             }
-            hideAllPreviewer();
+            // パネル切り替え時にhideAllPreviewer()を呼ぶと開いているAceエディタも非表示になるため削除
         },
         "右パネルの表示/非表示"
     );
@@ -137,7 +137,7 @@ async function main(){
                 editor.showPanel('left');
             }else{
                 editor.hidePanel('left');
-                hideAllPreviewer();
+                // パネル切り替え時にhideAllPreviewer()を呼ぶと開いているAceエディタも非表示になるため削除
             }
         },
         "左パネルの表示/非表示"

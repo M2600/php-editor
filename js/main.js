@@ -170,12 +170,15 @@ async function main(){
         "Run",
         (e) => {
             console.log("Run: " + APP_STATE.CURRENT_FILE.path);
+            // dictMenuからGETパラメータを取得
+            const getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
             APP_STATE.RUN_BROWSER_TAB = openInOtherWindow(
                 APP_STATE.CURRENT_FILE, 
                 (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor),
                 APP_STATE.RUN_BROWSER_TAB,
                 CONFIG.FILE_PAGE_BASE_URL,
-                APP_STATE.USER_ID
+                APP_STATE.USER_ID,
+                getParams
             );
         }
     ));
@@ -186,6 +189,8 @@ async function main(){
         "QR Code",
         (e) => {
             console.log("QR Code: " + APP_STATE.CURRENT_FILE.path);
+            // dictMenuからGETパラメータを取得
+            const getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
             showQRCode(
                 APP_STATE.CURRENT_FILE,
                 (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor),
@@ -193,7 +198,8 @@ async function main(){
                 CONFIG.FILE_PAGE_BASE_URL,
                 APP_STATE.USER_ID,
                 mConsole,
-                CONFIG.DEBUG
+                CONFIG.DEBUG,
+                getParams
             );
         }
     ));
@@ -203,9 +209,22 @@ async function main(){
         editorEditor.menu.right,
         "Debug",
         (e) => {
-            console.log("Debug: ");
-            runPhp(
+            console.log("Debug with GET params");
+            // dictMenuからGETパラメータを取得
+            const getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
+            console.log("GET Parameters:", getParams);
+            
+            // GETパラメータをlocalStorageに保存
+            try {
+                localStorage.setItem('getParams', JSON.stringify(getParams));
+            } catch (err) {
+                console.error('Failed to save GET parameters:', err);
+            }
+            
+            // CGI実行（GETパラメータ付き）
+            runPhpCgi(
                 APP_STATE.CURRENT_FILE.path,
+                getParams,
                 api,
                 APP_STATE.CURRENT_FILE,
                 (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor),
@@ -244,12 +263,14 @@ async function main(){
                     saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor)
                 ),
                 () => {
+                    const getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
                     APP_STATE.RUN_BROWSER_TAB = openInOtherWindow(
                         APP_STATE.CURRENT_FILE, 
                         (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor),
                         APP_STATE.RUN_BROWSER_TAB,
                         CONFIG.FILE_PAGE_BASE_URL,
-                        APP_STATE.USER_ID
+                        APP_STATE.USER_ID,
+                        getParams
                     );
                 }
             ),
@@ -328,6 +349,22 @@ async function main(){
     });
 
     await loadExplorer("/", api, APP_STATE, editor);
+
+    // GET Parameters setup
+    dictMenu = editor.createDictMenu(editor.page.main.right, {});
+    dictMenu.setTitle("GET Parameters");
+    dictMenu.addButton();
+    
+    // localStorageからGETパラメータを復元
+    const savedParams = localStorage.getItem('getParams');
+    if (savedParams) {
+        try {
+            const params = JSON.parse(savedParams);
+            dictMenu.addItem(params);
+        } catch (e) {
+            console.error('Failed to load GET parameters:', e);
+        }
+    }
 
     // Chat setup
     chat = editor.createChat(editor.page.main.right, {});

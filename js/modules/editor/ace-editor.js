@@ -158,7 +158,7 @@ export async function pushSaveButton(currentFile, saveFile) {
     return await saveFile(currentFile.path, content);
 }
 
-export async function openInOtherWindow(currentFile, saveFile, runBrowserTab, filePageBaseUrl, userId) {
+export async function openInOtherWindow(currentFile, saveFile, runBrowserTab, filePageBaseUrl, userId, getParams = {}) {
     if (!currentFile) {
         return;
     }
@@ -169,6 +169,12 @@ export async function openInOtherWindow(currentFile, saveFile, runBrowserTab, fi
     let url = Path.join(filePageBaseUrl, userId, currentFile.path);
     if(url.endsWith("/")){
         url = url.substring(0, url.length - 1);
+    }
+    
+    // GETパラメータをクエリ文字列として追加
+    if (getParams && Object.keys(getParams).length > 0) {
+        const queryString = new URLSearchParams(getParams).toString();
+        url += '?' + queryString;
     }
     
     console.log("Opening URL:", url);
@@ -187,7 +193,7 @@ export async function openInOtherWindow(currentFile, saveFile, runBrowserTab, fi
     return targetTab;
 }
 
-export async function showQRCode(currentFile, saveFile, editor, filePageBaseUrl, userId, mConsole, DEBUG) {
+export async function showQRCode(currentFile, saveFile, editor, filePageBaseUrl, userId, mConsole, DEBUG, getParams = {}) {
     if (!currentFile) {
         return;
     }
@@ -199,6 +205,12 @@ export async function showQRCode(currentFile, saveFile, editor, filePageBaseUrl,
     url = url.origin + Path.join(filePageBaseUrl, userId, currentFile.path);
     if(url.endsWith("/")){
         url = url.substring(0, url.length - 1);
+    }
+    
+    // GETパラメータをクエリ文字列として追加
+    if (getParams && Object.keys(getParams).length > 0) {
+        const queryString = new URLSearchParams(getParams).toString();
+        url += '?' + queryString;
     }
 
     let windowName = "QR Code for " + currentFile.name;

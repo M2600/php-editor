@@ -352,7 +352,7 @@ async function main(){
 
     // GET Parameters setup
     dictMenu = editor.createDictMenu(editor.page.main.right, {});
-    dictMenu.setTitle("GET Parameters");
+    dictMenu.setTitle("GETパラメータ(テスト用)");
     dictMenu.addButton();
     
     // localStorageからGETパラメータを復元

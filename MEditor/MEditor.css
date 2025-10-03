@@ -904,6 +904,7 @@ i {
     flex-direction: column;
     overflow-x: hidden;
     width: 100%;
+    height: fit-content;
 }
 
 .meditor-dict-menu-title {
@@ -914,6 +915,7 @@ i {
     display: flex;
     flex-direction: column;
     overflow-y : auto;
+    height: fit-content;
 }
 
 .meditor-dict-menu-item {
@@ -956,6 +958,7 @@ i {
     cursor: pointer;
     border-radius: .3em;
     width: 1.5em;
+    height: 1.5em;
 }
 .meditor-dict-menu-add-button:hover {
     background-color: var(--me-color-bg-active);

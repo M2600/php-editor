@@ -1042,7 +1042,10 @@ export class MEditor {
         parentObj.header.menu.element.classList.add(this.CLASS_NAME_PREFIX + "header-menu");
 
         parentObj.header.menu.items = [];
-        let ThemeButton = this.generateButton(parentObj.header.menu, "Theme", (e) => {
+        // 現在のテーマに応じたアイコンを表示
+        const currentTheme = document.body.getAttribute("theme") || "light";
+        const themeIcon = "☀";
+        let ThemeButton = this.generateButton(parentObj.header.menu, themeIcon, (e) => {
             console.log("theme clicked");
             if(document.body.getAttribute("theme") == "dark"){
                 document.body.setAttribute("theme", "light");
@@ -1054,6 +1057,7 @@ export class MEditor {
             }
             this.changeThemeAction(this.THEME);
         });
+        ThemeButton.element.title = "テーマ切り替え (ライト/ダーク)";
         parentObj.header.menu.items.push(ThemeButton);
 
         parentObj.header.element.appendChild(parentObj.header.title.element);

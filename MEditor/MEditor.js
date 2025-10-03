@@ -352,7 +352,7 @@ export class MEditor {
     }
 
     // localStorageからパネルの表示状態を復元
-    restorePanelVisibility() {
+    restorePanelVisibility(defaults = { left: true, right: false, bottom: false }) {
         if (!this.page || !this.page.main) return;
 
         const savedLeftVisible = localStorage.getItem(this.STORAGE_KEYS.leftVisible);
@@ -360,9 +360,9 @@ export class MEditor {
         const savedBottomVisible = localStorage.getItem(this.STORAGE_KEYS.bottomVisible);
 
         // localStorageに保存された値がない場合はデフォルトで全て表示
-        const leftVisible = savedLeftVisible !== null ? savedLeftVisible === 'true' : true;
-        const rightVisible = savedRightVisible !== null ? savedRightVisible === 'true' : true;
-        const bottomVisible = savedBottomVisible !== null ? savedBottomVisible === 'true' : true;
+        const leftVisible = savedLeftVisible !== null ? savedLeftVisible === 'true' : defaults.left;
+        const rightVisible = savedRightVisible !== null ? savedRightVisible === 'true' : defaults.right;
+        const bottomVisible = savedBottomVisible !== null ? savedBottomVisible === 'true' : defaults.bottom;
 
         // パネルの表示状態を直接設定（adjustPage()は最後に1回だけ呼ぶ）
         const displayLeft = leftVisible ? '' : 'none';

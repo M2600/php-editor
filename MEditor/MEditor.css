@@ -920,6 +920,7 @@ i {
     display: flex;
     margin: .1em .1em;
     overflow-x: hidden;
+    height: 2em;
 }
 
 .meditor-dict-menu-item-key {

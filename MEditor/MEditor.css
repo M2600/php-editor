@@ -163,9 +163,12 @@ i {
 
 .meditor-header-title {
     margin: 0;
-    text-align: center;
+    /*text-align: center;*/
     line-height: 2em;
     padding-left: .5em;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: clip;
 }
 
 .meditor-header-menu {

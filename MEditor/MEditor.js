@@ -1209,6 +1209,43 @@ export class MEditor {
         );
         
         parentObj.explorer.menu.control.items.push(newFileButton);
+        
+        // ソートメニューボタンを追加
+        let sortButton = this.generateButton(
+            parentObj.explorer.menu.control,
+            "↕",
+        );
+        sortButton.element.title = "Sort files";
+        sortButton.addTrigger("click", (e) => {
+            e.stopPropagation();
+            console.log("sort menu clicked");
+
+            // 現在のソート設定を取得
+            let currentSort = this.getSortSettings();
+            let nameText = currentSort.sortBy === 'name' ? 
+                (currentSort.order === 'asc' ? '✓ Name (A-Z)' : '✓ Name (Z-A)') : 
+                'Name';
+            let mtimeText = currentSort.sortBy === 'mtime' ? 
+                (currentSort.order === 'asc' ? '✓ Modified (Old-New)' : '✓ Modified (New-Old)') : 
+                'Modified';
+
+            this.popupMenu(sortButton, [
+                {text: nameText, title: "Sort by Name", clickAction: (e) => {
+                    let newOrder = (currentSort.sortBy === 'name' && currentSort.order === 'asc') ? 'desc' : 'asc';
+                    parentObj.explorer.sortClickAction('name', newOrder);
+                }},
+                {text: mtimeText, title: "Sort by Modified Time", clickAction: (e) => {
+                    let newOrder = (currentSort.sortBy === 'mtime' && currentSort.order === 'asc') ? 'desc' : 'asc';
+                    parentObj.explorer.sortClickAction('mtime', newOrder);
+                }},
+            ]);
+            this.page.popupMenuCloseAction = () => {
+                //parentObj.explorer.content.element.style.overflowY = "auto";
+            }
+            //parentObj.explorer.content.element.style.overflowY = "hidden";
+        });
+        parentObj.explorer.menu.control.items.push(sortButton);
+        
         //parentObj.explorer.menu.control.items.push(this.generateButton(parentObj.explorer.menu.control, "New Folder", this.EXPLORER_NEW_DIR_ACTION));
         let otherButton = this.generateButton(
             parentObj.explorer.menu.control,
@@ -1299,6 +1336,13 @@ export class MEditor {
             parentObj.explorer.deleteClickAction = func;
         }
 
+        parentObj.explorer.sortClickAction = (sortBy, order) => {
+            console.log("sort: ", sortBy, order);
+        }
+        parentObj.explorer.setSortClickAction = (func) => {
+            parentObj.explorer.sortClickAction = func;
+        }
+
 
         // dir actions
         parentObj.explorer.renameDirClickAction = (dirInfo) => {
@@ -1338,6 +1382,22 @@ export class MEditor {
     }
 
 
+
+    /**
+     * ソート設定を取得する
+     */
+    getSortSettings() {
+        const defaultSettings = { sortBy: 'name', order: 'asc' };
+        try {
+            const saved = localStorage.getItem('explorerSortSettings');
+            if (saved) {
+                return JSON.parse(saved);
+            }
+        } catch (e) {
+            console.error('Failed to load sort settings:', e);
+        }
+        return defaultSettings;
+    }
 
     explorerRecursive(parentObj, dirInfo, currentDir="") {
         // build currentDir

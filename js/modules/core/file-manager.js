@@ -234,6 +234,12 @@ export async function loadExplorer(path, api, appState, editor) {
         let dir = Path.join(appState.USER_ID, path);
         editor.explorer.setMenuTitle(dir);
         
+        // ソート設定を取得してファイルリストをソート
+        const sortSettings = getSortSettings();
+        if (appState.FILE_LIST && appState.FILE_LIST.files) {
+            appState.FILE_LIST.files = sortFiles(appState.FILE_LIST.files, sortSettings.sortBy, sortSettings.order);
+        }
+        
         // エクスプローラー表示でファイルパスを設定
         await editor.explorer.loadExplorer(appState.FILE_LIST);
         
@@ -682,4 +688,82 @@ export async function phpSyntaxCheck(path, api, DEBUG) {
     .catch(error => {
         DEBUG && console.error("PHP syntax check failed:", error);
     });
+}
+
+/**
+ * ファイルリストをソートする
+ * @param {Array} files - ソート対象のファイル配列
+ * @param {string} sortBy - ソート基準 ('name' or 'mtime')
+ * @param {string} order - ソート順 ('asc' or 'desc')
+ * @returns {Array} - ソート済みのファイル配列
+ */
+export function sortFiles(files, sortBy = 'name', order = 'asc') {
+    if (!files || !Array.isArray(files)) {
+        return files;
+    }
+
+    // ファイルのコピーを作成してソート（元の配列を変更しない）
+    const sortedFiles = [...files];
+
+    sortedFiles.sort((a, b) => {
+        // ディレクトリを常に上位に表示
+        if (a.type === 'dir' && b.type !== 'dir') return -1;
+        if (a.type !== 'dir' && b.type === 'dir') return 1;
+
+        let comparison = 0;
+
+        if (sortBy === 'name') {
+            // ファイル名でソート（大文字小文字を区別しない）
+            const nameA = (a.name || '').toLowerCase();
+            const nameB = (b.name || '').toLowerCase();
+            comparison = nameA.localeCompare(nameB);
+        } else if (sortBy === 'mtime') {
+            // 最終更新時刻でソート
+            const mtimeA = a.mtime || 0;
+            const mtimeB = b.mtime || 0;
+            comparison = mtimeA - mtimeB;
+        }
+
+        // 昇順/降順の適用
+        return order === 'desc' ? -comparison : comparison;
+    });
+
+    // ディレクトリの子要素も再帰的にソート
+    sortedFiles.forEach(file => {
+        if (file.type === 'dir' && file.files && Array.isArray(file.files)) {
+            file.files = sortFiles(file.files, sortBy, order);
+        }
+    });
+
+    return sortedFiles;
+}
+
+/**
+ * ソート設定を取得する
+ * @returns {Object} - { sortBy: string, order: string }
+ */
+export function getSortSettings() {
+    const defaultSettings = { sortBy: 'name', order: 'asc' };
+    try {
+        const saved = localStorage.getItem('explorerSortSettings');
+        if (saved) {
+            return JSON.parse(saved);
+        }
+    } catch (e) {
+        console.error('Failed to load sort settings:', e);
+    }
+    return defaultSettings;
+}
+
+/**
+ * ソート設定を保存する
+ * @param {string} sortBy - ソート基準
+ * @param {string} order - ソート順
+ */
+export function saveSortSettings(sortBy, order) {
+    try {
+        localStorage.setItem('explorerSortSettings', JSON.stringify({ sortBy, order }));
+    } catch (e) {
+        console.error('Failed to save sort settings:', e);
+    }
 }

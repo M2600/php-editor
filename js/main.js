@@ -4,7 +4,7 @@
 
 // Core modules
 import { UserConfig, changeTheme, CONFIG, APP_STATE } from './modules/core/config.js';
-import { loadExplorer } from './modules/core/file-manager.js';
+import { loadExplorer, saveSortSettings } from './modules/core/file-manager.js';
 import { startSessionPulse } from './modules/core/pulse.js';
 
 // UI modules
@@ -319,6 +319,12 @@ async function main(){
     explorer.setUploadClickAction((dir) => {
         console.log("re: upload: ", dir);
         fileUploadDialog(dir, editor, api, mConsole, CONFIG.DEBUG);
+    });
+
+    explorer.setSortClickAction((sortBy, order) => {
+        console.log("re: sort: ", sortBy, order);
+        saveSortSettings(sortBy, order);
+        loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
     });
 
     await loadExplorer("/", api, APP_STATE, editor);

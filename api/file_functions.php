@@ -358,11 +358,21 @@ function fileRecursive($path){
         if($p == "." || $p == "..") continue;
         $fullPath = $path . "/" . $p;
         $htmlSafePath = htmlspecialchars($p, ENT_QUOTES);
+        $mtime = filemtime($fullPath);
         if(is_dir($fullPath)){
-            $object[] = array("name" => $htmlSafePath, "type" => "dir", "files" => fileRecursive($fullPath));
+            $object[] = array(
+                "name" => $htmlSafePath, 
+                "type" => "dir", 
+                "mtime" => $mtime,
+                "files" => fileRecursive($fullPath)
+            );
         }
         else{
-            $object[] = array("name" => $htmlSafePath, "type" => getFileType($fullPath));
+            $object[] = array(
+                "name" => $htmlSafePath, 
+                "type" => getFileType($fullPath),
+                "mtime" => $mtime
+            );
         }
     }
     return $object;

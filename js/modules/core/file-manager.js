@@ -234,6 +234,9 @@ export async function loadExplorer(path, api, appState, editor) {
         let dir = Path.join(appState.USER_ID, path);
         editor.explorer.setMenuTitle(dir);
         
+        // サーバーから最新データを取得したのでクライアント側の更新時刻をクリア
+        clearClientMtimes();
+        
         // ソート設定を取得してファイルリストをソート
         const sortSettings = getSortSettings();
         if (appState.FILE_LIST && appState.FILE_LIST.files) {
@@ -288,7 +291,7 @@ export async function loadFile(path, api) {
     return ret;
 }
 
-export async function saveFile(path, content, api, currentFile, mConsole, DEBUG, phpSyntaxCheck, editor) {
+export async function saveFile(path, content, api, currentFile, mConsole, DEBUG, phpSyntaxCheck, editor, appState = null) {
     if (currentFile.aceObj.editor.isDiffView) {
         mConsole.print("差分表示中は保存できません。", "warning");
         return 0;
@@ -322,6 +325,14 @@ export async function saveFile(path, content, api, currentFile, mConsole, DEBUG,
             }
             mConsole.print("File saved: " + currentFile.path, "success");
             phpSyntaxCheck(currentFile.path, api, DEBUG);
+            
+            // クライアント側の更新時刻を記録
+            updateClientMtime(currentFile.path);
+            
+            // mtimeソート時はエクスプローラーを再ソート
+            if (appState) {
+                refreshExplorerSort(appState, editor);
+            }
         }
         ret = 1;
     });
@@ -765,5 +776,74 @@ export function saveSortSettings(sortBy, order) {
         localStorage.setItem('explorerSortSettings', JSON.stringify({ sortBy, order }));
     } catch (e) {
         console.error('Failed to save sort settings:', e);
+    }
+}
+
+// クライアント側の更新時刻をメモリ上で管理（エクスプローラー再リロードまでの一時的なデータ）
+let clientMtimes = {};
+
+/**
+ * クライアント側でのファイル更新時刻を記録（メモリ上のみ）
+ * @param {string} filePath - ファイルパス
+ */
+export function updateClientMtime(filePath) {
+    clientMtimes[filePath] = Date.now();
+}
+
+/**
+ * クライアント側の更新時刻をクリア（エクスプローラー再リロード時に呼ぶ）
+ */
+export function clearClientMtimes() {
+    clientMtimes = {};
+}
+
+/**
+ * クライアント側の更新時刻をファイルリストにマージ
+ * @param {Array} files - ファイルリスト
+ * @returns {Array} - 更新時刻がマージされたファイルリスト
+ */
+export function mergeClientMtimes(files) {
+    if (!files || !Array.isArray(files)) {
+        return files;
+    }
+    
+    return files.map(file => {
+        const updatedFile = { ...file };
+        
+        // ファイルパスがクライアント側の更新時刻にあれば上書き
+        if (file.path && clientMtimes[file.path]) {
+            updatedFile.mtime = Math.floor(clientMtimes[file.path] / 1000); // ミリ秒を秒に変換
+            updatedFile.clientModified = true; // クライアント側で更新されたことを示すフラグ
+        }
+        
+        // ディレクトリの子要素も再帰的に処理
+        if (file.type === 'dir' && file.files && Array.isArray(file.files)) {
+            updatedFile.files = mergeClientMtimes(file.files);
+        }
+        
+        return updatedFile;
+    });
+}
+
+/**
+ * エクスプローラーを再ソートして再描画
+ * @param {Object} appState - アプリケーション状態
+ * @param {Object} editor - MEditorインスタンス
+ */
+export function refreshExplorerSort(appState, editor) {
+    if (!appState.FILE_LIST || !appState.FILE_LIST.files) {
+        return;
+    }
+    
+    // クライアント側の更新時刻をマージ
+    appState.FILE_LIST.files = mergeClientMtimes(appState.FILE_LIST.files);
+    
+    // ソート設定を取得してファイルリストをソート
+    const sortSettings = getSortSettings();
+    if (sortSettings.sortBy === 'mtime') {
+        appState.FILE_LIST.files = sortFiles(appState.FILE_LIST.files, sortSettings.sortBy, sortSettings.order);
+        
+        // エクスプローラーを再描画
+        editor.explorer.loadExplorer(appState.FILE_LIST);
     }
 }

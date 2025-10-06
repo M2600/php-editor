@@ -1003,6 +1003,7 @@ i {
     padding: .5em;
     background-color: var(--me-color-bg);
     overflow-x: hidden;
+    position: relative; /* 追加: 子要素の絶対位置の基準にする */
 }
 .meditor-chat-background-message {
     position: absolute;

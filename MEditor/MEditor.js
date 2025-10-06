@@ -2715,7 +2715,7 @@ export class MEditor {
         parentElm.appendChild(pWindow.element);
     }
 
-    popupWindow(title, contents) {
+    popupWindow(title, contents, opt={}) {
         let pWindow = {};
         pWindow.title = title;
 
@@ -2730,6 +2730,31 @@ export class MEditor {
             }
         }.bind(this));
         pWindow.element.classList.add(this.CLASS_NAME_PREFIX + "popup-window");
+
+        // set width
+        if(opt.width){
+            // opt.widthが数字の場合はpxとみなす
+            if(typeof opt.width === "number"){
+                pWindow.element.style.width = opt.width + "px";
+            }
+            // opt.widthが"100px"、"10em"、"50%"のような文字列の場合はそのまま適用する
+            let reg = /^\d+(px|em|rem|%)$/;
+            if(typeof opt.width === "string" && reg.test(opt.width)){
+                pWindow.element.style.width = opt.width;
+            }
+        }
+        // set height
+        if(opt.height){
+            // opt.heightが数字の場合はpxとみなす
+            if(typeof opt.height === "number"){
+                pWindow.element.style.height = opt.height + "px";
+            }
+            // opt.heightが"100px"、"10em"、"50%"のような文字列の場合はそのまま適用する
+            let reg = /^\d+(px|em|rem|%)$/;
+            if(typeof opt.height === "string" && reg.test(opt.height)){
+                pWindow.element.style.height = opt.height;
+            }
+        }
 
         let pWindowTitleBar = {};
         pWindowTitleBar.element = document.createElement("div");

@@ -67,6 +67,12 @@ i {
     /*min-height: 10em;*/
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+}
+
+.meditor-popup-window-title {
+    pointer-events: none;
+    cursor: default;
 }
 
 .meditor-popup-window-title-bar {
@@ -96,6 +102,11 @@ i {
 
 .meditor-popup-window-content {
     padding: .5em;
+    overflow: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
 
 
 .meditor-tab-container {

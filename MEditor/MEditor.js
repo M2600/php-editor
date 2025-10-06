@@ -2846,6 +2846,162 @@ export class MEditor {
     }
 
 
+    tab(parentObj=null, opt={}){
+        let container = {};
+        container.element = document.createElement("div");
+        container.element.classList.add(this.CLASS_NAME_PREFIX + "tab-container");
+        if(parentObj && parentObj.element){
+            parentObj.element.appendChild(container.element);
+        }
+
+        let tabBar = {};
+        tabBar.element = document.createElement("div");
+        tabBar.element.classList.add(this.CLASS_NAME_PREFIX + "tab-bar");
+        container.element.appendChild(tabBar.element);
+        container.tabBar = tabBar;
+
+        let tabContentArea = {};
+        tabContentArea.element = document.createElement("div");
+        tabContentArea.element.classList.add(this.CLASS_NAME_PREFIX + "tab-content-area");
+        container.element.appendChild(tabContentArea.element);
+        container.tabContentArea = tabContentArea;
+
+        container.tabs = [];
+        container.activeTab = null;
+
+        container.createTab = (...args) => {
+            let tab = this.tab(...args);
+            this.addTab(tab);
+            return tab;
+        }
+        container.addTab = (tab) => {
+            if(!(tab && tab.element && tab.content && tab.content.element)){
+                console.error("Invalid tab object");
+                return;
+            }
+            // タブバーにタブを追加
+            let tabButton = {};
+            tabButton.id = tab.id;
+            tabButton.element = document.createElement("button");
+            tabButton.element.classList.add(this.CLASS_NAME_PREFIX + "tab-button");
+            tabButton.element.id = this.CLASS_NAME_PREFIX + "tab-button-" + tab.id;
+            tabButton.element.innerHTML = tab.title;
+            tabButton.element.addEventListener("click", () => {
+                container.activateTab(tab.id);
+            });
+            container.tabBar.element.appendChild(tabButton.element);
+            // タブコンテンツエリアにコンテンツを追加
+            container.tabContentArea.element.appendChild(tab.content.element);
+            container.tabs.push(tab);
+        }
+        container.removeTab = (id) => {
+            let tab = container.tabs.find(t => t.id === id);
+            if(!tab){
+                console.error("Tab not found: " + id);
+                return;
+            }
+            // タブを削除
+            container.tabs = container.tabs.filter(t => t.id !== id);
+            container.tabBar.element.removeChild(tabButton.element);
+            container.tabContentArea.element.removeChild(tab.content.element);
+        }
+        container.activateTab = (id) => {
+            let tab = container.tabs.find(t => t.id === id);
+            if(!tab){
+                console.error("Tab not found: " + id);
+                return;
+            }
+            // 既存のタブをすべて非表示に
+            container.tabs.forEach(t => {
+                if(t.content && t.content.element){
+                    t.content.element.style.display = "none";
+                }
+            });
+            // 新しいタブを表示
+            tab.content.element.style.display = "block";
+            container.activeTab = tab;
+            // タブボタンのスタイル更新
+            let buttons = container.tabBar.element.querySelectorAll("button");
+            buttons.forEach(btn => {
+                if(btn.id === this.CLASS_NAME_PREFIX + "tab-button-" + tab.id){
+                    btn.classList.add(this.CLASS_NAME_PREFIX + "tab-button-active");
+                }
+                else{
+                    btn.classList.remove(this.CLASS_NAME_PREFIX + "tab-button-active");
+                }
+            });
+        }
+        container.clearTabs = () => {
+            container.tabs = [];
+            container.tabBar.element.innerHTML = "";
+            container.tabContentArea.element.innerHTML = "";
+            container.activeTab = null;
+        }
+
+
+        // tab object
+        container.createTab = (title="", opt={}) => {
+            let tab = {};
+            tab.element = document.createElement("div");
+            tab.element.classList.add(this.CLASS_NAME_PREFIX + "tab");
+            tab.title = title;
+
+            let originalID = title.replace(/\s+/g, '-').toLowerCase();
+            let n = 1;
+            tab.id = originalID;
+            while (true) {
+                let exists = false;
+                for (let i = 0; i < container.tabs.length; i++) {
+                    if (container.tabs[i].id === tab.id) {
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists) {
+                    break;
+                }
+                tab.id = originalID + "-" + n;
+                n++;
+            }
+            
+            tab.content = {};
+            tab.content.element = document.createElement("div");
+            tab.content.element.classList.add(this.CLASS_NAME_PREFIX + "tab-content");
+            tab.element.appendChild(tab.content.element);
+
+            container.addTab(tab);
+            
+            // 最初は非表示
+            tab.content.element.style.display = "none";
+
+            // コンテンツ設定メソッド
+
+            tab.setContent = (content) => {
+                if(content instanceof HTMLElement){
+                    tab.content.element.innerHTML = "";
+                    tab.content.element.appendChild(content);
+                }
+                else if(typeof content === "string"){
+                    tab.content.element.innerHTML = content;
+                }
+                // MEditorのUIコンポーネントオブジェクトの場合
+                else if(content && content.element && content.element instanceof HTMLElement){
+                    tab.content.element.innerHTML = "";
+                    tab.content.element.appendChild(content.element);
+                }
+                else{
+                    console.error("Invalid content type");
+                }
+            }
+
+
+            return tab;
+        }
+
+
+        return container;
+    }
+
 }
 
 

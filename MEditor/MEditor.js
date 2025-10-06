@@ -1872,12 +1872,14 @@ export class MEditor {
     }
 
 
-    dictMenu(parentObj) {
+    dictMenu(parentObj=null) {
         let dictMenu = {};
         dictMenu.element = document.createElement("div");
         dictMenu.element.classList.add(this.CLASS_NAME_PREFIX + "dict-menu");
-        parentObj.element.appendChild(dictMenu.element);
-        parentObj.dictMenu = dictMenu;
+        if(parentObj && parentObj.element) {
+            parentObj.element.appendChild(dictMenu.element);
+            parentObj.dictMenu = dictMenu;
+        }
         dictMenu.items = [];
 
         let dictMenuTitle = {};
@@ -1907,6 +1909,7 @@ export class MEditor {
             button.element = document.createElement("button");
             button.element.classList.add(this.CLASS_NAME_PREFIX + "dict-menu-add-button");
             button.element.innerHTML = "+";
+            button.element.title = "Add Item";
             button.element.addEventListener("click", (e) => {
                 let item = {"":""};
                 dictMenu.addItem(item);
@@ -1962,6 +1965,7 @@ export class MEditor {
                 let deleteButton = document.createElement("button");
                 deleteButton.classList.add(this.CLASS_NAME_PREFIX + "dict-menu-item-delete-button");
                 deleteButton.innerHTML = "×";
+                deleteButton.title = "Delete Item";
                 deleteButton.addEventListener("click", (e) => {
                     dictMenu.items = dictMenu.items.filter((i) => i != dict);
                     itemElement.remove();
@@ -1992,7 +1996,7 @@ export class MEditor {
         return dictMenu;
     }
 
-    createDictMenu(parentObj, opt={}) {
+    createDictMenu(parentObj=null, opt={}) {
         let dictMenu = this.dictMenu(parentObj);
         dictMenu.items = [];
         dictMenu.options = opt;

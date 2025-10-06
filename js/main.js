@@ -233,6 +233,31 @@ async function main(){
         },
     ));
 
+    editorEditor.menu.right.items.push(editor.generateButton(
+        editorEditor.menu.right,
+        "test",
+        (e) => {
+            let tabContainer = editor.tab();
+            let dictMenu = editor.createDictMenu();
+            dictMenu.setTitle("デバッグ時に送信するGETパラメータ");
+            dictMenu.addButton();
+            dictMenu.addItem({'':''});
+            let tab1 = tabContainer.createTab("GETパラメータ");
+            tab1.setContent(dictMenu);
+            let tab2 = tabContainer.createTab("test");
+            tab2.setContent("<p>Tab 2 content</p>");
+            let tab3 = tabContainer.createTab("test3");
+            tab3.setContent("<p>Tab 3 content. long long long long long long long long long long long long long long</p>");
+            tabContainer.activateTab(tab1.id);
+            let popup = editor.popupWindow(
+                "デバッグメニュー", 
+                tabContainer.element, 
+                {width: "40em",height: "30em"},
+            );
+
+        }
+    ));
+
     const explorer = editor.createExplorer(editor.page.main.left, {
         title: "エクスプローラー",
     });
@@ -351,10 +376,19 @@ async function main(){
 
     await loadExplorer("/", api, APP_STATE, editor);
 
+    // Right panel components
+    let tabContainer = editor.tab(editor.page.main.right);
+
+    let dictMenuTab = tabContainer.createTab("GET Parameters");
+    let chatTab = tabContainer.createTab("AI Chat");
+    
+
     // GET Parameters setup
-    dictMenu = editor.createDictMenu(editor.page.main.right, {});
+    dictMenu = editor.createDictMenu(dictMenuTab, {});
     dictMenu.setTitle("GETパラメータ(テスト用)");
     dictMenu.addButton();
+    dictMenu.addItem({'':''});
+    dictMenuTab.setContent(dictMenu);
     
     // localStorageからGETパラメータを復元
     const savedParams = localStorage.getItem('getParams');
@@ -368,9 +402,11 @@ async function main(){
     }
 
     // Chat setup
-    chat = editor.createChat(editor.page.main.right, {});
+    chat = editor.createChat(chatTab, {});
     chat.setTitle("AI Chat");
     chat.setBackgroundMessage("AIチャットへようこそ!");
+
+    chatTab.setContent(chat);
 
     // AIからの返答のコードブロックのコードに適用ボタンを押したときの処理
     chat.onApplyToCode = function(codeText, applyBtn) {

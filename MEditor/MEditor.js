@@ -1161,6 +1161,9 @@ export class MEditor {
             
             // this.BASE_DIR is not "/" and add "../" file to explorerContents
             if (this.BASE_DIR != "/") {
+                // 既存の "../" を削除（重複を防ぐ）
+                explorerContents.files = explorerContents.files.filter(f => f.name !== "../");
+                
                 let parentDir = {
                     name: "../",
                     type: "file",

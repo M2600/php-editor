@@ -962,10 +962,16 @@ export class MEditor {
         button.removeTrigger = (event, func) => {
             button.element.removeEventListener(event, func);
         }
+        button.setEnabled = (enabled) => {
+            button.element.disabled = !enabled;
+        }
 
-        parentObj.element.appendChild(button.element);
+        if (parentObj && parentObj.element instanceof HTMLElement) {
+            parentObj.element.appendChild(button.element);
+        }
         //if(name) parentObj[name] = button;
         //else
+        
         return button;
     }
 

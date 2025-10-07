@@ -185,6 +185,12 @@ i {
 .meditor-button:hover {
     background-color: var(--me-color-bg-active);
 }
+.meditor-button:disabled {
+    background-color: var(--me-color-bg);
+    color: var(--me-color-text-secondary);
+    border: solid 1px #444;
+    cursor: default;
+}
 
 
 .meditor-sash-v {

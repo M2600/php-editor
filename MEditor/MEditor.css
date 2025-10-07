@@ -1607,3 +1607,14 @@ i {
     color: white !important;
     animation: error-shake 0.5s ease-out !important;
 }
+
+
+.meditor-checkbox-container {
+    padding: .5em 0;
+}
+.meditor-checkbox-label {
+    padding: .5em 0;
+}
+.meditor-checkbox-input {
+
+}

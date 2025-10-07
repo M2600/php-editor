@@ -1026,6 +1026,69 @@ export class MEditor {
         return button;
     }
 
+    checkbox(parentObj, labelText="", initialState=false, changeAction, tooltip="") {        
+        let checkbox = {};
+
+        checkbox.changeAction = changeAction;
+
+        checkbox.container = {};
+        checkbox.container.element = document.createElement("div");
+        checkbox.container.element.classList.add(this.CLASS_NAME_PREFIX + "checkbox-container");
+
+        checkbox.label = {};
+        checkbox.label.element = document.createElement("label");
+        checkbox.label.element.classList.add(this.CLASS_NAME_PREFIX + "checkbox-label");
+        if(tooltip) checkbox.label.element.title = tooltip;
+        checkbox.label.element.innerHTML = labelText;
+        checkbox.container.element.appendChild(checkbox.label.element);
+
+        checkbox.input = {};
+        checkbox.input.element = document.createElement("input");
+        checkbox.input.element.type = "checkbox";
+        checkbox.input.element.classList.add(this.CLASS_NAME_PREFIX + "checkbox-input");
+        checkbox.input.element.checked = initialState;
+        if(checkbox.changeAction){
+            checkbox.input.element.addEventListener("change", (e) => {
+                checkbox.changeAction(e.target.checked);
+            });
+        }
+        checkbox.label.element.prepend(checkbox.input.element);
+
+        if (parentObj && typeof parentObj.element === "object"){
+            parentObj.element.appendChild(checkbox.container.element);
+        }else{
+            console.warn("parentObj has no element property");
+        }
+
+
+        checkbox.setState = (state) => {
+            checkbox.input.element.checked = state;
+        }
+        checkbox.getState = () => {
+            return checkbox.input.element.checked;
+        }
+
+        checkbox.setChangeAction = (func) => {
+            checkbox.changeAction = func;
+        }
+        checkbox.appendTo = (parent) => {
+            if (parent && parent instanceof HTMLElement){
+                parent.appendChild(checkbox.container.element);
+            }
+            else if (parent && parent.element instanceof HTMLElement){
+                parent.element.appendChild(checkbox.container.element);
+            }else{
+                console.warn("parent has no element property");
+            }
+        }
+
+        return checkbox;
+    }
+    generateCheckbox(parentObj, labelText="", initialState=false, changeAction, tooltip="") {
+        let checkbox = this.checkbox(parentObj, labelText, initialState, changeAction, tooltip);
+        return checkbox;
+    }
+
 
     generateHeader (parentObj, title="Editor") {
         parentObj.header = {};

@@ -153,41 +153,95 @@ async function main(){
     editor.wp = editorEditor;
 
     // Save button
-    editorEditor.menu.left.items.push(editor.generateButton(
+    const saveButton = editor.generateButton(
         editorEditor.menu.left,
-        "Save",
+        "🖫保存",  // 保存アイコン
         (e) => {
+            if (!APP_STATE.CURRENT_FILE) {
+                console.warn("No file is currently open");
+                return;
+            }
             console.log("Save: " + APP_STATE.CURRENT_FILE.path);
             pushSaveButton(APP_STATE.CURRENT_FILE, (path, content) => 
                 saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE)
             );
-        }
-    ));
+        },
+        "ファイルを保存してPHP構文チェックを実行"
+    );
+    editorEditor.menu.left.items.push(saveButton);
     
-    // Run button
-    editorEditor.menu.left.items.push(editor.generateButton(
+    // Run button (統合版: RUN_AS_NEW_TABに応じて動作を変更)
+    const runButton = editor.generateButton(
         editorEditor.menu.left,
-        "Run",
+        "▶実行",  // 実行アイコン
         (e) => {
+            if (!APP_STATE.CURRENT_FILE) {
+                console.warn("No file is currently open");
+                return;
+            }
             console.log("Run: " + APP_STATE.CURRENT_FILE.path);
             // dictMenuからGETパラメータを取得
             const getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
-            APP_STATE.RUN_BROWSER_TAB = openInOtherWindow(
-                APP_STATE.CURRENT_FILE, 
-                (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE),
-                APP_STATE.RUN_BROWSER_TAB,
-                CONFIG.FILE_PAGE_BASE_URL,
-                APP_STATE.USER_ID,
-                getParams
-            );
-        }
-    ));
-    
-    // QR Code button
-    editorEditor.menu.left.items.push(editor.generateButton(
+            
+            if (APP_STATE.RUN_AS_NEW_TAB) {
+                // Webページモード: 別タブで実行
+                console.log("Run as new tab (Web page mode)");
+                APP_STATE.RUN_BROWSER_TAB = openInOtherWindow(
+                    APP_STATE.CURRENT_FILE, 
+                    (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE),
+                    APP_STATE.RUN_BROWSER_TAB,
+                    CONFIG.FILE_PAGE_BASE_URL,
+                    APP_STATE.USER_ID,
+                    getParams
+                );
+            } else {
+                // デバッグモード: コンソールに出力
+                console.log("Run in debug mode with GET params:", getParams);
+                
+                // GETパラメータをlocalStorageに保存
+                try {
+                    localStorage.setItem('getParams', JSON.stringify(getParams));
+                } catch (err) {
+                    console.error('Failed to save GET parameters:', err);
+                }
+                
+                // CGI実行（GETパラメータ付き）
+                runPhpCgi(
+                    APP_STATE.CURRENT_FILE.path,
+                    getParams,
+                    api,
+                    APP_STATE.CURRENT_FILE,
+                    (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE),
+                    mConsole
+                );
+            }
+        },
+        "Webページモード: 別タブで実行 | デバッグモード: コンソール出力"
+    );
+    editorEditor.menu.left.items.push(runButton);
+
+    // Run mode toggle
+    editorEditor.menu.left.items.push(editor.generateCheckbox(
         editorEditor.menu.left,
-        "QR Code",
+        "Webページモード",
+        APP_STATE.RUN_AS_NEW_TAB,
+        (checked) => {
+            APP_STATE.RUN_AS_NEW_TAB = checked;
+            console.log("Run mode changed - RUN_AS_NEW_TAB:", APP_STATE.RUN_AS_NEW_TAB);
+            console.log(checked ? "→ Webページモード (別タブで実行)" : "→ デバッグモード (コンソール出力)");
+        },
+        "チェックON: Webページとして別タブで実行 | チェックOFF: デバッグモードでコンソール出力"
+    ));
+
+    // QR Code button
+    const qrButton = editor.generateButton(
+        editorEditor.menu.left,
+        "⊞QR",  // QRコードアイコン
         (e) => {
+            if (!APP_STATE.CURRENT_FILE) {
+                console.warn("No file is currently open");
+                return;
+            }
             console.log("QR Code: " + APP_STATE.CURRENT_FILE.path);
             // dictMenuからGETパラメータを取得
             const getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
@@ -201,37 +255,60 @@ async function main(){
                 CONFIG.DEBUG,
                 getParams
             );
-        }
-    ));
+        },
+        "実行URLのQRコードを表示します"
+    );
+    editorEditor.menu.left.items.push(qrButton);
+
+    // 初期状態でボタンを無効化
+    saveButton.setEnabled(false);
+    runButton.setEnabled(false);
+    qrButton.setEnabled(false);
+
+    // ファイルが開かれたときにボタンを有効化する関数
+    function updateFileActionButtons() {
+        const hasFile = APP_STATE.CURRENT_FILE !== false && APP_STATE.CURRENT_FILE !== null;
+        saveButton.setEnabled(hasFile);
+        runButton.setEnabled(hasFile);
+        qrButton.setEnabled(hasFile);
+    }
+
+    // ファイル操作用のボタンを参照として保持
+    APP_STATE.FILE_ACTION_BUTTONS = {
+        save: saveButton,
+        run: runButton,
+        qr: qrButton,
+        update: updateFileActionButtons
+    };
 
     // Debug button
-    editorEditor.menu.right.items.push(editor.generateButton(
-        editorEditor.menu.right,
-        "Debug",
-        (e) => {
-            console.log("Debug with GET params");
-            // dictMenuからGETパラメータを取得
-            const getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
-            console.log("GET Parameters:", getParams);
+    // editorEditor.menu.right.items.push(editor.generateButton(
+    //     editorEditor.menu.right,
+    //     "Debug",
+    //     (e) => {
+    //         console.log("Debug with GET params");
+    //         // dictMenuからGETパラメータを取得
+    //         const getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
+    //         console.log("GET Parameters:", getParams);
             
-            // GETパラメータをlocalStorageに保存
-            try {
-                localStorage.setItem('getParams', JSON.stringify(getParams));
-            } catch (err) {
-                console.error('Failed to save GET parameters:', err);
-            }
+    //         // GETパラメータをlocalStorageに保存
+    //         try {
+    //             localStorage.setItem('getParams', JSON.stringify(getParams));
+    //         } catch (err) {
+    //             console.error('Failed to save GET parameters:', err);
+    //         }
             
-            // CGI実行（GETパラメータ付き）
-            runPhpCgi(
-                APP_STATE.CURRENT_FILE.path,
-                getParams,
-                api,
-                APP_STATE.CURRENT_FILE,
-                (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE),
-                mConsole
-            );
-        },
-    ));
+    //         // CGI実行（GETパラメータ付き）
+    //         runPhpCgi(
+    //             APP_STATE.CURRENT_FILE.path,
+    //             getParams,
+    //             api,
+    //             APP_STATE.CURRENT_FILE,
+    //             (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE),
+    //             mConsole
+    //         );
+    //     },
+    // ));
 
     editorEditor.menu.right.items.push(editor.generateButton(
         editorEditor.menu.right,
@@ -302,6 +379,11 @@ async function main(){
             ),
             api
         );
+        
+        // ファイルが開かれたらボタンを有効化
+        if (APP_STATE.FILE_ACTION_BUTTONS) {
+            APP_STATE.FILE_ACTION_BUTTONS.update();
+        }
     });
 
     explorer.setDirClickAction(async function (dir) {
@@ -343,6 +425,10 @@ async function main(){
         duplicateFile(file.path, api, mConsole).then((newPath) => {
             loadExplorer(editor.BASE_DIR, api, APP_STATE, editor).then(() => {
                 APP_STATE.CURRENT_FILE = false;
+                // ファイルが閉じられたらボタンを無効化
+                if (APP_STATE.FILE_ACTION_BUTTONS) {
+                    APP_STATE.FILE_ACTION_BUTTONS.update();
+                }
                 // loadFile(newPath); // 新しいファイルを開く場合
             });
         });
@@ -381,7 +467,8 @@ async function main(){
 
     let dictMenuTab = tabContainer.createTab("GET Parameters");
     let chatTab = tabContainer.createTab("AI Chat");
-    
+    // 初期表示タブをGET Parametersタブに設定
+    tabContainer.activateTab(dictMenuTab.id);
 
     // GET Parameters setup
     dictMenu = editor.createDictMenu(dictMenuTab, {});

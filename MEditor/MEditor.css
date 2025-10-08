@@ -583,25 +583,18 @@ i {
 
 .meditor-console-line-info {
     color: var(--me-color-text);
-    animation: console-fade-in 0.3s ease-out;
 }
 
 .meditor-console-line-accept {
     color: var(--me-color-accept);
-    font-weight: bold;
-    animation: console-success-flash 0.5s ease-out;
 }
 
 .meditor-console-line-warning {
     color: var(--me-color-warning);
-    font-weight: bold;
-    animation: console-warning-pulse 0.4s ease-out;
 }
 
 .meditor-console-line-error {
     color: var(--me-color-reject);
-    font-weight: bold;
-    animation: console-error-shake 0.5s ease-out;
 }
 
 /* コンソールメッセージのアニメーション */

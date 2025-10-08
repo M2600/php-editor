@@ -405,6 +405,9 @@ async function main(){
     chat = editor.createChat(chatTab, {});
     chat.setTitle("AI Chat");
     chat.setBackgroundMessage("AIチャットへようこそ!");
+    
+    // chatにコンソールへの参照を渡す（設定保存時のメッセージ表示用）
+    chat.console = mConsole;
 
     chatTab.setContent(chat);
 

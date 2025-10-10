@@ -2145,6 +2145,18 @@ export class MEditor {
         };
         chat.clearBtn.element.addEventListener("click", () => chat.clearHistory());
 
+
+
+        // chat config
+
+        chat.onConfigSaved = (config) => {
+            console.log("AI custom model: Config saved", config);
+        }
+
+        chat.setOnConfigSaved = (func) => {
+            chat.onConfigSaved = func;
+        }
+
         chat.configWindow = () => {
             console.log("config window");
             let window = this.popupWindow("Chat Settings", null, {width: '600px'});
@@ -2210,7 +2222,13 @@ export class MEditor {
             saveButton.textContent = "保存";
             saveButton.addEventListener("click", () => {
                 // 保存処理
+                chat.onConfigSaved({
+                    useCustomApi: checkbox.checked,
+                    baseUrl: baseUrlInput.value,
+                    apiKey: apiKeyInput.value
+                });
                 console.log("AI custom model: Saved");
+                window.remove();
             });
             buttonContainer.appendChild(saveButton);
             let cancelButton = document.createElement("button");

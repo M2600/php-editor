@@ -65,12 +65,28 @@ class SmoothTextStreamer {
     }
 }
 
-export async function fetchAIChat({messages, model, fileContext, dirContext, onDelta, onError, signal, smoothOutput = true}) {
+export async function fetchAIChat({messages, model, fileContext, dirContext, onDelta, onError, signal, smoothOutput = true, customUrl = null, customApiKey = null}) {
     try {
+        // リクエストボディを作成
+        const requestBody = {
+            messages, 
+            model, 
+            fileContext: fileContext ?? null, 
+            dirContext: dirContext ?? null
+        };
+        
+        // カスタムURL及びAPIキーがある場合は追加
+        if (customUrl) {
+            requestBody.customUrl = customUrl;
+        }
+        if (customApiKey) {
+            requestBody.customApiKey = customApiKey;
+        }
+        
         const res = await fetch("/api/ai.php", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({messages, model, fileContext: fileContext ?? null, dirContext: dirContext ?? null}),
+            body: JSON.stringify(requestBody),
             signal
         });
         if (!res.ok) {

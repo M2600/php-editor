@@ -219,7 +219,7 @@ export function setupInputHistoryHotkeys(chat, historyManager) {
     });
 }
 
-export async function AIMerge(baseCode, aiCode, modelSelect, fetchAIChat, editor, currentFile, mConsole, editorEditor) {
+export async function AIMerge(baseCode, aiCode, modelSelect, fetchAIChat, editor, currentFile, mConsole, editorEditor, customUrl = null, customApiKey = null) {
     const prompt = `Merge the following code snippets:
 
 Base Code:
@@ -242,6 +242,8 @@ Please provide the merged code only, without any additional text or explanations
             model: selectedModel,
             signal: controller.signal,
             smoothOutput: true, // スムーズ出力を有効化
+            customUrl: customUrl,
+            customApiKey: customApiKey,
             onDelta: (delta, chunk, isSmooth) => {
                 // ストリーム更新処理
                 if (isSmooth) {
@@ -455,7 +457,9 @@ export async function sendAIMessage({
     currentFile,
     fileList,
     baseDir,
-    requestAIMergeAndPreview
+    requestAIMergeAndPreview,
+    customUrl = null,
+    customApiKey = null
 }) {
     try {
         if(historyManager.getStreaming()) return;
@@ -531,6 +535,8 @@ export async function sendAIMessage({
                 dirContext: dirContext ?? null,
                 signal: controller.signal,
                 smoothOutput: true, // スムーズ出力を有効化
+                customUrl: customUrl,
+                customApiKey: customApiKey,
                 onDelta: (delta, chunk, isSmooth) => {
                     if (isSmooth) {
                         // スムーズ出力の場合はdeltaが完全なテキスト

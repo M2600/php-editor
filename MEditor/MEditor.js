@@ -207,6 +207,13 @@ export class MEditor {
             popupWindows: [],
         };
 
+        // パネルトグルボタンへの参照を保存
+        this.panelToggleButtons = {
+            left: null,
+            right: null,
+            bottom: null,
+        };
+
         (function() {
             document.addEventListener('keydown', (e) => {
                 if ((e.key === 'Enter' && e.isComposing) || e.keyCode === 229) {
@@ -897,6 +904,133 @@ export class MEditor {
         }
     }
 
+    /**
+     * パネルトグルボタンを登録する
+     * Register a panel toggle button for automatic state updates
+     * @param {string} position - 'left' | 'right' | 'bottom'
+     * @param {Object} button - トグルボタンオブジェクト (setState メソッドを持つ)
+     */
+    registerPanelToggleButton(position, button) {
+        if (!button || typeof button.setState !== 'function') {
+            console.error("Invalid button: button must have a setState method");
+            return;
+        }
+        if (!['left', 'right', 'bottom'].includes(position)) {
+            console.error("Invalid position: must be 'left', 'right', or 'bottom'");
+            return;
+        }
+        this.panelToggleButtons[position] = button;
+        this.DEBUG && console.log(`Panel toggle button registered for ${position}`);
+    }
+
+    /**
+     * パネルトグルボタンの状態を更新する（内部使用）
+     * Update panel toggle button state (internal use)
+     * @param {string} position - 'left' | 'right' | 'bottom'
+     * @param {boolean} visible - パネルが表示されているか
+     */
+    _updatePanelToggleButton(position, visible) {
+        const button = this.panelToggleButtons[position];
+        if (button && typeof button.setState === 'function') {
+            // setStateはtoggleActionも呼び出すため、状態が変わった時のみ呼ぶ
+            if (button.state !== visible) {
+                this.DEBUG && console.log(`Updating ${position} panel toggle button to:`, visible);
+                // toggleActionを一時的に無効化して無限ループを防ぐ
+                const originalAction = button.toggleAction;
+                button.toggleAction = null;
+                button.setState(visible);
+                button.toggleAction = originalAction;
+            }
+        }
+    }
+
+    /**
+     * コンポーネントが配置されているパネルとタブを自動的に開く
+     * Show a component by opening its parent panel and tab automatically
+     * @param {Object} component - コンポーネントオブジェクト (element プロパティを持つ)
+     */
+    showComponent(component) {
+        if (!component || !component.element) {
+            console.error("Invalid component: component must have an element property");
+            return;
+        }
+
+        this.DEBUG && console.log("showComponent() called for component:", component);
+        
+        // Find the parent structure
+        let currentElement = component.element;
+        let panelPosition = null;
+        let tabContainer = null;
+        let tabId = null;
+        
+        // Traverse up the DOM to find panel and tab information
+        while (currentElement && currentElement !== this.page.element) {
+            // Check if this is a tab content
+            if (currentElement.classList.contains(this.CLASS_NAME_PREFIX + "tab-content")) {
+                // Find the tab ID from the parent tab element
+                let tabElement = currentElement.parentElement;
+                if (tabElement && tabElement.classList.contains(this.CLASS_NAME_PREFIX + "tab")) {
+                    // Search for tab container and find the correct position
+                    let containerElement = tabElement.parentElement?.parentElement;
+                    if (containerElement && containerElement.classList.contains(this.CLASS_NAME_PREFIX + "tab-content-area")) {
+                        tabContainer = containerElement.parentElement;
+                        // Find tab ID by searching in the container's tabs array
+                        // Check all possible tab containers
+                        const checkContainer = (container) => {
+                            if (!container) return false;
+                            for (let tab of container.tabs || []) {
+                                if (tab.content && tab.content.element === currentElement) {
+                                    tabId = tab.id;
+                                    return true;
+                                }
+                            }
+                            return false;
+                        };
+                        
+                        if (this.page.main?.left && checkContainer(this.page.main.left)) {
+                            // Found in left panel
+                        } else if (this.page.main?.right && checkContainer(this.page.main.right)) {
+                            // Found in right panel
+                        } else if (this.page.main?.mid?.container?.bottom && checkContainer(this.page.main.mid.container.bottom)) {
+                            // Found in bottom panel
+                        }
+                    }
+                }
+            }
+            
+            // Check if this element is a panel
+            if (this.page.main?.left?.element === currentElement) {
+                panelPosition = 'left';
+            } else if (this.page.main?.right?.element === currentElement) {
+                panelPosition = 'right';
+            } else if (this.page.main?.mid?.container?.bottom?.element === currentElement) {
+                panelPosition = 'bottom';
+            }
+            
+            currentElement = currentElement.parentElement;
+        }
+        
+        // Show the panel if found
+        if (panelPosition) {
+            this.DEBUG && console.log("Found panel position:", panelPosition);
+            this.showPanel(panelPosition);
+            // Update the toggle button state
+            this._updatePanelToggleButton(panelPosition, true);
+        }
+        
+        // Activate the tab if found
+        if (tabId) {
+            this.DEBUG && console.log("Activating tab:", tabId);
+            if (panelPosition === 'left' && this.page.main?.left) {
+                this.page.main.left.activateTab(tabId);
+            } else if (panelPosition === 'right' && this.page.main?.right) {
+                this.page.main.right.activateTab(tabId);
+            } else if (panelPosition === 'bottom' && this.page.main?.mid?.container?.bottom) {
+                this.page.main.mid.container.bottom.activateTab(tabId);
+            }
+        }
+    }
+
     async pageLayout(parentObj) {
         await this.loadCSS(this.root+"colors.css");
         await this.loadCSS(this.root+"MEditor.css");
@@ -1452,6 +1586,14 @@ export class MEditor {
             parentObj.explorer.title.element.innerHTML = title;
         }
 
+        /**
+         * Show this explorer component by opening its parent panel and tab
+         * エクスプローラーが配置されているパネルとタブを自動的に開く
+         */
+        parentObj.explorer.show = () => {
+            this.showComponent(parentObj.explorer);
+        }
+
 
         this.explorer = parentObj.explorer;
         //console.log(this.explorer);
@@ -1915,6 +2057,14 @@ export class MEditor {
                 this.DEBUG && console.log("scrolling", out);
                 out.scrollTop = out.scrollHeight;
             }
+        }
+
+        /**
+         * Show this console component by opening its parent panel and tab
+         * コンソールが配置されているパネルとタブを自動的に開く
+         */
+        mConsole.show = () => {
+            this.showComponent(mConsole);
         }
 
 
@@ -2622,6 +2772,14 @@ export class MEditor {
 
         chat.setTitle = (title) => {
             chat.topMenu.title.element.innerHTML = title;
+        };
+
+        /**
+         * Show this chat component by opening its parent panel and tab
+         * チャットが配置されているパネルとタブを自動的に開く
+         */
+        chat.show = () => {
+            this.showComponent(chat);
         };
 
         // CSS: loaderアニメーション（必要なら）

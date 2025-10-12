@@ -147,6 +147,11 @@ async function main(){
     editor.page.header.header.menu.items.push(leftPanelToggle);
     editor.page.header.header.menu.element.prepend(leftPanelToggle.element);
 
+    // Register toggle buttons with MEditor for automatic state updates
+    editor.registerPanelToggleButton('left', leftPanelToggle);
+    editor.registerPanelToggleButton('right', rightPanelToggle);
+    editor.registerPanelToggleButton('bottom', bottomPanelToggle);
+
     
 
     mConsole = editor.console(editor.page.main.mid.container.bottom);
@@ -205,6 +210,11 @@ async function main(){
                     localStorage.setItem('getParams', JSON.stringify(getParams));
                 } catch (err) {
                     console.error('Failed to save GET parameters:', err);
+                }
+                
+                // Show console automatically when running program
+                if (mConsole && typeof mConsole.show === 'function') {
+                    mConsole.show();
                 }
                 
                 // CGI実行（GETパラメータ付き）
@@ -474,7 +484,7 @@ async function main(){
 
     // GET Parameters setup
     dictMenu = editor.createDictMenu(dictMenuTab, {});
-    dictMenu.setTitle("GETパラメータ(テスト用)");
+    dictMenu.setTitle("GETパラメータ (実行時に送信されます)");
     dictMenu.addButton();
     dictMenu.addItem({'':''});
     dictMenuTab.setContent(dictMenu);

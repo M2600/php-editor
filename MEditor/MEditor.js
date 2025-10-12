@@ -2222,6 +2222,16 @@ export class MEditor {
             apiKeyContainer.appendChild(apiKeyInput);
             content.appendChild(apiKeyContainer);
 
+            // 説明
+            let description = document.createElement("div");
+            description.classList.add(this.CLASS_NAME_PREFIX + "chat-config-description");
+            description.classList.add(this.CLASS_NAME_PREFIX + "chat-config-section");
+            description.innerHTML = `
+                <p>OpenAI形式のAPIを提供するAIを使用することができます。<br>
+                APIのURL及び有効なAPIキーを入力してください。</p>
+            `;
+            content.appendChild(description);
+
             // ボタン
             let buttonContainer = document.createElement("div");
             buttonContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-button-container");

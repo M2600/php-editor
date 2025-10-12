@@ -2462,7 +2462,7 @@ export class MEditor {
             apiKeyInput.style.flex = "1";
             apiKeyInput.style.paddingRight = "40px"; // トグルボタン用のスペース
             // ブラウザのパスワードマネージャーによる誤認識を防ぐ
-            apiKeyInput.autocomplete = "off";
+            apiKeyInput.autocomplete = "new-password";
             apiKeyInput.setAttribute("data-form-type", "other");
             apiKeyInput.setAttribute("data-lpignore", "true"); // LastPass対策
             apiKeyInput.setAttribute("data-1p-ignore", "true"); // 1Password対策

@@ -502,7 +502,6 @@ async function main(){
     dictMenu = editor.createDictMenu(dictMenuTab, {});
     dictMenu.setTitle("GETパラメータ (実行時に送信されます)");
     dictMenu.addButton();
-    dictMenu.addItem({'':''});
     dictMenuTab.setContent(dictMenu);
     
     // localStorageからGETパラメータを復元
@@ -515,6 +514,8 @@ async function main(){
             console.error('Failed to load GET parameters:', e);
         }
     }
+    // 末尾に空の行を追加しておく
+    dictMenu.addItem({'':''});
 
     // Chat setup
     chat = editor.createChat(chatTab, {});

@@ -1438,17 +1438,17 @@ export class MEditor {
             let currentSort = this.getSortSettings();
             let nameText = currentSort.sortBy === 'name' ? 
                 (currentSort.order === 'asc' ? '✓ ファイル名 (A-Z)' : '✓ ファイル名 (Z-A)') : 
-                'Name';
+                'ファイル名';
             let mtimeText = currentSort.sortBy === 'mtime' ? 
                 (currentSort.order === 'asc' ? '✓ 最終更新 (古い-新しい)' : '✓ 最終更新 (新しい-古い)') : 
-                'Modified';
+                '最終更新';
 
             this.popupMenu(sortButton, [
-                {text: nameText, title: "Sort by Name", clickAction: (e) => {
+                {text: nameText, title: "ファイル名でソート", clickAction: (e) => {
                     let newOrder = (currentSort.sortBy === 'name' && currentSort.order === 'asc') ? 'desc' : 'asc';
                     parentObj.explorer.sortClickAction('name', newOrder);
                 }},
-                {text: mtimeText, title: "Sort by Modified Time", clickAction: (e) => {
+                {text: mtimeText, title: "最終更新でソート", clickAction: (e) => {
                     let newOrder = (currentSort.sortBy === 'mtime' && currentSort.order === 'asc') ? 'desc' : 'asc';
                     parentObj.explorer.sortClickAction('mtime', newOrder);
                 }},

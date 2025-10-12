@@ -2428,7 +2428,7 @@ export class MEditor {
             baseUrlInput.id = "baseUrlInput";
             baseUrlInput.placeholder = "https://api.example.com/v1";
             baseUrlInput.value = chat.config.customApiUrl || "";
-            baseUrlInput.autocomplete = "off";
+            baseUrlInput.autocomplete = "new-password";
             baseUrlInput.name = "baseurl";
             baseUrlInput.setAttribute("data-form-type", "other");
             baseUrlInput.setAttribute("data-lpignore", "true");

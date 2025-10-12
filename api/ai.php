@@ -32,7 +32,8 @@ function sendAIRequest($apiUrl, $apiKey, $payload) {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Content-Type: application/json',
-            'x-api-key: ' . $apiKey
+            //'x-api-key: ' . $apiKey,
+            'Authorization: Bearer ' . $apiKey
         ]);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
         curl_setopt($ch, CURLOPT_TIMEOUT, 600); // タイムアウトを600秒に設定

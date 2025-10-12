@@ -46,7 +46,7 @@ export function deleteCookie(name) {
  * @param {string} apiUrl - カスタムAPIのURL
  * @param {string} apiKey - APIキー
  */
-export function saveAIConfig(apiUrl, apiKey) {
+export function saveAIConfig(apiUrl, apiKey, userCustomApi = false) {
     if (apiUrl) {
         setCookie('ai_custom_url', apiUrl, 365);
     } else {
@@ -58,6 +58,11 @@ export function saveAIConfig(apiUrl, apiKey) {
     } else {
         deleteCookie('ai_custom_key');
     }
+    if (userCustomApi) {
+        setCookie('ai_use_custom_api', 'true', 365);
+    } else {
+        deleteCookie('ai_use_custom_api');
+    }
 }
 
 /**
@@ -67,7 +72,8 @@ export function saveAIConfig(apiUrl, apiKey) {
 export function loadAIConfig() {
     return {
         apiUrl: getCookie('ai_custom_url'),
-        apiKey: getCookie('ai_custom_key')
+        apiKey: getCookie('ai_custom_key'),
+        useCustomApi: getCookie('ai_use_custom_api') === 'true'
     };
 }
 

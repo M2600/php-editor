@@ -1255,7 +1255,7 @@ i {
     position: relative;
     width: 100%;
 }
-.meditor-chat-config-container input[type="text"] {
+.meditor-chat-config-container input[type="text"],[type="password"] {
     padding: 0;
     width: 100%;
     box-sizing: border-box;

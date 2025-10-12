@@ -379,9 +379,28 @@ export function restoreChatHistoryToUI(chatHistory, chat) {
     ensureLinksOpenInNewTab(chat.content.element);
 }
 
-export async function loadModelList(chat) {
+export async function loadModelList(chat, customApiConfig = null) {
     try {
-        const res = await fetch("/api/ai_models.php");
+        let res;
+        
+        // カスタムAPI設定がある場合は新しいエンドポイントを使用
+        if (customApiConfig && customApiConfig.baseUrl && customApiConfig.apiKey) {
+            console.log("Loading models from custom API:", customApiConfig.baseUrl);
+            res = await fetch("/api/ai_custom_models.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    baseUrl: customApiConfig.baseUrl,
+                    apiKey: customApiConfig.apiKey
+                })
+            });
+        } else {
+            // デフォルトのエンドポイントを使用
+            res = await fetch("/api/ai_models.php");
+        }
+        
         if (!res.ok) throw new Error("モデル一覧取得失敗: " + res.status);
         const data = await res.json();
         if (!data.data || !Array.isArray(data.data)) throw new Error("モデルデータ不正");

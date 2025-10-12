@@ -44,6 +44,8 @@ import {
     runPhpCgi,
     phpSyntaxCheck
 } from './modules/core/file-manager.js';
+import { saveAIConfig, loadAIConfig } from './modules/utils/cookie.js';
+
 
 // Export main instances for global access
 export const userConfig = new UserConfig();
@@ -425,6 +427,14 @@ async function main(){
         applyBtn.startLoading();
         mConsole.print("コードをマージ中...", "info");
         
+        // カスタムAPIが有効な場合はURLとAPIキーを渡す
+        let customUrl = null;
+        let customApiKey = null;
+        if (APP_STATE.AI_CONFIG.useCustomApi && APP_STATE.AI_CONFIG.baseUrl && APP_STATE.AI_CONFIG.apiKey) {
+            customUrl = APP_STATE.AI_CONFIG.baseUrl;
+            customApiKey = APP_STATE.AI_CONFIG.apiKey;
+        }
+        
         AIMerge(
             APP_STATE.CURRENT_FILE.aceObj.editor.getValue(), 
             codeText, 
@@ -433,7 +443,9 @@ async function main(){
             editor,
             APP_STATE.CURRENT_FILE,
             mConsole,
-            editorEditor
+            editorEditor,
+            customUrl,
+            customApiKey
         ).then(() => {
             applyBtn.stopLoading();
             // 成功フィードバック
@@ -448,8 +460,64 @@ async function main(){
         });
     };
 
+    // Chat config
+    chat.setOnConfigSaved(async (config) => {
+        saveAIConfig(config.baseUrl, config.apiKey, config.useCustomApi);
+        console.log("AI custom model: Config saved", config);
+        APP_STATE.AI_CONFIG = config;
+        chat.config.customApiUrl = config.baseUrl;
+        chat.config.customApiKey = config.apiKey;
+        chat.config.useCustomApi = config.useCustomApi;
+        
+        // 設定変更後にモデルリストを再読み込み
+        let customApiConfig = null;
+        if (config.useCustomApi && config.baseUrl && config.apiKey) {
+            customApiConfig = {
+                baseUrl: config.baseUrl,
+                apiKey: config.apiKey
+            };
+            console.log("Reloading models from custom API");
+        } else {
+            console.log("Reloading models from default API");
+        }
+        
+        // モデルセレクターを再生成
+        modelSelect = await loadModelList(chat, customApiConfig);
+        
+        // コンソールにメッセージを表示
+        if (mConsole) {
+            mConsole.print("AI設定を保存しました。モデルリストを更新しました。", "success");
+        }
+    });
+
+    // Cookieから保存されたAI設定を復元
+    const savedAIConfig = loadAIConfig();
+    if (savedAIConfig.apiUrl || savedAIConfig.apiKey || savedAIConfig.useCustomApi) {
+        console.log("AI custom setting: Restoring config from cookie", savedAIConfig);
+        // chatコンポーネントに設定を復元
+        chat.config.customApiUrl = savedAIConfig.apiUrl || '';
+        chat.config.customApiKey = savedAIConfig.apiKey || '';
+        chat.config.useCustomApi = savedAIConfig.useCustomApi || false;
+        
+        // APP_STATEにも保存
+        APP_STATE.AI_CONFIG = {
+            baseUrl: savedAIConfig.apiUrl || '',
+            apiKey: savedAIConfig.apiKey || '',
+            useCustomApi: savedAIConfig.useCustomApi || false
+        };
+    }
+
     // Model selector setup
-    modelSelect = await loadModelList(chat);
+    // カスタムAPIが有効な場合はカスタムAPIからモデルを取得
+    let customApiConfig = null;
+    if (APP_STATE.AI_CONFIG.useCustomApi && APP_STATE.AI_CONFIG.baseUrl && APP_STATE.AI_CONFIG.apiKey) {
+        customApiConfig = {
+            baseUrl: APP_STATE.AI_CONFIG.baseUrl,
+            apiKey: APP_STATE.AI_CONFIG.apiKey
+        };
+        console.log("Loading models from custom API");
+    }
+    modelSelect = await loadModelList(chat, customApiConfig);
 
     // Chat history setup
     setupChatClearHistory(chat, chatHistoryManager);
@@ -460,6 +528,15 @@ async function main(){
 
     // Chat event handlers
     const sendAIMessageHandler = () => {
+        // カスタムAPIが有効な場合はURLとAPIキーを渡す
+        let customUrl = null;
+        let customApiKey = null;
+        if (APP_STATE.AI_CONFIG.useCustomApi && APP_STATE.AI_CONFIG.baseUrl && APP_STATE.AI_CONFIG.apiKey) {
+            customUrl = APP_STATE.AI_CONFIG.baseUrl;
+            customApiKey = APP_STATE.AI_CONFIG.apiKey;
+            console.log("Using custom API for chat request");
+        }
+        
         sendAIMessage({
             chat,
             historyManager: chatHistoryManager,
@@ -468,6 +545,8 @@ async function main(){
             currentFile: APP_STATE.CURRENT_FILE,
             fileList: APP_STATE.FILE_LIST,
             baseDir: editor.BASE_DIR,
+            customUrl: customUrl,
+            customApiKey: customApiKey,
             requestAIMergeAndPreview: async (aiCode) => {
                 // この関数は必要に応じて実装
                 console.log("requestAIMergeAndPreview called with:", aiCode);

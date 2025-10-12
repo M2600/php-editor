@@ -2019,6 +2019,12 @@ export class MEditor {
         chat.element.classList.add(this.CLASS_NAME_PREFIX + "chat");
         parentObj.element.appendChild(chat.element);
 
+        chat.config = {};
+        chat.config.customApiUrl = null;
+        chat.config.customApiKey = null;
+        chat.config.useCustomApi = false;
+
+
         // ファイルコンテキスト表示エリア
         chat.fileContextInfo = document.createElement("div");
         chat.fileContextInfo.className = this.CLASS_NAME_PREFIX + "chat-filecontext";
@@ -2174,8 +2180,9 @@ export class MEditor {
             checkboxContainer.appendChild(label);
             let checkbox = document.createElement("input");
             checkbox.type = "checkbox";          
-            checkbox.checked = false;
+            checkbox.checked = chat.config.useCustomApi || false;
             checkbox.id = "customApiCheckbox";
+            
             label.prepend(checkbox);
             content.appendChild(checkboxContainer);
 
@@ -2193,6 +2200,7 @@ export class MEditor {
             baseUrlInput.type = "text";
             baseUrlInput.id = "baseUrlInput";
             baseUrlInput.placeholder = "https://api.example.com/v1";
+            baseUrlInput.value = chat.config.customApiUrl || "";
             baseUrlContainer.appendChild(baseUrlInput);
             content.appendChild(baseUrlContainer);
 
@@ -2207,9 +2215,10 @@ export class MEditor {
             apiKeyContainer.appendChild(apiKeyLabel);
             let apiKeyInput = document.createElement("input");
             apiKeyInput.classList.add(this.CLASS_NAME_PREFIX + "chat-config-api-key-input");
-            apiKeyInput.type = "text";
+            apiKeyInput.type = "password";
             apiKeyInput.id = "apiKeyInput";
             apiKeyInput.placeholder = "sk-xxxxxx";
+            apiKeyInput.value = chat.config.customApiKey || "";
             apiKeyContainer.appendChild(apiKeyInput);
             content.appendChild(apiKeyContainer);
 
@@ -2239,6 +2248,22 @@ export class MEditor {
             });
             buttonContainer.appendChild(cancelButton);
             content.appendChild(buttonContainer);
+
+            checkbox.addEventListener("change", (e) => {
+                if (e.target.checked) {
+                    baseUrlInput.disabled = false;
+                    apiKeyInput.disabled = false;
+                } else {
+                    baseUrlInput.disabled = true;
+                    apiKeyInput.disabled = true;
+                }
+            });
+            if (!chat.config.useCustomApi) {
+                // 初期状態でオフなら入力欄を無効化
+                // (changeイベントは発火しないためここで設定)
+                baseUrlInput.disabled = true;
+                apiKeyInput.disabled = true;
+            }
 
             window.setContent(content);
         }

@@ -117,16 +117,26 @@
                     pw: pw,
                 })
             }).then(response => response.json()).then(async (data) => {
-                console.log(data);
+                console.log("Login response:", data);
                 if(data.status == "success"){
                     message.style.color = "green";
                     message.innerHTML = data.message;
+                    
+                    // リダイレクト先をログ出力
+                    const redirectUrl = data.redirect || "index.php";
+                    console.log("Redirecting to:", redirectUrl);
+                    
                     //await new Promise(resolve => setTimeout(resolve, 2000));
-                    window.location.href = "index.php";
+                    // サーバーから返されたリダイレクト先へ移動
+                    window.location.href = redirectUrl;
                 } else {
                     message.style.color = "red";
                     message.innerHTML = data.message;
                 }
+            }).catch(error => {
+                console.error("Login error:", error);
+                message.style.color = "red";
+                message.innerHTML = "ログインエラー: " + error.message;
             });
             
         }

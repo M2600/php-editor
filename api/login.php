@@ -107,13 +107,29 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
 
 	if($verified){
 		$userData = getUserData($id);
+		
+		// リダイレクト先を取得（session_regenerate_id前に取得する必要がある）
+		$redirect = isset($_SESSION['redirect_after_login']) ? $_SESSION['redirect_after_login'] : '/index.php';
+		
 		// regenerate session id to prevent fixation
 		session_regenerate_id(true);
 		$_SESSION['id'] = $userData['id'];
 		$_SESSION['role'] = $userData['role'];
 
+		// 使用後は削除
+		if(isset($_SESSION['redirect_after_login'])){
+			unset($_SESSION['redirect_after_login']);
+		}
+
+		// デバッグログ
+		error_log("Login successful. Redirect to: " . $redirect);
+
 		http_response_code(200);
-		echo json_encode(array('status' => 'success', 'message' => getRandomComment()));
+		echo json_encode(array(
+			'status' => 'success', 
+			'message' => getRandomComment(),
+			'redirect' => $redirect
+		));
 	} else {
 		json_error('Invalid login', 401);
 	}

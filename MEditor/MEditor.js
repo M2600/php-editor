@@ -2428,6 +2428,11 @@ export class MEditor {
             baseUrlInput.id = "baseUrlInput";
             baseUrlInput.placeholder = "https://api.example.com/v1";
             baseUrlInput.value = chat.config.customApiUrl || "";
+            baseUrlInput.autocomplete = "off";
+            baseUrlInput.name = "baseurl";
+            baseUrlInput.setAttribute("data-form-type", "other");
+            baseUrlInput.setAttribute("data-lpignore", "true");
+            baseUrlInput.setAttribute("data-1p-ignore", "true");
             baseUrlContainer.appendChild(baseUrlInput);
             content.appendChild(baseUrlContainer);
 
@@ -2445,7 +2450,13 @@ export class MEditor {
             apiKeyInput.type = "password";
             apiKeyInput.id = "apiKeyInput";
             apiKeyInput.placeholder = "sk-xxxxxx";
+            apiKeyInput.name = "apikey";
             apiKeyInput.value = chat.config.customApiKey || "";
+            // ブラウザのパスワードマネージャーによる誤認識を防ぐ
+            apiKeyInput.autocomplete = "off";  // または "off"
+            apiKeyInput.setAttribute("data-form-type", "other");
+            apiKeyInput.setAttribute("data-lpignore", "true"); // LastPass対策
+            apiKeyInput.setAttribute("data-1p-ignore", "true"); // 1Password対策
             apiKeyContainer.appendChild(apiKeyInput);
             content.appendChild(apiKeyContainer);
 

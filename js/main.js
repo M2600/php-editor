@@ -60,6 +60,13 @@ let modelSelect;
 let fetchAIChat;
 
 async function main(){
+    // localStorageから実行モードを復元
+    const savedRunMode = localStorage.getItem('runAsNewTab');
+    if (savedRunMode !== null) {
+        APP_STATE.RUN_AS_NEW_TAB = savedRunMode === 'true';
+        console.log("Run mode restored from localStorage:", APP_STATE.RUN_AS_NEW_TAB);
+    }
+
     // AI APIをインポート
     try {
         // 動的import（ESM対応ブラウザ用）
@@ -241,6 +248,14 @@ async function main(){
             APP_STATE.RUN_AS_NEW_TAB = checked;
             console.log("Run mode changed - RUN_AS_NEW_TAB:", APP_STATE.RUN_AS_NEW_TAB);
             console.log(checked ? "→ Webページモード (別タブで実行)" : "→ デバッグモード (コンソール出力)");
+            
+            // localStorageに状態を保存
+            try {
+                localStorage.setItem('runAsNewTab', checked.toString());
+                console.log("Run mode saved to localStorage:", checked);
+            } catch (err) {
+                console.error('Failed to save run mode:', err);
+            }
         },
         "チェックON: Webページとして別タブで実行 | チェックOFF: デバッグモードでコンソール出力"
     ));

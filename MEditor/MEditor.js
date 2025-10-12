@@ -2445,6 +2445,13 @@ export class MEditor {
             apiKeyLabel.textContent = "APIキー:";
             apiKeyLabel.for = "apiKeyInput";
             apiKeyContainer.appendChild(apiKeyLabel);
+            
+            // 入力欄とトグルボタンのラッパー
+            let apiKeyInputWrapper = document.createElement("div");
+            apiKeyInputWrapper.style.position = "relative";
+            apiKeyInputWrapper.style.display = "flex";
+            apiKeyInputWrapper.style.alignItems = "center";
+            
             let apiKeyInput = document.createElement("input");
             apiKeyInput.classList.add(this.CLASS_NAME_PREFIX + "chat-config-api-key-input");
             apiKeyInput.type = "password";
@@ -2452,12 +2459,70 @@ export class MEditor {
             apiKeyInput.placeholder = "sk-xxxxxx";
             apiKeyInput.name = "apikey";
             apiKeyInput.value = chat.config.customApiKey || "";
+            apiKeyInput.style.flex = "1";
+            apiKeyInput.style.paddingRight = "40px"; // トグルボタン用のスペース
             // ブラウザのパスワードマネージャーによる誤認識を防ぐ
-            apiKeyInput.autocomplete = "off";  // または "off"
+            apiKeyInput.autocomplete = "off";
             apiKeyInput.setAttribute("data-form-type", "other");
             apiKeyInput.setAttribute("data-lpignore", "true"); // LastPass対策
             apiKeyInput.setAttribute("data-1p-ignore", "true"); // 1Password対策
-            apiKeyContainer.appendChild(apiKeyInput);
+            
+            // 表示/非表示トグルボタン
+            let toggleButton = document.createElement("button");
+            toggleButton.type = "button";
+            toggleButton.classList.add(this.CLASS_NAME_PREFIX + "chat-config-api-key-toggle");
+            
+            // SVGアイコン: 目（表示用）
+            const eyeIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+            </svg>`;
+            
+            // SVGアイコン: 目に斜線（非表示用）
+            const eyeOffIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+            </svg>`;
+            
+            toggleButton.innerHTML = eyeIcon;
+            toggleButton.style.position = "absolute";
+            toggleButton.style.right = "8px";
+            toggleButton.style.border = "none";
+            toggleButton.style.background = "transparent";
+            toggleButton.style.cursor = "pointer";
+            toggleButton.style.padding = "4px 8px";
+            toggleButton.style.opacity = "0.6";
+            toggleButton.style.display = "flex";
+            toggleButton.style.alignItems = "center";
+            toggleButton.style.justifyContent = "center";
+            toggleButton.title = "表示/非表示を切り替え";
+            
+            toggleButton.addEventListener("click", (e) => {
+                e.preventDefault();
+                if (apiKeyInput.type === "password") {
+                    apiKeyInput.type = "text";
+                    toggleButton.innerHTML = eyeOffIcon;
+                    toggleButton.style.opacity = "1";
+                } else {
+                    apiKeyInput.type = "password";
+                    toggleButton.innerHTML = eyeIcon;
+                    toggleButton.style.opacity = "0.6";
+                }
+            });
+            
+            toggleButton.addEventListener("mouseenter", () => {
+                toggleButton.style.opacity = "1";
+            });
+            
+            toggleButton.addEventListener("mouseleave", () => {
+                if (apiKeyInput.type === "password") {
+                    toggleButton.style.opacity = "0.6";
+                }
+            });
+            
+            apiKeyInputWrapper.appendChild(apiKeyInput);
+            apiKeyInputWrapper.appendChild(toggleButton);
+            apiKeyContainer.appendChild(apiKeyInputWrapper);
             content.appendChild(apiKeyContainer);
 
             // 説明

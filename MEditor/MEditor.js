@@ -1416,8 +1416,9 @@ export class MEditor {
         parentObj.explorer.menu.control.items = [];
         let newFileButton = this.generateButton(
             parentObj.explorer.menu.control,
-            "New File",
-            (e) => {parentObj.explorer.newFileClickAction();}
+            "新規ファイル",
+            (e) => {parentObj.explorer.newFileClickAction();},
+            "新しいファイルを作成"
         );
         
         parentObj.explorer.menu.control.items.push(newFileButton);
@@ -1426,8 +1427,9 @@ export class MEditor {
         let sortButton = this.generateButton(
             parentObj.explorer.menu.control,
             "↕",
+            (e) => { /* ソートメニューはクリックイベントで処理 */ },
+            "ファイルの並び替え"
         );
-        sortButton.element.title = "Sort files";
         sortButton.addTrigger("click", (e) => {
             e.stopPropagation();
             console.log("sort menu clicked");
@@ -1435,10 +1437,10 @@ export class MEditor {
             // 現在のソート設定を取得
             let currentSort = this.getSortSettings();
             let nameText = currentSort.sortBy === 'name' ? 
-                (currentSort.order === 'asc' ? '✓ Name (A-Z)' : '✓ Name (Z-A)') : 
+                (currentSort.order === 'asc' ? '✓ ファイル名 (A-Z)' : '✓ ファイル名 (Z-A)') : 
                 'Name';
             let mtimeText = currentSort.sortBy === 'mtime' ? 
-                (currentSort.order === 'asc' ? '✓ Modified (Old-New)' : '✓ Modified (New-Old)') : 
+                (currentSort.order === 'asc' ? '✓ 最終更新 (古い-新しい)' : '✓ 最終更新 (新しい-古い)') : 
                 'Modified';
 
             this.popupMenu(sortButton, [
@@ -1462,16 +1464,18 @@ export class MEditor {
         let otherButton = this.generateButton(
             parentObj.explorer.menu.control,
             "⋮",
+            (e) => { /* その他メニューはクリックイベントで処理 */ },
+            "その他の操作"
         );
         otherButton.addTrigger("click", (e) => {
             e.stopPropagation();
             console.log("menu clicked");
 
             this.popupMenu(otherButton, [
-                {text: "New Folder", title: "Create New Folder", clickAction: (e) => {
+                {text: "新規フォルダ", title: "新しいフォルダを作る", clickAction: (e) => {
                     parentObj.explorer.newDirClickAction();
                 }},
-                {text: "Upload", title: "Upload File", clickAction: (e) => {
+                {text: "アップロード", title: "ファイルをアップロードする", clickAction: (e) => {
                     parentObj.explorer.uploadClickAction();
                 }},
             ]);
@@ -1658,13 +1662,13 @@ export class MEditor {
             e.stopPropagation();
             console.log("file menu clicked:", fileInfo);
             this.popupMenu(fileMenu, [
-                {text: "rename", title: "Rename File", clickAction: (e) => {this.explorer.renameClickAction(fileInfo);}},
-                {text: "move", title: "Move File", clickAction: (e) => {
+                {text: "名前変更", title: "ファイル名を変更", clickAction: (e) => {this.explorer.renameClickAction(fileInfo);}},
+                {text: "移動", title: "ファイルを別のフォルダに移動", clickAction: (e) => {
                     e.stopPropagation();
                     this.explorer.moveClickAction(fileInfo);
                 }},
-                {text: "duplicate", title: "Duplicate File", clickAction: (e) => {this.explorer.duplicateClickAction(fileInfo);}},
-                {text: "delete", title: "Delete File", clickAction: (e) => {this.explorer.deleteClickAction(fileInfo);}},
+                {text: "複製", title: "ファイルを複製", clickAction: (e) => {this.explorer.duplicateClickAction(fileInfo);}},
+                {text: "削除", title: "ファイルを削除", clickAction: (e) => {this.explorer.deleteClickAction(fileInfo);}},
             ]);
             this.page.popupMenuCloseAction = () => {
                 this.explorer.content.element.style.overflowY = "auto";
@@ -1803,23 +1807,23 @@ export class MEditor {
             e.stopPropagation();
             console.log("dir menu clicked:", dirInfo);
             this.popupMenu(dirMenu, [
-                {text: "rename", title: "Rename Directory", clickAction: (e) => {
+                {text: "名前変更", title: "フォルダ名を変更", clickAction: (e) => {
                     //console.log("rename: ", dirInfo);
                     this.explorer.renameDirClickAction(dirInfo);
                 }},
-                {text: "new file", title: "Create New File", clickAction: (e) => {
+                {text: "新しいファイル", title: "フォルダ内に新しいファイルを作成", clickAction: (e) => {
                     //console.log("new file: ", dirInfo);
                     this.explorer.newFileClickAction(dirInfo);
                 }},
-                {text: "new folder", title: "Create New Folder", clickAction: (e) => {
+                {text: "新しいフォルダ", title: "フォルダ内に新しいフォルダを作成", clickAction: (e) => {
                     //console.log("new folder: ", dirInfo);
                     this.explorer.newDirClickAction(dirInfo);
                 }},
-                {text: "upload", title: "Upload File", clickAction: (e) => {
+                {text: "アップロード", title: "フォルダ内にファイルをアップロード", clickAction: (e) => {
                     //console.log("upload: ", dirInfo);
                     this.explorer.uploadClickAction(dirInfo);
                 }},
-                {text: "delete", title: "Delete Directory", clickAction: (e) => {
+                {text: "削除", title: "フォルダを削除", clickAction: (e) => {
                     //console.log("delete: ", dirInfo);
                     this.explorer.deleteDirClickAction(dirInfo);
                 }}
@@ -2133,7 +2137,7 @@ export class MEditor {
             button.element = document.createElement("button");
             button.element.classList.add(this.CLASS_NAME_PREFIX + "dict-menu-add-button");
             button.element.innerHTML = "+";
-            button.element.title = "Add Item";
+            button.element.title = "項目を追加";
             button.element.addEventListener("click", (e) => {
                 let item = {"":""};
                 dictMenu.addItem(item);
@@ -2189,7 +2193,7 @@ export class MEditor {
                 let deleteButton = document.createElement("button");
                 deleteButton.classList.add(this.CLASS_NAME_PREFIX + "dict-menu-item-delete-button");
                 deleteButton.innerHTML = "×";
-                deleteButton.title = "Delete Item";
+                deleteButton.title = "この項目を削除";
                 deleteButton.addEventListener("click", (e) => {
                     dictMenu.items = dictMenu.items.filter((i) => i != dict);
                     itemElement.remove();
@@ -2355,6 +2359,7 @@ export class MEditor {
         chat.clearBtn = {};
         chat.clearBtn.element = document.createElement("button");
         chat.clearBtn.element.textContent = "クリア";
+        chat.clearBtn.element.title = "チャット履歴をクリア";
         chat.clearBtn.element.className = this.CLASS_NAME_PREFIX + "chat-clear-btn";
         chat.clearBtn.element.style.marginLeft = "0.5em";
         chat.topMenu.element.appendChild(chat.clearBtn.element);

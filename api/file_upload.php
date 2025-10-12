@@ -17,8 +17,8 @@ if(!str_ends_with($path, "/")){
 }
 $files = $_FILES;
 
-error_log(print_r($_POST, true));
-error_log(print_r($_FILES, true));
+//error_log(print_r($_POST, true));
+//error_log(print_r($_FILES, true));
 
 
 if($action == "upload"){

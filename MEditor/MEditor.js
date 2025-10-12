@@ -1,5 +1,7 @@
 // general functions
 
+import { api } from "../js/modules/utils/api.js";
+
 export class Path {
     constructor(path){
         
@@ -2089,6 +2091,12 @@ export class MEditor {
         chat.element.classList.add(this.CLASS_NAME_PREFIX + "chat");
         parentObj.element.appendChild(chat.element);
 
+        chat.config = {};
+        chat.config.customApiUrl = null;
+        chat.config.customApiKey = null;
+        chat.config.useCustomApi = false;
+
+
         // ファイルコンテキスト表示エリア
         chat.fileContextInfo = document.createElement("div");
         chat.fileContextInfo.className = this.CLASS_NAME_PREFIX + "chat-filecontext";
@@ -2214,6 +2222,137 @@ export class MEditor {
             // 外部変数の履歴もクリアしたい場合は外部で上書きすること
         };
         chat.clearBtn.element.addEventListener("click", () => chat.clearHistory());
+
+
+
+        // chat config
+
+        chat.onConfigSaved = (config) => {
+            console.log("AI custom model: Config saved", config);
+        }
+
+        chat.setOnConfigSaved = (func) => {
+            chat.onConfigSaved = func;
+        }
+
+        chat.configWindow = () => {
+            console.log("config window");
+            let window = this.popupWindow("Chat Settings", null, {width: '600px'});
+            
+            let content = document.createElement("div");
+            content.classList.add(this.CLASS_NAME_PREFIX + "chat-config-container");
+
+            // チェックボックス追加
+            let checkboxContainer = document.createElement("div");
+            checkboxContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-checkbox-container");
+            checkboxContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-section");
+            let label = document.createElement("label");
+            label.textContent = "カスタムAI APIを使用する";
+            label.for = "customApiCheckbox";
+            checkboxContainer.appendChild(label);
+            let checkbox = document.createElement("input");
+            checkbox.type = "checkbox";          
+            checkbox.checked = chat.config.useCustomApi || false;
+            checkbox.id = "customApiCheckbox";
+            
+            label.prepend(checkbox);
+            content.appendChild(checkboxContainer);
+
+            // ベースURL入力欄
+            let baseUrlContainer = document.createElement("div");
+            baseUrlContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-base-url-container");
+            baseUrlContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-section");
+            let baseUrlLabel = document.createElement("label");
+            baseUrlLabel.classList.add(this.CLASS_NAME_PREFIX + "chat-config-base-url-label");
+            baseUrlLabel.textContent = "ベースURL:";
+            baseUrlLabel.for = "baseUrlInput";
+            baseUrlContainer.appendChild(baseUrlLabel);
+            let baseUrlInput = document.createElement("input");
+            baseUrlInput.classList.add(this.CLASS_NAME_PREFIX + "chat-config-base-url-input");
+            baseUrlInput.type = "text";
+            baseUrlInput.id = "baseUrlInput";
+            baseUrlInput.placeholder = "https://api.example.com/v1";
+            baseUrlInput.value = chat.config.customApiUrl || "";
+            baseUrlContainer.appendChild(baseUrlInput);
+            content.appendChild(baseUrlContainer);
+
+            // APIキー入力欄
+            let apiKeyContainer = document.createElement("div");
+            apiKeyContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-api-key-container");
+            apiKeyContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-section");
+            let apiKeyLabel = document.createElement("label");
+            apiKeyLabel.classList.add(this.CLASS_NAME_PREFIX + "chat-config-api-key-label");
+            apiKeyLabel.textContent = "APIキー:";
+            apiKeyLabel.for = "apiKeyInput";
+            apiKeyContainer.appendChild(apiKeyLabel);
+            let apiKeyInput = document.createElement("input");
+            apiKeyInput.classList.add(this.CLASS_NAME_PREFIX + "chat-config-api-key-input");
+            apiKeyInput.type = "password";
+            apiKeyInput.id = "apiKeyInput";
+            apiKeyInput.placeholder = "sk-xxxxxx";
+            apiKeyInput.value = chat.config.customApiKey || "";
+            apiKeyContainer.appendChild(apiKeyInput);
+            content.appendChild(apiKeyContainer);
+
+            // ボタン
+            let buttonContainer = document.createElement("div");
+            buttonContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-button-container");
+            buttonContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-section");
+            let saveButton = document.createElement("button");
+            saveButton.classList.add(this.CLASS_NAME_PREFIX + "chat-config-save-button");
+            saveButton.textContent = "保存";
+            saveButton.addEventListener("click", () => {
+                // 保存処理
+                chat.onConfigSaved({
+                    useCustomApi: checkbox.checked,
+                    baseUrl: baseUrlInput.value,
+                    apiKey: apiKeyInput.value
+                });
+                console.log("AI custom model: Saved");
+                window.remove();
+            });
+            buttonContainer.appendChild(saveButton);
+            let cancelButton = document.createElement("button");
+            cancelButton.classList.add(this.CLASS_NAME_PREFIX + "chat-config-cancel-button");
+            cancelButton.textContent = "キャンセル";
+            cancelButton.addEventListener("click", () => {
+                window.remove();
+            });
+            buttonContainer.appendChild(cancelButton);
+            content.appendChild(buttonContainer);
+
+            checkbox.addEventListener("change", (e) => {
+                if (e.target.checked) {
+                    baseUrlInput.disabled = false;
+                    apiKeyInput.disabled = false;
+                } else {
+                    baseUrlInput.disabled = true;
+                    apiKeyInput.disabled = true;
+                }
+            });
+            if (!chat.config.useCustomApi) {
+                // 初期状態でオフなら入力欄を無効化
+                // (changeイベントは発火しないためここで設定)
+                baseUrlInput.disabled = true;
+                apiKeyInput.disabled = true;
+            }
+
+            window.setContent(content);
+        }
+
+        chat.openConfigWindow = function() {
+            console.log("Open config window");
+            chat.configWindow();
+
+        }
+
+        chat.configButton = {};
+        chat.configButton.element = document.createElement("button");
+        chat.configButton.element.className = this.CLASS_NAME_PREFIX + "chat-config-button";
+        chat.configButton.element.innerHTML = "⚙";
+        chat.configButton.element.title = "設定";
+        chat.topMenu.element.appendChild(chat.configButton.element);
+        chat.configButton.element.addEventListener("click", () => chat.openConfigWindow());
 
         // テキストエリア（入力内容に応じて高さ自動調整）
         chat.inputArea.textarea = document.createElement("textarea");
@@ -2787,7 +2926,7 @@ export class MEditor {
         parentElm.appendChild(pWindow.element);
     }
 
-    popupWindow(title, contents, opt={}) {
+    popupWindow(title="", contents=null, opt={}) {
         let pWindow = {};
         pWindow.title = title;
 
@@ -2895,7 +3034,10 @@ export class MEditor {
         pWindow.element.appendChild(pWindowContent.element);
 
         // add contents
-        if(Array.isArray(contents)){
+        if(!contents){
+            console.warn("popupWindow contents is null");
+        }
+        else if(Array.isArray(contents)){
             for(let i=0; i<contents.length; i++) {
                 if(contents[i] instanceof HTMLElement){
                     pWindowContent.element.appendChild(contents[i]);
@@ -2925,6 +3067,19 @@ export class MEditor {
         pWindow.remove = () => {
             pWindow.element.remove();
             this.page.popupWindows = this.page.popupWindows.filter((item) => item != pWindow);
+        }
+
+        pWindow.setContent = (contents) => {
+            pWindowContent.element.innerHTML = "";
+            if(contents instanceof HTMLElement){
+                pWindowContent.element.appendChild(contents);
+            }
+            else if(contents.element instanceof HTMLElement){
+                pWindowContent.element.appendChild(contents.element);
+            }
+            else{
+                console.error("contents must be an HTMLElement or an object with an 'element' property");
+            }
         }
 
         window.addEventListener("keydown", (e) => {

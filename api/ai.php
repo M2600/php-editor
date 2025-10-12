@@ -32,7 +32,8 @@ function sendAIRequest($apiUrl, $apiKey, $payload) {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Content-Type: application/json',
-            'x-api-key: ' . $apiKey
+            //'x-api-key: ' . $apiKey,
+            'Authorization: Bearer ' . $apiKey
         ]);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
         curl_setopt($ch, CURLOPT_TIMEOUT, 600); // タイムアウトを600秒に設定
@@ -207,6 +208,20 @@ if (!is_array($messages) || count($messages) === 0) {
     exit;
 }
 $messages = formatPromptMessages($messages);
+
+// カスタムURL及びAPIキーの処理
+$customUrl = isset($input['customUrl']) && !empty($input['customUrl']) ? $input['customUrl'] : null;
+$customApiKey = isset($input['customApiKey']) && !empty($input['customApiKey']) ? $input['customApiKey'] : null;
+
+// カスタム設定がある場合は上書き
+if ($customUrl) {
+    $API_URL = rtrim($customUrl, '/'); // 末尾のスラッシュを削除
+    error_log("Using custom API URL: " . $API_URL);
+}
+if ($customApiKey) {
+    $API_KEY = $customApiKey;
+    error_log("Using custom API Key (length: " . strlen($API_KEY) . ")");
+}
 
 // コンテキスト圧縮を実行（AI要約機能付き）
 $messages = compressContext($messages, 2500, $API_URL, $API_KEY);

@@ -219,7 +219,7 @@ export function setupInputHistoryHotkeys(chat, historyManager) {
     });
 }
 
-export async function AIMerge(baseCode, aiCode, modelSelect, fetchAIChat, editor, currentFile, mConsole, editorEditor) {
+export async function AIMerge(baseCode, aiCode, modelSelect, fetchAIChat, editor, currentFile, mConsole, editorEditor, customUrl = null, customApiKey = null) {
     const prompt = `Merge the following code snippets:
 
 Base Code:
@@ -242,6 +242,8 @@ Please provide the merged code only, without any additional text or explanations
             model: selectedModel,
             signal: controller.signal,
             smoothOutput: true, // スムーズ出力を有効化
+            customUrl: customUrl,
+            customApiKey: customApiKey,
             onDelta: (delta, chunk, isSmooth) => {
                 // ストリーム更新処理
                 if (isSmooth) {
@@ -377,9 +379,28 @@ export function restoreChatHistoryToUI(chatHistory, chat) {
     ensureLinksOpenInNewTab(chat.content.element);
 }
 
-export async function loadModelList(chat) {
+export async function loadModelList(chat, customApiConfig = null) {
     try {
-        const res = await fetch("/api/ai_models.php");
+        let res;
+        
+        // カスタムAPI設定がある場合は新しいエンドポイントを使用
+        if (customApiConfig && customApiConfig.baseUrl && customApiConfig.apiKey) {
+            console.log("Loading models from custom API:", customApiConfig.baseUrl);
+            res = await fetch("/api/ai_custom_models.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    baseUrl: customApiConfig.baseUrl,
+                    apiKey: customApiConfig.apiKey
+                })
+            });
+        } else {
+            // デフォルトのエンドポイントを使用
+            res = await fetch("/api/ai_models.php");
+        }
+        
         if (!res.ok) throw new Error("モデル一覧取得失敗: " + res.status);
         const data = await res.json();
         if (!data.data || !Array.isArray(data.data)) throw new Error("モデルデータ不正");
@@ -455,7 +476,9 @@ export async function sendAIMessage({
     currentFile,
     fileList,
     baseDir,
-    requestAIMergeAndPreview
+    requestAIMergeAndPreview,
+    customUrl = null,
+    customApiKey = null
 }) {
     try {
         if(historyManager.getStreaming()) return;
@@ -531,6 +554,8 @@ export async function sendAIMessage({
                 dirContext: dirContext ?? null,
                 signal: controller.signal,
                 smoothOutput: true, // スムーズ出力を有効化
+                customUrl: customUrl,
+                customApiKey: customApiKey,
                 onDelta: (delta, chunk, isSmooth) => {
                     if (isSmooth) {
                         // スムーズ出力の場合はdeltaが完全なテキスト

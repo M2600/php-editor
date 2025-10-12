@@ -68,7 +68,8 @@ try {
         exit;
     }
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'x-api-key: ' . $API_KEY, // APIキーをヘッダーに追加
+        //'x-api-key: ' . $API_KEY, // APIキーをヘッダーに追加
+        'Authorization: Bearer ' . $API_KEY,
     ]);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HEADER, false);

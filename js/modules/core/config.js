@@ -100,5 +100,6 @@ export const APP_STATE = {
     FILE_LIST: {},
     RUN_BROWSER_TAB: undefined,
     ACE_LIST: [],
+    AI_CONFIG: { baseUrl: "", apiKey: "" , userCustomApi: false },
     RUN_AS_NEW_TAB: true  // true: 別タブで実行(Webページモード), false: デバッグモードで実行
 };

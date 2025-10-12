@@ -64,6 +64,60 @@
     <!--markdown render-->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
+
+    <!-- Import Maps -->
+    <script type="importmap">
+        {
+            "imports": {
+                <?php
+                // モジュールリストの取得
+                function getModuleVersions($baseDir) {
+                    $modules = [];
+                    if (!is_dir($baseDir)) {
+                        return $modules;
+                    }
+                    
+                    $iterator = new RecursiveIteratorIterator(
+                        new RecursiveDirectoryIterator($baseDir, RecursiveDirectoryIterator::SKIP_DOTS)
+                    );
+                    
+                    foreach ($iterator as $file) {
+                        if ($file->isFile() && $file->getExtension() === 'js') {
+                            $relativePath = str_replace($baseDir . '/', '', $file->getPathname());
+                            $modules[$relativePath] = filemtime($file->getPathname());
+                        }
+                    }
+                    return $modules;
+                }
+
+                // js/ と MEditor/ の両方をスキャン
+                $baseDir = realpath(__DIR__ . '/../');
+                $jsDir = $baseDir . '/js';
+                $meditorDir = $baseDir . '/MEditor';
+                
+                $imports = [];
+                
+                // js/ ディレクトリのモジュール
+                $jsModules = getModuleVersions($jsDir);
+                foreach ($jsModules as $path => $version) {
+                    $webPath = './js/' . $path;
+                    $imports[] = json_encode($webPath) . ': ' . json_encode($webPath . '?v=' . $version);
+                }
+                
+                // MEditor/ ディレクトリのモジュール
+                $meditorModules = getModuleVersions($meditorDir);
+                foreach ($meditorModules as $path => $version) {
+                    $webPath = './MEditor/' . $path;
+                    $imports[] = json_encode($webPath) . ': ' . json_encode($webPath . '?v=' . $version);
+                }
+                
+                echo implode(",\n                ", $imports);     
+                ?>
+            }
+        }
+    </script>
+
+
     <!--jsdiff-->
     <script src="../js/diff.js?v=<?php echo date("ymdHis",filemtime("./js/diff.js")); ?>"></script>
 

@@ -3,6 +3,7 @@
  */
 
 import { CONFIG } from '../core/config.js';
+import { loadSelectedModel, saveSelectedModel } from '../utils/cookie.js';
 
 // AIToolクラスをインポート
 export { AITool } from './ai-tool.js';
@@ -406,16 +407,35 @@ export async function loadModelList(chat, customApiConfig = null) {
         if (!data.data || !Array.isArray(data.data)) throw new Error("モデルデータ不正");
         // nameを表示名に使う
         const models = data.data.map(m => ({ id: m.id, name: m.name }));
-        // デフォルトモデル（nameが"Default("で始まるもの）を探す
-        let defaultModel = models.find(m => m.name && m.name.startsWith("Default("))
-            || models.find(m => m.name && m.name.toLowerCase().includes("default"));
-        let defaultValue = defaultModel ? defaultModel.id : undefined;
-        return chat.createModelSelector({
+        
+        // 保存されたモデルがあり、かつモデルリストに存在するかチェック
+        const savedModel = loadSelectedModel();
+        let defaultValue = undefined;
+        
+        if (savedModel && models.find(m => m.id === savedModel)) {
+            // 保存されたモデルが有効な場合はそれを使用
+            defaultValue = savedModel;
+            console.log("Restored saved model:", savedModel);
+        } else {
+            // 保存されたモデルがない、または無効な場合はデフォルトモデルを探す
+            let defaultModel = models.find(m => m.name && m.name.startsWith("Default("))
+                || models.find(m => m.name && m.name.toLowerCase().includes("default"));
+            defaultValue = defaultModel ? defaultModel.id : undefined;
+        }
+        
+        const modelSelector = chat.createModelSelector({
             models: models,
             className: "meditor-chat-model-selector",
             style: { marginRight: "0.5em" },
-            defaultValue: defaultValue
+            defaultValue: defaultValue,
+            onChange: (selectedModelId) => {
+                // モデルが変更されたら保存
+                saveSelectedModel(selectedModelId);
+                console.log("Model selection saved:", selectedModelId);
+            }
         });
+        
+        return modelSelector;
     } catch(e) {
         const modelSelect = chat.createModelSelector({
             models: ['モデル取得エラー'],

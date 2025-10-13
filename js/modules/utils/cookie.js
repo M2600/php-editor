@@ -84,3 +84,28 @@ export function clearAIConfig() {
     deleteCookie('ai_custom_url');
     deleteCookie('ai_custom_key');
 }
+
+/**
+ * 選択されたAIモデルを保存する
+ * @param {string} modelId - モデルID
+ */
+export function saveSelectedModel(modelId) {
+    if (modelId) {
+        setCookie('ai_selected_model', modelId, 365);
+    }
+}
+
+/**
+ * 保存された選択モデルを取得する
+ * @returns {string|null} - モデルID、存在しない場合はnull
+ */
+export function loadSelectedModel() {
+    return getCookie('ai_selected_model');
+}
+
+/**
+ * 選択モデルをクリアする
+ */
+export function clearSelectedModel() {
+    deleteCookie('ai_selected_model');
+}

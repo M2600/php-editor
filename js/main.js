@@ -226,6 +226,21 @@ async function main(){
                     console.error('Failed to save GET parameters:', err);
                 }
                 
+                // POSTパラメータをlocalStorageに保存
+                try {
+                    localStorage.setItem('postParams', JSON.stringify(postParams));
+                } catch (err) {
+                    console.error('Failed to save POST parameters:', err);
+                }
+                
+                // POST設定（POSTチェックボックス、JSONチェックボックス）を保存
+                try {
+                    localStorage.setItem('postCheckState', postCheck.getState().toString());
+                    localStorage.setItem('jsonCheckState', jsonCheck.getState().toString());
+                } catch (err) {
+                    console.error('Failed to save POST settings:', err);
+                }
+                
                 // Show console automatically when running program
                 if (mConsole && typeof mConsole.show === 'function') {
                     mConsole.show();
@@ -561,10 +576,53 @@ async function main(){
     postDictMenu.addButton();
     dictMenuTab.addContent(postDictMenu);
     
+    // localStorageからPOST設定を復元
+    const savedPostCheckState = localStorage.getItem('postCheckState');
+    const savedJsonCheckState = localStorage.getItem('jsonCheckState');
+    const savedPostParams = localStorage.getItem('postParams');
+    
+    // POSTチェックボックスの状態を復元
+    if (savedPostCheckState !== null) {
+        try {
+            const postCheckEnabled = savedPostCheckState === 'true';
+            postCheck.setState(postCheckEnabled);
+            postDictMenu.setEnabled(postCheckEnabled);
+            jsonCheck.setEnabled(postCheckEnabled);
+            console.log('Restored POST checkbox state:', postCheckEnabled);
+        } catch (e) {
+            console.error('Failed to restore POST checkbox state:', e);
+        }
+    }
+    
+    // JSONチェックボックスの状態を復元
+    if (savedJsonCheckState !== null && savedPostCheckState === 'true') {
+        try {
+            const jsonCheckEnabled = savedJsonCheckState === 'true';
+            jsonCheck.setState(jsonCheckEnabled);
+            console.log('Restored JSON checkbox state:', jsonCheckEnabled);
+        } catch (e) {
+            console.error('Failed to restore JSON checkbox state:', e);
+        }
+    }
+    
+    // POSTパラメータを復元
+    if (savedPostParams) {
+        try {
+            const postParams = JSON.parse(savedPostParams);
+            postDictMenu.addItem(postParams);
+            console.log('Restored POST parameters:', postParams);
+        } catch (e) {
+            console.error('Failed to load POST parameters:', e);
+        }
+    }
+    
     // 末尾に空の行を追加しておく
     postDictMenu.addItem({'':''});
     
-    postDictMenu.setEnabled(false); // 初期状態では無効化
+    // 初期状態では無効化（復元された状態に応じて有効化される）
+    if (savedPostCheckState !== 'true') {
+        postDictMenu.setEnabled(false);
+    }
 
     // Chat setup
     chat = editor.createChat(chatTab, {});

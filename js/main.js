@@ -364,30 +364,32 @@ async function main(){
     //     },
     // ));
 
-    editorEditor.menu.right.items.push(editor.generateButton(
-        editorEditor.menu.right,
-        "test",
-        (e) => {
-            let tabContainer = editor.tab();
-            let dictMenu = editor.createDictMenu();
-            dictMenu.setTitle("デバッグ時に送信するGETパラメータ");
-            dictMenu.addButton();
-            dictMenu.addItem({'':''});
-            let tab1 = tabContainer.createTab("GETパラメータ");
-            tab1.setContent(dictMenu);
-            let tab2 = tabContainer.createTab("test");
-            tab2.setContent("<p>Tab 2 content</p>");
-            let tab3 = tabContainer.createTab("test3");
-            tab3.setContent("<p>Tab 3 content. long long long long long long long long long long long long long long</p>");
-            tabContainer.activateTab(tab1.id);
-            let popup = editor.popupWindow(
-                "デバッグメニュー", 
-                tabContainer.element, 
-                {width: "40em",height: "30em"},
-            );
 
-        }
-    ));
+    // Tab, ポップアップウィンドウのサンプル
+    // editorEditor.menu.right.items.push(editor.generateButton(
+    //     editorEditor.menu.right,
+    //     "test",
+    //     (e) => {
+    //         let tabContainer = editor.tab();
+    //         let dictMenu = editor.createDictMenu();
+    //         dictMenu.setTitle("デバッグ時に送信するGETパラメータ");
+    //         dictMenu.addButton();
+    //         dictMenu.addItem({'':''});
+    //         let tab1 = tabContainer.createTab("GETパラメータ");
+    //         tab1.setContent(dictMenu);
+    //         let tab2 = tabContainer.createTab("test");
+    //         tab2.setContent("<p>Tab 2 content</p>");
+    //         let tab3 = tabContainer.createTab("test3");
+    //         tab3.setContent("<p>Tab 3 content. long long long long long long long long long long long long long long</p>");
+    //         tabContainer.activateTab(tab1.id);
+    //         let popup = editor.popupWindow(
+    //             "デバッグメニュー", 
+    //             tabContainer.element, 
+    //             {width: "40em",height: "30em"},
+    //         );
+
+    //     }
+    // ));
 
     const explorer = editor.createExplorer(editor.page.main.left, {
         title: "エクスプローラー",

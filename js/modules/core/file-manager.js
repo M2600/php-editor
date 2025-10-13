@@ -614,7 +614,7 @@ export async function runPhp(path, api, currentFile, saveFile, mConsole){
     return ret;
 }
 
-export async function runPhpCgi(path, GETParams={}, api, currentFile, saveFile, mConsole) {
+export async function runPhpCgi(path, GETParams={}, api, currentFile, saveFile, mConsole, options={}) {
     if(!currentFile){
         return;
     }
@@ -626,12 +626,26 @@ export async function runPhpCgi(path, GETParams={}, api, currentFile, saveFile, 
         }
     }
 
+    // オプションからHTTPメソッド、POSTパラメータ、Content-Typeを取得
+    const method = options.method || "GET";
+    const POSTParams = options.POSTParams || {};
+    const contentType = options.contentType || "application/x-www-form-urlencoded";
+
     let ret;
     let body = {
         action: "cgi_run",
         path: path,
+        method: method,
         GETParams: GETParams,
+        POSTParams: POSTParams,
+        contentType: contentType
+    };
+    
+    // メソッド情報をコンソールに表示
+    if (method !== "GET") {
+        mConsole.print(`Running PHP with ${method} method...`, "info");
     }
+    
     let status = await api("/api/file_manager.php", body=body)
     .then(data => {
         if (data.status === "error") {

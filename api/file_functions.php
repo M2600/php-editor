@@ -3,6 +3,8 @@
 // 強化されたログシステムを読み込み
 require_once(__DIR__ . '/logger.php');
 
+require_once(__DIR__ . '/debug.php');
+
 //$iniConf = parse_ini_file("../config.ini");
 //error_log(print_r($iniConf, true));
 

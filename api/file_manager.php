@@ -8,6 +8,7 @@ if(!isset($_SESSION["id"])){
 }
 
 require_once("file_functions.php");
+require_once("debug.php");
 
 // main function
 
@@ -116,10 +117,112 @@ if($action == "run"){
 }
 
 if($action == "cgi_run"){
-    $GETParams = $params["GETParams"];
-    $result = phpCgiRun($path, $printHttpHeaders=false, $GETParams=$GETParams);
-    echo json_encode(array("status" => "success", "result" => $result["status"], "message" => $result["message"]));
-    exit();
+    $startTime = logPerformanceStart("cgi_run");
+    logInfo("PHP CGI execution started", ['path' => $path]);
+    
+    try {
+        // パスをサーバーパスに変換
+        $serverPath = convertUserPath($path);
+        
+        if(!file_exists($serverPath)){
+            logError("PHP CGI file not found", ['user_path' => $path, 'server_path' => $serverPath]);
+            echo json_encode(array(
+                "status" => "success", 
+                "result" => true, 
+                "message" => array("File not found: " . $path)
+            ));
+            exit();
+        }
+        
+        // 実行するファイルのディレクトリに移動
+        $fileDirectory = dirname($serverPath);
+        chdir($fileDirectory);
+        
+        // リクエストパラメータを取得
+        $method = $params["method"] ?? "GET";
+        $GETParams = $params["GETParams"] ?? array();
+        $POSTParams = $params["POSTParams"] ?? array();
+        $contentType = $params["contentType"] ?? "application/x-www-form-urlencoded";
+        
+        logDebug("Executing with Debug class", [
+            'method' => $method,
+            'path' => $serverPath,
+            'get' => $GETParams,
+            'post' => $POSTParams,
+            'content_type' => $contentType
+        ]);
+        
+        // Debugクラスを使用して実行
+        if (strtoupper($method) === "POST" || strtoupper($method) === "PUT" || strtoupper($method) === "PATCH") {
+            // POSTメソッドの場合
+            $result = Debug::executeWithPost(
+                $serverPath,
+                $POSTParams,
+                $GETParams,
+                $contentType
+            );
+        } else {
+            // GETメソッドの場合
+            $result = Debug::execute(
+                $serverPath,
+                $method,
+                array(),
+                $GETParams
+            );
+        }
+        
+        logPerformanceEnd("cgi_run", $startTime, [
+            'path' => $path,
+            'success' => $result['success'],
+            'exit_code' => $result['exit_code']
+        ]);
+        
+        // 出力をユーザールートパスに変換してエスケープ
+        $outputLines = explode("\n", $result['output']);
+        for($i = 0; $i < count($outputLines); $i++){
+            $outputLines[$i] = str_replace(getUserRoot(), "", $outputLines[$i]);
+            $outputLines[$i] = htmlspecialchars($outputLines[$i], ENT_QUOTES);
+        }
+        
+        // エラー出力も処理
+        $errorLines = array();
+        if (!empty($result['errors'])) {
+            $errorLines = explode("\n", $result['errors']);
+            for($i = 0; $i < count($errorLines); $i++){
+                $errorLines[$i] = str_replace(getUserRoot(), "", $errorLines[$i]);
+                $errorLines[$i] = htmlspecialchars($errorLines[$i], ENT_QUOTES);
+            }
+        }
+        
+        // 成功の場合はresult=false（エラーなし）、失敗の場合はresult=true（エラーあり）
+        // これは既存のphpCgiRunの戻り値形式に合わせるため
+        $hasError = !$result['success'];
+        
+        // 出力とエラーを結合
+        $allOutput = array_merge($errorLines, $outputLines);
+        
+        if ($hasError) {
+            logError("PHP CGI execution failed", [
+                'path' => $path,
+                'exit_code' => $result['exit_code'],
+                'output_lines' => count($allOutput)
+            ]);
+        }
+        
+        echo json_encode(array(
+            "status" => "success", 
+            "result" => $hasError,
+            "message" => $allOutput,
+            "exit_code" => $result['exit_code'],
+            "method" => $method
+        ));
+        exit();
+        
+    } catch (Exception $e) {
+        logCritical("PHP CGI execution exception", ['path' => $path, 'error' => $e->getMessage()]);
+        echo json_encode(array("status" => "error", "error" => $e->getMessage()));
+        exit();
+    }
 }
 
 

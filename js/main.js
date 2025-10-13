@@ -197,6 +197,12 @@ async function main(){
             console.log("Run: " + APP_STATE.CURRENT_FILE.path);
             // dictMenuからGETパラメータを取得
             const getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
+            // dictMenuからPOSTパラメータを取得
+            const postParams = postDictMenu ? postDictMenu.getItemsAsObject() : {};
+            // POST リクエストするかどうか
+            const method = postCheck.getState() ? "POST" : "GET";
+            // コンテンツタイプ
+            const contentType = jsonCheck.getState() ? "application/json" : "application/x-www-form-urlencoded";
             
             if (APP_STATE.RUN_AS_NEW_TAB) {
                 // Webページモード: 別タブで実行
@@ -232,7 +238,12 @@ async function main(){
                     api,
                     APP_STATE.CURRENT_FILE,
                     (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE),
-                    mConsole
+                    mConsole,
+                    {
+                        method: method,
+                        POSTParams: postParams,
+                        contentType: contentType,
+                    }
                 );
             }
         },
@@ -493,7 +504,7 @@ async function main(){
     // Right panel components
     let tabContainer = editor.tab(editor.page.main.right);
 
-    let dictMenuTab = tabContainer.createTab("GET Parameters");
+    let dictMenuTab = tabContainer.createTab("デバッグメニュー");
     let chatTab = tabContainer.createTab("AI Chat");
     // 初期表示タブをGET Parametersタブに設定
     tabContainer.activateTab(dictMenuTab.id);
@@ -516,6 +527,44 @@ async function main(){
     }
     // 末尾に空の行を追加しておく
     dictMenu.addItem({'':''});
+
+    let hr = document.createElement("hr");
+    dictMenuTab.addContent(hr);
+
+    // POST parameters setup
+    // POST checkbox
+    let postCheck = editor.generateCheckbox(
+        null,
+        "POSTリクエスト",
+        false,
+        (checked) => {
+            postDictMenu.setEnabled(checked);
+            jsonCheck.setEnabled(checked);
+        }
+    );
+    dictMenuTab.addContent(postCheck);
+
+    // JSON checkbox
+    let jsonCheck = editor.generateCheckbox(
+        null,
+        "JSON形式で送信",
+        false,
+        (checked) => {
+            // 今のところ特に処理は不要
+        }
+    );
+    dictMenuTab.addContent(jsonCheck);
+    jsonCheck.setEnabled(false); // 初期状態では無効化
+
+    let postDictMenu = editor.createDictMenu(dictMenuTab, {});
+    postDictMenu.setTitle("POSTパラメータ (Webページモードでは送信されません)");
+    postDictMenu.addButton();
+    dictMenuTab.addContent(postDictMenu);
+    
+    // 末尾に空の行を追加しておく
+    postDictMenu.addItem({'':''});
+    
+    postDictMenu.setEnabled(false); // 初期状態では無効化
 
     // Chat setup
     chat = editor.createChat(chatTab, {});

@@ -1173,16 +1173,15 @@ export class MEditor {
 
         checkbox.changeAction = changeAction;
 
-        checkbox.container = {};
-        checkbox.container.element = document.createElement("div");
-        checkbox.container.element.classList.add(this.CLASS_NAME_PREFIX + "checkbox-container");
+        checkbox.element = document.createElement("div");
+        checkbox.element.classList.add(this.CLASS_NAME_PREFIX + "checkbox-container");
 
         checkbox.label = {};
         checkbox.label.element = document.createElement("label");
         checkbox.label.element.classList.add(this.CLASS_NAME_PREFIX + "checkbox-label");
         if(tooltip) checkbox.label.element.title = tooltip;
         checkbox.label.element.innerHTML = labelText;
-        checkbox.container.element.appendChild(checkbox.label.element);
+        checkbox.element.appendChild(checkbox.label.element);
 
         checkbox.input = {};
         checkbox.input.element = document.createElement("input");
@@ -1197,7 +1196,7 @@ export class MEditor {
         checkbox.label.element.prepend(checkbox.input.element);
 
         if (parentObj && typeof parentObj.element === "object"){
-            parentObj.element.appendChild(checkbox.container.element);
+            parentObj.element.appendChild(checkbox.element);
         }else{
             console.warn("parentObj has no element property");
         }
@@ -1215,13 +1214,17 @@ export class MEditor {
         }
         checkbox.appendTo = (parent) => {
             if (parent && parent instanceof HTMLElement){
-                parent.appendChild(checkbox.container.element);
+                parent.appendChild(checkbox.element);
             }
             else if (parent && parent.element instanceof HTMLElement){
-                parent.element.appendChild(checkbox.container.element);
+                parent.element.appendChild(checkbox.element);
             }else{
                 console.warn("parent has no element property");
             }
+        }
+
+        checkbox.setEnabled = (enabled) => {
+            checkbox.input.element.disabled = !enabled;
         }
 
         return checkbox;
@@ -2109,6 +2112,7 @@ export class MEditor {
             parentObj.dictMenu = dictMenu;
         }
         dictMenu.items = [];
+        dictMenu.itemElements = [];
 
         let dictMenuTitle = {};
         dictMenuTitle.element = document.createElement("div");
@@ -2203,6 +2207,7 @@ export class MEditor {
                 itemElement.appendChild(value);
                 itemElement.appendChild(deleteButton);
                 dictMenu.content.element.appendChild(itemElement);
+                dictMenu.itemElements.push(itemElement);
             });
         }
 
@@ -2219,6 +2224,12 @@ export class MEditor {
                 obj[item.key] = item.value;
             })
             return obj;
+        }
+
+        dictMenu.setEnabled = (bool) => {
+            dictMenu.element.querySelectorAll("input, button").forEach((el) => {
+                el.disabled = !bool;
+            });
         }
 
         return dictMenu;
@@ -3492,6 +3503,24 @@ export class MEditor {
                 // MEditorのUIコンポーネントオブジェクトの場合
                 else if(content && content.element && content.element instanceof HTMLElement){
                     tab.content.element.innerHTML = "";
+                    tab.content.element.appendChild(content.element);
+                }
+                else{
+                    console.error("Invalid content type");
+                }
+            }
+
+            tab.addContent = (content) => {
+                if(content instanceof HTMLElement){
+                    tab.content.element.appendChild(content);
+                }
+                else if(typeof content === "string"){
+                    let div = document.createElement("div");
+                    div.innerHTML = content;
+                    tab.content.element.appendChild(div);
+                }
+                // MEditorのUIコンポーネントオブジェクトの場合
+                else if(content && content.element && content.element instanceof HTMLElement){
                     tab.content.element.appendChild(content.element);
                 }
                 else{

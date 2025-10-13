@@ -998,6 +998,11 @@ i {
     color: var(--me-color-text);
     border: 1px solid var(--me-color-input-border);
 }
+.meditor-dict-menu-item-key-input:disabled {
+    background-color: var(--me-color-bg);
+    color: var(--me-color-text-secondary);
+    border: 1px solid var(--me-color-border);
+}
 .meditor-dict-menu-item-value {
 
 }
@@ -1007,6 +1012,11 @@ i {
     background-color: var(--me-color-input-bg);
     color: var(--me-color-text);
     border: 1px solid var(--me-color-input-border);
+}
+.meditor-dict-menu-item-value-input:disabled {
+    background-color: var(--me-color-bg);
+    color: var(--me-color-text-secondary);
+    border: 1px solid var(--me-color-border);
 }
 
 .meditor-dict-menu-item-separator {
@@ -1026,6 +1036,12 @@ i {
 .meditor-dict-menu-add-button:hover {
     background-color: var(--me-color-bg-active);
 }
+.meditor-dict-menu-add-button:disabled {
+    background-color: var(--me-color-bg);
+    color: var(--me-color-text-secondary);
+    border: solid 1px #444;
+    cursor: default;
+}
 
 .meditor-dict-menu-item-delete-button {
     background-color: var(--me-color-bg);
@@ -1038,6 +1054,12 @@ i {
 }
 .meditor-dict-menu-item-delete-button:hover {
     background-color: var(--me-color-bg-active);
+}
+.meditor-dict-menu-item-delete-button:disabled {
+    background-color: var(--me-color-bg);
+    color: var(--me-color-text-secondary);
+    border: solid 1px #444;
+    cursor: default;
 }
 
 

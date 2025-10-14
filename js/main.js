@@ -55,9 +55,126 @@ export const chatHistoryManager = new ChatHistoryManager(CONFIG.CHAT_STORAGE_KEY
 // Global variables
 let mConsole;
 let dictMenu;
+let postDictMenu;
+let postCheck;
+let jsonCheck;
 let chat;
 let modelSelect;
 let fetchAIChat;
+
+/**
+ * 実行処理を共通化した関数
+ * RUN_MODEに応じてWebプレビューまたはAPI開発モードで実行
+ */
+async function executeCurrentFile() {
+    if (!APP_STATE.CURRENT_FILE) {
+        console.warn("No file is currently open");
+        return;
+    }
+    
+    console.log("Execute: " + APP_STATE.CURRENT_FILE.path);
+    
+    // dictMenuからGETパラメータを取得
+    const getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
+    const postParams = postDictMenu ? postDictMenu.getItemsAsObject() : {};
+    const method = postCheck.getState() ? "POST" : "GET";
+    const contentType = jsonCheck.getState() ? "application/json" : "application/x-www-form-urlencoded";
+    
+    if (APP_STATE.RUN_MODE === 'WEB_MODE') {
+        // Webページモード: プレビューiframeで実行
+        console.log("Run in preview iframe (Web page mode)");
+        
+        // まずファイルを保存
+        await saveFile(
+            APP_STATE.CURRENT_FILE.path,
+            APP_STATE.CURRENT_FILE.aceObj.editor.getValue(),
+            api,
+            APP_STATE.CURRENT_FILE,
+            mConsole,
+            CONFIG.DEBUG,
+            phpSyntaxCheck,
+            editor,
+            APP_STATE
+        );
+        
+        // プレビューURLを構築
+        const filePath = APP_STATE.CURRENT_FILE.path;
+        let previewUrl = `${CONFIG.FILE_PAGE_BASE_URL}${APP_STATE.USER_ID}${filePath}?`;
+        
+        // GETパラメータを追加
+        for (const [key, value] of Object.entries(getParams)) {
+            if (key) { // 空のキーはスキップ
+                previewUrl += `&${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+            }
+        }
+        
+        // プレビューiframeにURLを設定
+        if (APP_STATE.WEB_PREVIEWER) {
+            APP_STATE.WEB_PREVIEWER.setURL(previewUrl);
+            APP_STATE.WEB_PREVIEWER.show();
+            console.log("Preview URL set:", previewUrl);
+        } else {
+            // WEB_PREVIEWERが利用できない場合は新しいタブで開く
+            APP_STATE.RUN_BROWSER_TAB = openInOtherWindow(
+                APP_STATE.CURRENT_FILE,
+                (path, content) => saveFile(
+                    path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE
+                ),
+                APP_STATE.RUN_BROWSER_TAB,
+                CONFIG.FILE_PAGE_BASE_URL,
+                APP_STATE.USER_ID,
+                getParams,
+            );
+
+            console.error("WEB_PREVIEWER not available");
+        }
+    } else {
+        // API開発モード: コンソールに出力
+        console.log("Run in debug mode with GET params:", getParams);
+        
+        // GETパラメータをlocalStorageに保存
+        try {
+            localStorage.setItem('getParams', JSON.stringify(getParams));
+        } catch (err) {
+            console.error('Failed to save GET parameters:', err);
+        }
+        
+        // POSTパラメータをlocalStorageに保存
+        try {
+            localStorage.setItem('postParams', JSON.stringify(postParams));
+        } catch (err) {
+            console.error('Failed to save POST parameters:', err);
+        }
+        
+        // POST設定（POSTチェックボックス、JSONチェックボックス）を保存
+        try {
+            localStorage.setItem('postCheckState', postCheck.getState().toString());
+            localStorage.setItem('jsonCheckState', jsonCheck.getState().toString());
+        } catch (err) {
+            console.error('Failed to save POST settings:', err);
+        }
+        
+        // Show console automatically when running program
+        if (mConsole && typeof mConsole.show === 'function') {
+            mConsole.show();
+        }
+        
+        // CGI実行（GETパラメータ付き）
+        runPhpCgi(
+            APP_STATE.CURRENT_FILE.path,
+            getParams,
+            api,
+            APP_STATE.CURRENT_FILE,
+            (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE),
+            mConsole,
+            {
+                method: method,
+                POSTParams: postParams,
+                contentType: contentType,
+            }
+        );
+    }
+}
 
 async function main(){
     // localStorageから実行モードを復元
@@ -187,80 +304,10 @@ async function main(){
     const runButton = editor.generateButton(
         editorEditor.menu.left,
         "▶実行",  // 実行アイコン
-        (e) => {
-            if (!APP_STATE.CURRENT_FILE) {
-                console.warn("No file is currently open");
-                return;
-            }
-            console.log("Run: " + APP_STATE.CURRENT_FILE.path);
-            // dictMenuからGETパラメータを取得
-            const getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
-            // dictMenuからPOSTパラメータを取得
-            const postParams = postDictMenu ? postDictMenu.getItemsAsObject() : {};
-            // POST リクエストするかどうか
-            const method = postCheck.getState() ? "POST" : "GET";
-            // コンテンツタイプ
-            const contentType = jsonCheck.getState() ? "application/json" : "application/x-www-form-urlencoded";
-            
-            if (APP_STATE.RUN_MODE === 'WEB_MODE') {
-                // Webページモード: 別タブで実行
-                console.log("Run as new tab (Web page mode)");
-                APP_STATE.RUN_BROWSER_TAB = openInOtherWindow(
-                    APP_STATE.CURRENT_FILE, 
-                    (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE),
-                    APP_STATE.RUN_BROWSER_TAB,
-                    CONFIG.FILE_PAGE_BASE_URL,
-                    APP_STATE.USER_ID,
-                    getParams
-                );
-            } else {
-                // デバッグモード: コンソールに出力
-                console.log("Run in debug mode with GET params:", getParams);
-                
-                // GETパラメータをlocalStorageに保存
-                try {
-                    localStorage.setItem('getParams', JSON.stringify(getParams));
-                } catch (err) {
-                    console.error('Failed to save GET parameters:', err);
-                }
-                
-                // POSTパラメータをlocalStorageに保存
-                try {
-                    localStorage.setItem('postParams', JSON.stringify(postParams));
-                } catch (err) {
-                    console.error('Failed to save POST parameters:', err);
-                }
-                
-                // POST設定（POSTチェックボックス、JSONチェックボックス）を保存
-                try {
-                    localStorage.setItem('postCheckState', postCheck.getState().toString());
-                    localStorage.setItem('jsonCheckState', jsonCheck.getState().toString());
-                } catch (err) {
-                    console.error('Failed to save POST settings:', err);
-                }
-                
-                // Show console automatically when running program
-                if (mConsole && typeof mConsole.show === 'function') {
-                    mConsole.show();
-                }
-                
-                // CGI実行（GETパラメータ付き）
-                runPhpCgi(
-                    APP_STATE.CURRENT_FILE.path,
-                    getParams,
-                    api,
-                    APP_STATE.CURRENT_FILE,
-                    (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE),
-                    mConsole,
-                    {
-                        method: method,
-                        POSTParams: postParams,
-                        contentType: contentType,
-                    }
-                );
-            }
+        async (e) => {
+            await executeCurrentFile();
         },
-        "Webページモード: 別タブで実行 | デバッグモード: コンソール出力"
+        "Webページモード: プレビューで実行 | API開発モード: コンソール出力"
     );
     editorEditor.menu.left.items.push(runButton);
 
@@ -419,42 +466,9 @@ async function main(){
                 () => pushSaveButton(APP_STATE.CURRENT_FILE, (path, content) => 
                     saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE)
                 ),
-                () => {
-                    // F10キーで実行：RUN_MODEに応じて動作を変更
-                    const getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
-                    const postParams = postDictMenu ? postDictMenu.getItemsAsObject() : {};
-                    const method = postCheck.getState() ? "POST" : "GET";
-                    const contentType = jsonCheck.getState() ? "application/json" : "application/x-www-form-urlencoded";
-                    
-                    if (APP_STATE.RUN_MODE === 'WEB_MODE') {
-                        // Webページモード: 別タブで実行
-                        APP_STATE.RUN_BROWSER_TAB = openInOtherWindow(
-                            APP_STATE.CURRENT_FILE, 
-                            (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE),
-                            APP_STATE.RUN_BROWSER_TAB,
-                            CONFIG.FILE_PAGE_BASE_URL,
-                            APP_STATE.USER_ID,
-                            getParams
-                        );
-                    } else {
-                        // API開発モード: コンソールに出力
-                        if (mConsole && typeof mConsole.show === 'function') {
-                            mConsole.show();
-                        }
-                        runPhpCgi(
-                            APP_STATE.CURRENT_FILE.path,
-                            getParams,
-                            api,
-                            APP_STATE.CURRENT_FILE,
-                            (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE),
-                            mConsole,
-                            {
-                                method: method,
-                                POSTParams: postParams,
-                                contentType: contentType,
-                            }
-                        );
-                    }
+                async () => {
+                    // F10キーで実行：共通の実行関数を呼び出し
+                    await executeCurrentFile();
                 }
             ),
             api
@@ -574,7 +588,7 @@ async function main(){
 
     // POST parameters setup
     // POST checkbox
-    let postCheck = editor.generateCheckbox(
+    postCheck = editor.generateCheckbox(
         null,
         "POSTリクエスト",
         false,
@@ -586,7 +600,7 @@ async function main(){
     dictMenuTab.addContent(postCheck);
 
     // JSON checkbox
-    let jsonCheck = editor.generateCheckbox(
+    jsonCheck = editor.generateCheckbox(
         null,
         "JSON形式で送信",
         false,
@@ -597,7 +611,7 @@ async function main(){
     dictMenuTab.addContent(jsonCheck);
     jsonCheck.setEnabled(false); // 初期状態では無効化
 
-    let postDictMenu = editor.createDictMenu(dictMenuTab, {});
+    postDictMenu = editor.createDictMenu(dictMenuTab, {});
     postDictMenu.setTitle("POSTパラメータ (Webページモードでは送信されません)");
     postDictMenu.addButton();
     dictMenuTab.addContent(postDictMenu);

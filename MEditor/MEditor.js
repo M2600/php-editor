@@ -994,34 +994,33 @@ export class MEditor {
         while (currentElement && currentElement !== this.page.element) {
             // Check if this is a tab content
             if (currentElement.classList.contains(this.CLASS_NAME_PREFIX + "tab-content")) {
-                // Find the tab ID from the parent tab element
-                let tabElement = currentElement.parentElement;
-                if (tabElement && tabElement.classList.contains(this.CLASS_NAME_PREFIX + "tab")) {
-                    // Search for tab container and find the correct position
-                    let containerElement = tabElement.parentElement?.parentElement;
-                    if (containerElement && containerElement.classList.contains(this.CLASS_NAME_PREFIX + "tab-content-area")) {
-                        tabContainer = containerElement.parentElement;
-                        // Find tab ID by searching in the container's tabs array
-                        // Check all possible tab containers
-                        const checkContainer = (container) => {
-                            if (!container) return false;
-                            for (let tab of container.tabs || []) {
-                                if (tab.content && tab.content.element === currentElement) {
-                                    tabId = tab.id;
-                                    return true;
-                                }
-                            }
-                            return false;
-                        };
-                        
-                        if (this.page.main?.left && checkContainer(this.page.main.left)) {
-                            // Found in left panel
-                        } else if (this.page.main?.right && checkContainer(this.page.main.right)) {
-                            // Found in right panel
-                        } else if (this.page.main?.mid?.container?.bottom && checkContainer(this.page.main.mid.container.bottom)) {
-                            // Found in bottom panel
+                // Find tab ID by searching in all possible tab containers
+                const checkContainer = (panel, panelName) => {
+                    const container = panel?.tabContainer;
+                    if (!container || !container.tabs) return false;
+                    for (let tab of container.tabs) {
+                        if (tab.content && tab.content.element === currentElement) {
+                            tabId = tab.id;
+                            tabContainer = container;
+                            panelPosition = panelName;  // Set panel position when tab is found
+                            return true;
                         }
                     }
+                    return false;
+                };
+                
+                // Search in all panels
+                if (this.page.main?.left && checkContainer(this.page.main.left, 'left')) {
+                    // Found in left panel
+                } else if (this.page.main?.right && checkContainer(this.page.main.right, 'right')) {
+                    // Found in right panel
+                } else if (this.page.main?.mid?.container?.bottom && checkContainer(this.page.main.mid.container.bottom, 'bottom')) {
+                    // Found in bottom panel
+                }
+                
+                // If we found the tab, we can stop searching
+                if (tabId) {
+                    break;
                 }
             }
             
@@ -1046,15 +1045,9 @@ export class MEditor {
         }
         
         // Activate the tab if found
-        if (tabId) {
+        if (tabId && tabContainer) {
             this.DEBUG && console.log("Activating tab:", tabId);
-            if (panelPosition === 'left' && this.page.main?.left) {
-                this.page.main.left.activateTab(tabId);
-            } else if (panelPosition === 'right' && this.page.main?.right) {
-                this.page.main.right.activateTab(tabId);
-            } else if (panelPosition === 'bottom' && this.page.main?.mid?.container?.bottom) {
-                this.page.main.mid.container.bottom.activateTab(tabId);
-            }
+            tabContainer.activateTab(tabId);
         }
     }
 
@@ -3762,6 +3755,9 @@ export class MEditor {
         previewer.setTitle = (title) => {
             previewer.title.element.innerHTML = title;
         };
+        previewer.show = () => {
+            this.showComponent(previewer);
+        }
 
         return previewer;
     }
@@ -4043,6 +4039,8 @@ export class MEditor {
         container.element.classList.add(this.CLASS_NAME_PREFIX + "tab-container");
         if(parentObj && parentObj.element){
             parentObj.element.appendChild(container.element);
+            // Store reference to tab container on parent object
+            parentObj.tabContainer = container;
         }
 
         let tabBar = {};

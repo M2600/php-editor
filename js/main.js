@@ -162,8 +162,6 @@ async function main(){
 
     
 
-    mConsole = editor.console(editor.page.main.mid.container.bottom);
-
     const editorEditor = editor.workPlace(editor.page.main.mid.container.main);
     editor.wp = editorEditor;
 
@@ -625,6 +623,41 @@ async function main(){
     if (savedPostCheckState !== 'true') {
         postDictMenu.setEnabled(false);
     }
+
+    const postDictContainer = document.createElement("div");
+    postDictContainer.style.display = "flex";
+    postDictContainer.style.flexDirection = "column";
+    postDictContainer.style.height = "100%";
+    postDictContainer.appendChild(postCheck.element);
+    postDictContainer.appendChild(jsonCheck.element);
+    postDictContainer.appendChild(postDictMenu.element);
+
+
+
+    // Console setup
+    mConsole = editor.console();
+    mConsole.setTitle("実行ログ");
+    dictMenuTab.addContent(mConsole);
+
+
+    const vstack = editor.createVStack(null, {
+        count: 3,
+        unit: 'percent',
+        sizes: [20, 30, 50],
+        minWidth: 120,
+        sashSize: 10,
+        saveKey: 'debugMenuPanelVStack',
+        onResizeEnd: ({ ratios, px, percent }) => {
+            console.log('VStack resized:', ratios, px, percent);
+        }
+    });
+    
+    vstack.getPane(0).element.appendChild(dictMenu.element);
+    vstack.getPane(1).element.appendChild(postDictContainer);
+    vstack.getPane(2).element.appendChild(mConsole.element);
+    dictMenuTab.setContent(vstack);
+
+
 
     // Chat setup
     chat = editor.createChat(chatTab, {});

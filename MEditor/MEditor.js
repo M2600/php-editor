@@ -1083,6 +1083,14 @@ export class MEditor {
     }
 
 
+
+    // layout components
+    
+    
+
+
+
+
     generateButton(parentObj, text, clickAction, tooltip="") {
         let button = {};
         button.element = document.createElement("button");
@@ -1989,13 +1997,21 @@ export class MEditor {
         let mConsole = {};
         mConsole.element = document.createElement("div");
         mConsole.element.classList.add(this.CLASS_NAME_PREFIX + "console");
-        parentObj.element.appendChild(mConsole.element);
+        if (parentObj && parentObj.element) {
+            parentObj.element.appendChild(mConsole.element);
+        }
 
         let consoleMenu = {};
         consoleMenu.element = document.createElement("div");
         consoleMenu.element.classList.add(this.CLASS_NAME_PREFIX + "console-menu");
         mConsole.element.appendChild(consoleMenu.element);
         mConsole.menu = consoleMenu;
+
+        const title = document.createElement("div");
+        title.classList.add(this.CLASS_NAME_PREFIX + "console-title");
+        title.innerHTML = "Console";
+        consoleMenu.element.appendChild(title);
+        mConsole.title = title;
 
         let consoleContent = {};
         consoleContent.element = document.createElement("div");
@@ -2074,10 +2090,579 @@ export class MEditor {
             this.showComponent(mConsole);
         }
 
-
-
+        /**
+         * Set console title
+         * @param {string} title 
+         */
+        mConsole.setTitle = (title) => {
+            mConsole.title.innerHTML = title;
+        }
 
         return mConsole;
+    }
+    
+    /**
+     * Create a vertical stack layout with N resizable panes (top to bottom).
+     * Each pane is separated by a horizontal sash that can be dragged to resize.
+     *
+     * Inputs:
+     * - parentObj: target container (object with .element or an HTMLElement)
+     * - options:
+     *   - count: number of panes (default 2)
+     *   - sizes: initial sizes. When unit='ratio', provide weights (e.g., [2,1,1]).
+     *            When unit='percent', provide percentages (e.g., [50,30,20]).
+     *            When unit='px', provide pixel heights (container-dependent).
+     *   - unit: 'ratio' | 'percent' | 'px' (default 'ratio')
+     *   - minHeight: min pane height in px (default from pageSettings.split.minHeight)
+     *   - sashSize: sash thickness in px (default from pageSettings.splitSash.width)
+     *   - preserveProportionsOnResize: if true, maintains ratios on container resize (default true)
+     *   - saveKey: localStorage key to persist ratios between sessions (optional)
+     *   - onResizeEnd: callback({ratios, px, percent}) after user finishes a drag
+     *
+     * Outputs:
+     * - { element, panes[], getSizes(unit), setSizes(values, unit), getPane(i), destroy() }
+     */
+    createVStack(parentObj = null, options = {}) {
+        const parentEl = parentObj?.element instanceof HTMLElement
+            ? parentObj.element
+            : (parentObj instanceof HTMLElement ? parentObj : this.page?.element);
+        if (!parentEl) {
+            console.error("createVStack: invalid parent");
+            return null;
+        }
+
+        const cfg = Object.assign({
+            count: 2,
+            sizes: null,
+            unit: 'ratio', // ratio | percent | px
+            minHeight: this.pageSettings?.split?.minHeight ?? 60,
+            sashSize: this.pageSettings?.splitSash?.width ?? 10,
+            preserveProportionsOnResize: true,
+            saveKey: null,
+            onResizeEnd: null,
+        }, options || {});
+
+        const container = {};
+        container.element = document.createElement('div');
+        container.element.classList.add(this.CLASS_NAME_PREFIX + 'vstack-container');
+        // inline styles to avoid CSS dependency
+        container.element.style.position = 'relative';
+        container.element.style.width = '100%';
+        container.element.style.height = '100%';
+        parentEl.appendChild(container.element);
+
+        // Internal state
+        const count = Math.max(1, parseInt(cfg.count || 2));
+        const sashSize = Math.max(0, parseInt(cfg.sashSize));
+        const minHeight = Math.max(0, parseInt(cfg.minHeight));
+        const sashes = [];
+        const panes = [];
+
+        // Helpers
+        const totalAvailable = () => {
+            const h = container.element.clientHeight;
+            return Math.max(0, h - (count - 1) * sashSize);
+        };
+
+        const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+
+        const toRatios = (values, unit) => {
+            let ratios = [];
+            if (!values || values.length !== count) {
+                // equal split
+                ratios = new Array(count).fill(1 / count);
+                return ratios;
+            }
+            unit = unit || cfg.unit || 'ratio';
+            if (unit === 'ratio') {
+                const sum = values.reduce((a, b) => a + (Number(b) || 0), 0) || 1;
+                ratios = values.map(v => (Number(v) || 0) / sum);
+            } else if (unit === 'percent') {
+                ratios = values.map(v => (Number(v) || 0) / 100);
+                const sum = ratios.reduce((a, b) => a + b, 0) || 1;
+                ratios = ratios.map(r => r / sum);
+            } else if (unit === 'px') {
+                const avail = totalAvailable() || 1;
+                ratios = values.map(v => (Number(v) || 0) / avail);
+                const sum = ratios.reduce((a, b) => a + b, 0) || 1;
+                ratios = ratios.map(r => r / sum);
+            } else {
+                console.warn('Unknown unit for sizes:', unit);
+                ratios = new Array(count).fill(1 / count);
+            }
+            return ratios;
+        };
+
+        const fromRatios = (ratios, unit) => {
+            unit = unit || 'ratio';
+            const avail = Math.max(1, totalAvailable());
+            if (unit === 'ratio') return ratios.slice();
+            if (unit === 'percent') return ratios.map(r => r * 100);
+            if (unit === 'px') return ratios.map(r => Math.round(r * avail));
+            return ratios.slice();
+        };
+
+        // Load/save ratios
+        const saveRatios = () => {
+            if (!cfg.saveKey) return;
+            try { localStorage.setItem(cfg.saveKey, JSON.stringify(container._ratios)); } catch {}
+        };
+        const loadRatios = () => {
+            if (!cfg.saveKey) return null;
+            try {
+                const raw = localStorage.getItem(cfg.saveKey);
+                if (!raw) return null;
+                const arr = JSON.parse(raw);
+                if (Array.isArray(arr) && arr.length === count) return arr;
+            } catch {}
+            return null;
+        };
+
+        // Initialize ratios
+        container._ratios = loadRatios() || toRatios(cfg.sizes, cfg.unit);
+
+        // Build panes
+        for (let i = 0; i < count; i++) {
+            const pane = {};
+            pane.element = document.createElement('div');
+            pane.element.classList.add(this.CLASS_NAME_PREFIX + 'split-h');
+            pane.element.classList.add(this.CLASS_NAME_PREFIX + 'vstack-pane');
+            // absolute placement
+            pane.element.style.position = 'absolute';
+            pane.element.style.left = '0';
+            pane.element.style.width = '100%';
+            container.element.appendChild(pane.element);
+            panes.push(pane);
+        }
+
+        // Build sashes (between panes)
+        for (let i = 0; i < count - 1; i++) {
+            const sash = {};
+            sash.index = i; // between pane i and i+1
+            sash.element = document.createElement('div');
+            sash.element.classList.add(this.CLASS_NAME_PREFIX + 'sash-h');
+            sash.element.style.height = sashSize + 'px';
+            container.element.appendChild(sash.element);
+
+            // Drag logic
+            let startY = 0;
+            let startHeights = null; // [upperPx, lowerPx]
+            const onMove = (e) => {
+                const avail = totalAvailable();
+                const dy = e.clientY - startY;
+                let upper = startHeights[0] + dy;
+                let lower = startHeights[1] - dy;
+                // Enforce minimums
+                const otherSum = fromRatios(container._ratios, 'px').reduce((a, b, idx) => {
+                    if (idx === i || idx === i + 1) return a;
+                    return a + b;
+                }, 0);
+                // Clamp within bounds
+                upper = clamp(upper, minHeight, avail - otherSum - minHeight);
+                lower = clamp(lower, minHeight, avail - otherSum - minHeight);
+                const newUpperRatio = upper / avail;
+                const newLowerRatio = lower / avail;
+                // Keep others as-is; re-normalize remaining space precisely across i and i+1
+                const ratios = container._ratios.slice();
+                ratios[i] = newUpperRatio;
+                ratios[i + 1] = newLowerRatio;
+                // Normalize i and i+1 so total stays 1 - others
+                const others = container._ratios.reduce((a, r, idx) => (idx === i || idx === i + 1 ? a : a + r), 0);
+                const remain = 1 - others;
+                const sumPair = newUpperRatio + newLowerRatio || 1e-6;
+                ratios[i] = remain * (newUpperRatio / sumPair);
+                ratios[i + 1] = remain * (newLowerRatio / sumPair);
+                container._ratios = ratios;
+                layout();
+            };
+            const onUp = (e) => {
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onUp);
+                document.body.style.userSelect = '';
+                saveRatios();
+                if (typeof cfg.onResizeEnd === 'function') {
+                    cfg.onResizeEnd({
+                        ratios: container._ratios.slice(),
+                        px: fromRatios(container._ratios, 'px'),
+                        percent: fromRatios(container._ratios, 'percent')
+                    });
+                }
+            };
+            sash.element.addEventListener('mousedown', (e) => {
+                // Prevent text selection while resizing
+                document.body.style.userSelect = 'none';
+                startY = e.clientY;
+                const px = fromRatios(container._ratios, 'px');
+                startHeights = [px[i], px[i + 1]];
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onUp);
+            });
+
+            sashes.push(sash);
+        }
+
+        // Layout computation
+        const layout = () => {
+            const avail = totalAvailable();
+            if (avail <= 0) return;
+            // Ensure ratios are valid and respect minHeight when possible
+            let pxHeights = fromRatios(container._ratios, 'px');
+            // Enforce minHeight pass
+            const deficit = (need, give) => {
+                // Try to pull from give indices proportionally
+                let totalGive = give.reduce((a, idx) => a + pxHeights[idx], 0) || 1;
+                give.forEach(idx => {
+                    const cut = (pxHeights[idx] / totalGive) * need;
+                    pxHeights[idx] = Math.max(minHeight, pxHeights[idx] - cut);
+                });
+            };
+            // First raise any below minHeight
+            let needSum = 0;
+            const tooSmall = [];
+            const large = [];
+            for (let i = 0; i < count; i++) {
+                if (pxHeights[i] < minHeight) {
+                    needSum += (minHeight - pxHeights[i]);
+                    tooSmall.push(i);
+                } else {
+                    large.push(i);
+                }
+            }
+            if (needSum > 0 && large.length) {
+                deficit(needSum, large);
+                // Recompute need after redistribution
+                for (let i of tooSmall) pxHeights[i] = Math.max(minHeight, pxHeights[i]);
+            }
+            // Normalize back to avail
+            const sumPx = pxHeights.reduce((a, b) => a + b, 0) || 1;
+            const scale = avail / sumPx;
+            pxHeights = pxHeights.map(v => v * scale);
+            // Update ratios from px to keep consistency
+            container._ratios = toRatios(pxHeights, 'px');
+
+            // Position panes and sashes
+            let y = 0;
+            for (let i = 0; i < count; i++) {
+                const h = Math.max(minHeight, Math.round(pxHeights[i]));
+                const pane = panes[i].element;
+                pane.style.top = y + 'px';
+                pane.style.height = h + 'px';
+                if (i < sashes.length) {
+                    const sash = sashes[i].element;
+                    // center sash on the boundary
+                    sash.style.top = Math.round(y + h - sashSize / 2) + 'px';
+                }
+                y += h;
+                if (i < sashes.length) y += sashSize;
+            }
+        };
+
+        // Attach a resize observer to maintain layout
+        const ro = new ResizeObserver(() => {
+            if (cfg.preserveProportionsOnResize) {
+                // ratios already preserve proportions; just re-layout
+                layout();
+            } else {
+                // Keep px fixed as much as possible; convert to px and re-derive ratios
+                const px = fromRatios(container._ratios, 'px');
+                container._ratios = toRatios(px, 'px');
+                layout();
+            }
+        });
+        ro.observe(container.element);
+        container._resizeObserver = ro;
+
+        // Public API
+        container.panes = panes;
+        container.getPane = (i) => panes[i] || null;
+        container.getSizes = (unit = 'ratio') => fromRatios(container._ratios, unit);
+        container.setSizes = (values, unit = cfg.unit || 'ratio') => {
+            container._ratios = toRatios(values, unit);
+            saveRatios();
+            layout();
+        };
+        container.destroy = () => {
+            try { ro.disconnect(); } catch {}
+            container.element.remove();
+        };
+
+        // Initial layout after mount
+        // Defer to ensure container has computed size
+        setTimeout(layout, 0);
+
+        return container;
+    }
+    
+    /**
+     * Create a horizontal stack layout with N resizable panes (left to right).
+     * Each pane is separated by a vertical sash that can be dragged to resize.
+     *
+     * Inputs:
+     * - parentObj: target container (object with .element or an HTMLElement)
+     * - options:
+     *   - count: number of panes (default 2)
+     *   - sizes: initial sizes. When unit='ratio', provide weights (e.g., [2,1,1]).
+     *            When unit='percent', provide percentages (e.g., [50,30,20]).
+     *            When unit='px', provide pixel widths (container-dependent).
+     *   - unit: 'ratio' | 'percent' | 'px' (default 'ratio')
+     *   - minWidth: min pane width in px (default from pageSettings.split.minWidth)
+     *   - sashSize: sash thickness in px (default from pageSettings.splitSash.width)
+     *   - preserveProportionsOnResize: if true, maintains ratios on container resize (default true)
+     *   - saveKey: localStorage key to persist ratios between sessions (optional)
+     *   - onResizeEnd: callback({ratios, px, percent}) after user finishes a drag
+     *
+     * Outputs:
+     * - { element, panes[], getSizes(unit), setSizes(values, unit), getPane(i), destroy() }
+     */
+    createHStack(parentObj = null, options = {}) {
+        const parentEl = parentObj?.element instanceof HTMLElement
+            ? parentObj.element
+            : (parentObj instanceof HTMLElement ? parentObj : this.page?.element);
+        if (!parentEl) {
+            console.error("createHStack: invalid parent");
+            return null;
+        }
+
+        const cfg = Object.assign({
+            count: 2,
+            sizes: null,
+            unit: 'ratio', // ratio | percent | px
+            minWidth: this.pageSettings?.split?.minWidth ?? 100,
+            sashSize: this.pageSettings?.splitSash?.width ?? 10,
+            preserveProportionsOnResize: true,
+            saveKey: null,
+            onResizeEnd: null,
+        }, options || {});
+
+        const container = {};
+        container.element = document.createElement('div');
+        container.element.classList.add(this.CLASS_NAME_PREFIX + 'hstack-container');
+        container.element.style.position = 'relative';
+        container.element.style.width = '100%';
+        container.element.style.height = '100%';
+        parentEl.appendChild(container.element);
+
+        // Internal state
+        const count = Math.max(1, parseInt(cfg.count || 2));
+        const sashSize = Math.max(0, parseInt(cfg.sashSize));
+        const minWidth = Math.max(0, parseInt(cfg.minWidth));
+        const sashes = [];
+        const panes = [];
+
+        // Helpers
+        const totalAvailable = () => {
+            const w = container.element.clientWidth;
+            return Math.max(0, w - (count - 1) * sashSize);
+        };
+        const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+
+        const toRatios = (values, unit) => {
+            let ratios = [];
+            if (!values || values.length !== count) {
+                ratios = new Array(count).fill(1 / count);
+                return ratios;
+            }
+            unit = unit || cfg.unit || 'ratio';
+            if (unit === 'ratio') {
+                const sum = values.reduce((a, b) => a + (Number(b) || 0), 0) || 1;
+                ratios = values.map(v => (Number(v) || 0) / sum);
+            } else if (unit === 'percent') {
+                ratios = values.map(v => (Number(v) || 0) / 100);
+                const sum = ratios.reduce((a, b) => a + b, 0) || 1;
+                ratios = ratios.map(r => r / sum);
+            } else if (unit === 'px') {
+                const avail = totalAvailable() || 1;
+                ratios = values.map(v => (Number(v) || 0) / avail);
+                const sum = ratios.reduce((a, b) => a + b, 0) || 1;
+                ratios = ratios.map(r => r / sum);
+            } else {
+                console.warn('Unknown unit for sizes:', unit);
+                ratios = new Array(count).fill(1 / count);
+            }
+            return ratios;
+        };
+
+        const fromRatios = (ratios, unit) => {
+            unit = unit || 'ratio';
+            const avail = Math.max(1, totalAvailable());
+            if (unit === 'ratio') return ratios.slice();
+            if (unit === 'percent') return ratios.map(r => r * 100);
+            if (unit === 'px') return ratios.map(r => Math.round(r * avail));
+            return ratios.slice();
+        };
+
+        // Load/save ratios
+        const saveRatios = () => {
+            if (!cfg.saveKey) return;
+            try { localStorage.setItem(cfg.saveKey, JSON.stringify(container._ratios)); } catch {}
+        };
+        const loadRatios = () => {
+            if (!cfg.saveKey) return null;
+            try {
+                const raw = localStorage.getItem(cfg.saveKey);
+                if (!raw) return null;
+                const arr = JSON.parse(raw);
+                if (Array.isArray(arr) && arr.length === count) return arr;
+            } catch {}
+            return null;
+        };
+
+        container._ratios = loadRatios() || toRatios(cfg.sizes, cfg.unit);
+
+        // Build panes
+        for (let i = 0; i < count; i++) {
+            const pane = {};
+            pane.element = document.createElement('div');
+            pane.element.classList.add(this.CLASS_NAME_PREFIX + 'split-v');
+            pane.element.classList.add(this.CLASS_NAME_PREFIX + 'hstack-pane');
+            pane.element.style.position = 'absolute';
+            pane.element.style.top = '0';
+            pane.element.style.height = '100%';
+            container.element.appendChild(pane.element);
+            panes.push(pane);
+        }
+
+        // Build sashes (between panes)
+        for (let i = 0; i < count - 1; i++) {
+            const sash = {};
+            sash.index = i; // between pane i and i+1
+            sash.element = document.createElement('div');
+            sash.element.classList.add(this.CLASS_NAME_PREFIX + 'sash-v');
+            sash.element.style.width = sashSize + 'px';
+            container.element.appendChild(sash.element);
+
+            // Drag logic
+            let startX = 0;
+            let startWidths = null; // [leftPx, rightPx]
+            const onMove = (e) => {
+                const avail = totalAvailable();
+                const dx = e.clientX - startX;
+                let left = startWidths[0] + dx;
+                let right = startWidths[1] - dx;
+                // Enforce minimums
+                const otherSum = fromRatios(container._ratios, 'px').reduce((a, b, idx) => {
+                    if (idx === i || idx === i + 1) return a;
+                    return a + b;
+                }, 0);
+                // Clamp within bounds
+                left = clamp(left, minWidth, avail - otherSum - minWidth);
+                right = clamp(right, minWidth, avail - otherSum - minWidth);
+                const newLeftRatio = left / avail;
+                const newRightRatio = right / avail;
+                // Keep others as-is; re-normalize remaining space precisely across i and i+1
+                const ratios = container._ratios.slice();
+                ratios[i] = newLeftRatio;
+                ratios[i + 1] = newRightRatio;
+                const others = container._ratios.reduce((a, r, idx) => (idx === i || idx === i + 1 ? a : a + r), 0);
+                const remain = 1 - others;
+                const sumPair = newLeftRatio + newRightRatio || 1e-6;
+                ratios[i] = remain * (newLeftRatio / sumPair);
+                ratios[i + 1] = remain * (newRightRatio / sumPair);
+                container._ratios = ratios;
+                layout();
+            };
+            const onUp = (e) => {
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onUp);
+                document.body.style.userSelect = '';
+                saveRatios();
+                if (typeof cfg.onResizeEnd === 'function') {
+                    cfg.onResizeEnd({
+                        ratios: container._ratios.slice(),
+                        px: fromRatios(container._ratios, 'px'),
+                        percent: fromRatios(container._ratios, 'percent')
+                    });
+                }
+            };
+            sash.element.addEventListener('mousedown', (e) => {
+                document.body.style.userSelect = 'none';
+                startX = e.clientX;
+                const px = fromRatios(container._ratios, 'px');
+                startWidths = [px[i], px[i + 1]];
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onUp);
+            });
+
+            sashes.push(sash);
+        }
+
+        // Layout computation
+        const layout = () => {
+            const avail = totalAvailable();
+            if (avail <= 0) return;
+            let pxWidths = fromRatios(container._ratios, 'px');
+            // Enforce minWidth
+            const deficit = (need, give) => {
+                let totalGive = give.reduce((a, idx) => a + pxWidths[idx], 0) || 1;
+                give.forEach(idx => {
+                    const cut = (pxWidths[idx] / totalGive) * need;
+                    pxWidths[idx] = Math.max(minWidth, pxWidths[idx] - cut);
+                });
+            };
+            let needSum = 0;
+            const tooSmall = [];
+            const large = [];
+            for (let i = 0; i < count; i++) {
+                if (pxWidths[i] < minWidth) {
+                    needSum += (minWidth - pxWidths[i]);
+                    tooSmall.push(i);
+                } else {
+                    large.push(i);
+                }
+            }
+            if (needSum > 0 && large.length) {
+                deficit(needSum, large);
+                for (let i of tooSmall) pxWidths[i] = Math.max(minWidth, pxWidths[i]);
+            }
+            const sumPx = pxWidths.reduce((a, b) => a + b, 0) || 1;
+            const scale = avail / sumPx;
+            pxWidths = pxWidths.map(v => v * scale);
+            container._ratios = toRatios(pxWidths, 'px');
+
+            let x = 0;
+            for (let i = 0; i < count; i++) {
+                const w = Math.max(minWidth, Math.round(pxWidths[i]));
+                const pane = panes[i].element;
+                pane.style.left = x + 'px';
+                pane.style.width = w + 'px';
+                if (i < sashes.length) {
+                    const sash = sashes[i].element;
+                    sash.style.left = Math.round(x + w - sashSize / 2) + 'px';
+                }
+                x += w;
+                if (i < sashes.length) x += sashSize;
+            }
+        };
+
+        // Resize observer
+        const ro = new ResizeObserver(() => {
+            if (cfg.preserveProportionsOnResize) {
+                layout();
+            } else {
+                const px = fromRatios(container._ratios, 'px');
+                container._ratios = toRatios(px, 'px');
+                layout();
+            }
+        });
+        ro.observe(container.element);
+        container._resizeObserver = ro;
+
+        // Public API
+        container.panes = panes;
+        container.getPane = (i) => panes[i] || null;
+        container.getSizes = (unit = 'ratio') => fromRatios(container._ratios, unit);
+        container.setSizes = (values, unit = cfg.unit || 'ratio') => {
+            container._ratios = toRatios(values, unit);
+            saveRatios();
+            layout();
+        };
+        container.destroy = () => {
+            try { ro.disconnect(); } catch {}
+            container.element.remove();
+        };
+
+        setTimeout(layout, 0);
+        return container;
     }
     
 

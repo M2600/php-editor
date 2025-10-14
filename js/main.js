@@ -111,6 +111,7 @@ async function executeCurrentFile() {
         // プレビューiframeにURLを設定
         if (APP_STATE.WEB_PREVIEWER) {
             APP_STATE.WEB_PREVIEWER.setURL(previewUrl);
+            APP_STATE.WEB_PREVIEWER.setTitle(APP_STATE.CURRENT_FILE.name);
             APP_STATE.WEB_PREVIEWER.show();
             console.log("Preview URL set:", previewUrl);
         } else {
@@ -559,14 +560,14 @@ async function main(){
     // Right panel components
     let tabContainer = editor.tab(editor.page.main.right);
 
-    let dictMenuTab = tabContainer.createTab("デバッグメニュー");
+    let dictMenuTab = tabContainer.createTab("API実行");
     let chatTab = tabContainer.createTab("AI Chat");
     // 初期表示タブをGET Parametersタブに設定
     tabContainer.activateTab(dictMenuTab.id);
 
     // GET Parameters setup
     dictMenu = editor.createDictMenu(dictMenuTab, {});
-    dictMenu.setTitle("GETパラメータ (実行時に送信されます)");
+    dictMenu.setTitle("GETパラメータ");
     dictMenu.addButton();
     dictMenuTab.setContent(dictMenu);
     
@@ -612,7 +613,7 @@ async function main(){
     jsonCheck.setEnabled(false); // 初期状態では無効化
 
     postDictMenu = editor.createDictMenu(dictMenuTab, {});
-    postDictMenu.setTitle("POSTパラメータ (Webページモードでは送信されません)");
+    postDictMenu.setTitle("POSTパラメータ");
     postDictMenu.addButton();
     dictMenuTab.addContent(postDictMenu);
     
@@ -699,9 +700,9 @@ async function main(){
 
 
     
-    const webPreviewTab = tabContainer.createTab("Webプレビュー");
-    const webPreviewer = editor.webPreviewer(webPreviewTab, "/",{});
-    webPreviewer.setTitle("Webプレビュー");
+    const webPreviewTab = tabContainer.createTab("実行結果");
+    const webPreviewer = editor.webPreviewer(webPreviewTab, "about:blank",{});
+    webPreviewer.setTitle("実行ボタンを押すと結果がここに表示されます");
     webPreviewTab.setContent(webPreviewer);
     APP_STATE.WEB_PREVIEWER = webPreviewer;
 

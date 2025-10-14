@@ -61,10 +61,10 @@ let fetchAIChat;
 
 async function main(){
     // localStorageから実行モードを復元
-    const savedRunMode = localStorage.getItem('runAsNewTab');
-    if (savedRunMode !== null) {
-        APP_STATE.RUN_AS_NEW_TAB = savedRunMode === 'true';
-        console.log("Run mode restored from localStorage:", APP_STATE.RUN_AS_NEW_TAB);
+    const savedRunMode = localStorage.getItem('runMode');
+    if (savedRunMode !== null && (savedRunMode === 'API_MODE' || savedRunMode === 'WEB_MODE')) {
+        APP_STATE.RUN_MODE = savedRunMode;
+        console.log("Run mode restored from localStorage:", APP_STATE.RUN_MODE);
     }
 
     // AI APIをインポート
@@ -183,7 +183,7 @@ async function main(){
     );
     editorEditor.menu.left.items.push(saveButton);
     
-    // Run button (統合版: RUN_AS_NEW_TABに応じて動作を変更)
+    // Run button (統合版: RUN_MODEに応じて動作を変更)
     const runButton = editor.generateButton(
         editorEditor.menu.left,
         "▶実行",  // 実行アイコン
@@ -202,7 +202,7 @@ async function main(){
             // コンテンツタイプ
             const contentType = jsonCheck.getState() ? "application/json" : "application/x-www-form-urlencoded";
             
-            if (APP_STATE.RUN_AS_NEW_TAB) {
+            if (APP_STATE.RUN_MODE === 'WEB_MODE') {
                 // Webページモード: 別タブで実行
                 console.log("Run as new tab (Web page mode)");
                 APP_STATE.RUN_BROWSER_TAB = openInOtherWindow(
@@ -268,16 +268,16 @@ async function main(){
     editorEditor.menu.left.items.push(editor.generateCheckbox(
         editorEditor.menu.left,
         "API開発モード",
-        !APP_STATE.RUN_AS_NEW_TAB,
+        APP_STATE.RUN_MODE === 'API_MODE',
         (checked) => {
-            APP_STATE.RUN_AS_NEW_TAB = !checked;
-            console.log("Run mode changed - RUN_AS_NEW_TAB:", APP_STATE.RUN_AS_NEW_TAB);
-            console.log(checked ? "→ API開発モード " : "→ 別タブ実行");
+            APP_STATE.RUN_MODE = checked ? 'API_MODE' : 'WEB_MODE';
+            console.log("Run mode changed - RUN_MODE:", APP_STATE.RUN_MODE);
+            console.log(checked ? "→ API開発モード " : "→ Webページモード");
             
             // localStorageに状態を保存
             try {
-                localStorage.setItem('runAsNewTab', !checked);
-                console.log("Run mode saved to localStorage:", !checked);
+                localStorage.setItem('runMode', APP_STATE.RUN_MODE);
+                console.log("Run mode saved to localStorage:", APP_STATE.RUN_MODE);
             } catch (err) {
                 console.error('Failed to save run mode:', err);
             }
@@ -420,15 +420,41 @@ async function main(){
                     saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE)
                 ),
                 () => {
+                    // F10キーで実行：RUN_MODEに応じて動作を変更
                     const getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
-                    APP_STATE.RUN_BROWSER_TAB = openInOtherWindow(
-                        APP_STATE.CURRENT_FILE, 
-                        (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE),
-                        APP_STATE.RUN_BROWSER_TAB,
-                        CONFIG.FILE_PAGE_BASE_URL,
-                        APP_STATE.USER_ID,
-                        getParams
-                    );
+                    const postParams = postDictMenu ? postDictMenu.getItemsAsObject() : {};
+                    const method = postCheck.getState() ? "POST" : "GET";
+                    const contentType = jsonCheck.getState() ? "application/json" : "application/x-www-form-urlencoded";
+                    
+                    if (APP_STATE.RUN_MODE === 'WEB_MODE') {
+                        // Webページモード: 別タブで実行
+                        APP_STATE.RUN_BROWSER_TAB = openInOtherWindow(
+                            APP_STATE.CURRENT_FILE, 
+                            (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE),
+                            APP_STATE.RUN_BROWSER_TAB,
+                            CONFIG.FILE_PAGE_BASE_URL,
+                            APP_STATE.USER_ID,
+                            getParams
+                        );
+                    } else {
+                        // API開発モード: コンソールに出力
+                        if (mConsole && typeof mConsole.show === 'function') {
+                            mConsole.show();
+                        }
+                        runPhpCgi(
+                            APP_STATE.CURRENT_FILE.path,
+                            getParams,
+                            api,
+                            APP_STATE.CURRENT_FILE,
+                            (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE),
+                            mConsole,
+                            {
+                                method: method,
+                                POSTParams: postParams,
+                                contentType: contentType,
+                            }
+                        );
+                    }
                 }
             ),
             api

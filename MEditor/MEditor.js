@@ -2097,7 +2097,6 @@ export class MEditor {
             out.appendChild(document.createElement("br"));
 
             if(mConsole.autoScroll) {
-                this.DEBUG && console.log("scrolling", out);
                 out.scrollTop = out.scrollHeight;
             }
         }

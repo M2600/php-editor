@@ -401,7 +401,7 @@ async function loadExplorer() {
         }),
     }).then(response => response.json())
         .then(data => {
-            DEBUG && console.log(data);
+            //DEBUG && console.log(data);
             if (data.status == "session_error") {
                 sessionError();
                 return;

@@ -1492,6 +1492,26 @@ i {
 
 
 
+.meditor-web-previewer {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+.meditor-web-previewer-menu {
+    display: flex;
+    width: 100%;
+    height: 2em;
+    overflow-x: hidden;
+}
+.meditor-web-previewer-iframe {
+    flex: 1;
+    border: none;
+    width: 100%;
+}
+
+
 
 /* ========== 差分適用確認ダイアログ ========== */
 .meditor-diff-apply-menu {

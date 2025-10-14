@@ -444,11 +444,20 @@ export class MEditor {
             // テキスト選択防止
             const prevUserSelect = document.body.style.userSelect;
             document.body.style.userSelect = "none";
+            // Block all iframes from capturing mouse events
+            const iframes = document.querySelectorAll('iframe');
+            iframes.forEach(iframe => {
+                iframe.style.pointerEvents = 'none';
+            });
             window.addEventListener("mousemove", leftSashMove);
             window.addEventListener("mouseup", function a (e){
                 window.removeEventListener("mousemove", leftSashMove);
                 window.removeEventListener("mouseup", a);
                 document.body.style.userSelect = prevUserSelect;
+                // Re-enable iframe pointer events
+                iframes.forEach(iframe => {
+                    iframe.style.pointerEvents = '';
+                });
                 // サイズ変更完了時にlocalStorageに保存
                 this.savePanelSizes();
             }.bind(this));
@@ -513,11 +522,20 @@ export class MEditor {
             // テキスト選択防止
             const prevUserSelect = document.body.style.userSelect;
             document.body.style.userSelect = "none";
+            // Block all iframes from capturing mouse events
+            const iframes = document.querySelectorAll('iframe');
+            iframes.forEach(iframe => {
+                iframe.style.pointerEvents = 'none';
+            });
             window.addEventListener("mousemove", midSashMove);
             window.addEventListener("mouseup", function a(e) {
                 window.removeEventListener("mousemove", midSashMove);
                 window.removeEventListener("mouseup", a);
                 document.body.style.userSelect = prevUserSelect;
+                // Re-enable iframe pointer events
+                iframes.forEach(iframe => {
+                    iframe.style.pointerEvents = '';
+                });
                 // サイズ変更完了時にlocalStorageに保存
                 this.savePanelSizes();
             }.bind(this));
@@ -564,11 +582,20 @@ export class MEditor {
             // テキスト選択防止
             const prevUserSelect = document.body.style.userSelect;
             document.body.style.userSelect = "none";
+            // Block all iframes from capturing mouse events
+            const iframes = document.querySelectorAll('iframe');
+            iframes.forEach(iframe => {
+                iframe.style.pointerEvents = 'none';
+            });
             window.addEventListener("mousemove", rightSashMove);
             window.addEventListener("mouseup", function a(e) {
                 window.removeEventListener("mousemove", rightSashMove);
                 window.removeEventListener("mouseup", a);
                 document.body.style.userSelect = prevUserSelect;
+                // Re-enable iframe pointer events
+                iframes.forEach(iframe => {
+                    iframe.style.pointerEvents = '';
+                });
                 // サイズ変更完了時にlocalStorageに保存
                 this.savePanelSizes();
             }.bind(this));
@@ -2279,6 +2306,11 @@ export class MEditor {
                 window.removeEventListener('mousemove', onMove);
                 window.removeEventListener('mouseup', onUp);
                 document.body.style.userSelect = '';
+                // Re-enable iframe pointer events
+                const iframes = document.querySelectorAll('iframe');
+                iframes.forEach(iframe => {
+                    iframe.style.pointerEvents = '';
+                });
                 saveRatios();
                 if (typeof cfg.onResizeEnd === 'function') {
                     cfg.onResizeEnd({
@@ -2289,8 +2321,13 @@ export class MEditor {
                 }
             };
             sash.element.addEventListener('mousedown', (e) => {
-                // Prevent text selection while resizing
+                // Prevent text selection and iframe interference while resizing
                 document.body.style.userSelect = 'none';
+                // Block all iframes from capturing mouse events
+                const iframes = document.querySelectorAll('iframe');
+                iframes.forEach(iframe => {
+                    iframe.style.pointerEvents = 'none';
+                });
                 startY = e.clientY;
                 const px = fromRatios(container._ratios, 'px');
                 startHeights = [px[i], px[i + 1]];
@@ -2565,6 +2602,11 @@ export class MEditor {
                 window.removeEventListener('mousemove', onMove);
                 window.removeEventListener('mouseup', onUp);
                 document.body.style.userSelect = '';
+                // Re-enable iframe pointer events
+                const iframes = document.querySelectorAll('iframe');
+                iframes.forEach(iframe => {
+                    iframe.style.pointerEvents = '';
+                });
                 saveRatios();
                 if (typeof cfg.onResizeEnd === 'function') {
                     cfg.onResizeEnd({
@@ -2576,6 +2618,11 @@ export class MEditor {
             };
             sash.element.addEventListener('mousedown', (e) => {
                 document.body.style.userSelect = 'none';
+                // Block all iframes from capturing mouse events
+                const iframes = document.querySelectorAll('iframe');
+                iframes.forEach(iframe => {
+                    iframe.style.pointerEvents = 'none';
+                });
                 startX = e.clientX;
                 const px = fromRatios(container._ratios, 'px');
                 startWidths = [px[i], px[i + 1]];
@@ -3675,6 +3722,49 @@ export class MEditor {
 
 
 
+    // Web previewer component
+    webPreviewer(parentObj, url="about:blank", opt={}) {
+        const previewer = {};
+        previewer.element = document.createElement("div");
+        previewer.element.classList.add(this.CLASS_NAME_PREFIX + "web-previewer");
+        if (parentObj && parentObj.element) {
+            parentObj.element.appendChild(previewer.element);
+        }
+
+        previewer.menu = {}
+        previewer.menu.element = document.createElement("div");
+        previewer.menu.element.classList.add(this.CLASS_NAME_PREFIX + "web-previewer-menu");
+        previewer.element.appendChild(previewer.menu.element);
+
+        previewer.title = {};
+        previewer.title.element = document.createElement("div");
+        previewer.title.element.classList.add(this.CLASS_NAME_PREFIX + "web-previewer-title");
+        previewer.title.element.innerHTML = "Web Previewer";
+        previewer.menu.element.appendChild(previewer.title.element);
+
+        previewer.iframe = document.createElement("iframe");
+        previewer.iframe.classList.add(this.CLASS_NAME_PREFIX + "web-previewer-iframe");
+        previewer.iframe.src = url;
+        previewer.element.appendChild(previewer.iframe);
+
+        // オプション処理
+
+        // Methods
+        previewer.setURL = (newUrl) => {
+            previewer.iframe.src = newUrl;
+        };
+        previewer.getURL = () => {
+            return previewer.iframe.src;
+        };
+        previewer.reload = () => {
+            previewer.iframe.contentWindow.location.reload();
+        };
+        previewer.setTitle = (title) => {
+            previewer.title.element.innerHTML = title;
+        };
+
+        return previewer;
+    }
 
 
 

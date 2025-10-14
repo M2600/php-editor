@@ -658,6 +658,14 @@ async function main(){
     dictMenuTab.setContent(vstack);
 
 
+    
+    const webPreviewTab = tabContainer.createTab("Webプレビュー");
+    const webPreviewer = editor.webPreviewer(webPreviewTab, "/",{});
+    webPreviewer.setTitle("Webプレビュー");
+    webPreviewTab.setContent(webPreviewer);
+    APP_STATE.WEB_PREVIEWER = webPreviewer;
+
+
 
     // Chat setup
     chat = editor.createChat(chatTab, {});

@@ -12,7 +12,10 @@ $DATA_PATH = $userRoot . "/data/php_editor/user.csv";
 $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
 ini_set('session.use_only_cookies', 1);
 ini_set('session.cookie_httponly', 1);
-ini_set('session.cookie_secure', $secure ? '1' : '0');
+// $secureを参照することでHTTPS時のみSecure属性を付与
+// しかしcloudflareのような特殊な環境化で使用予定なので常に1を設定
+//ini_set('session.cookie_secure', $secure ? '1' : '0');
+ini_set('session.cookie_secure', '1');
 
 
 $comments = array(

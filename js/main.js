@@ -267,22 +267,22 @@ async function main(){
     // Run mode toggle
     editorEditor.menu.left.items.push(editor.generateCheckbox(
         editorEditor.menu.left,
-        "Webページモード",
-        APP_STATE.RUN_AS_NEW_TAB,
+        "API開発モード",
+        !APP_STATE.RUN_AS_NEW_TAB,
         (checked) => {
-            APP_STATE.RUN_AS_NEW_TAB = checked;
+            APP_STATE.RUN_AS_NEW_TAB = !checked;
             console.log("Run mode changed - RUN_AS_NEW_TAB:", APP_STATE.RUN_AS_NEW_TAB);
-            console.log(checked ? "→ Webページモード (別タブで実行)" : "→ デバッグモード (コンソール出力)");
+            console.log(checked ? "→ API開発モード " : "→ 別タブ実行");
             
             // localStorageに状態を保存
             try {
-                localStorage.setItem('runAsNewTab', checked.toString());
-                console.log("Run mode saved to localStorage:", checked);
+                localStorage.setItem('runAsNewTab', !checked);
+                console.log("Run mode saved to localStorage:", !checked);
             } catch (err) {
                 console.error('Failed to save run mode:', err);
             }
         },
-        "チェックON: Webページとして別タブで実行 | チェックOFF: デバッグモードでコンソール出力"
+        "チェックON: API開発モード | チェックOFF: Webページモード"
     ));
 
     // QR Code button
@@ -876,3 +876,5 @@ window.chatHistoryManager = chatHistoryManager;
 
 // api関数をグローバルに定義（既存のコードとの互換性のため）
 window.api = api;
+
+window.APP_STATE = APP_STATE;

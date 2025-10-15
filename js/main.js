@@ -110,17 +110,19 @@ async function executeCurrentFile() {
         console.log("Run in preview iframe (Web page mode)");
         
         // まずファイルを保存
-        await saveFile(
-            APP_STATE.CURRENT_FILE.path,
-            APP_STATE.CURRENT_FILE.aceObj.editor.getValue(),
-            api,
-            APP_STATE.CURRENT_FILE,
-            mConsole,
-            CONFIG.DEBUG,
-            phpSyntaxCheck,
-            editor,
-            APP_STATE
-        );
+        if (APP_STATE.CURRENT_FILE.changed && !APP_STATE.CURRENT_FILE.readonly) {
+            await saveFile(
+                APP_STATE.CURRENT_FILE.path,
+                APP_STATE.CURRENT_FILE.aceObj.editor.getValue(),
+                api,
+                APP_STATE.CURRENT_FILE,
+                mConsole,
+                CONFIG.DEBUG,
+                phpSyntaxCheck,
+                editor,
+                APP_STATE
+            );
+        }
         
         // プレビューURLを構築
         const filePath = APP_STATE.CURRENT_FILE.path;
@@ -136,7 +138,7 @@ async function executeCurrentFile() {
         // プレビューiframeにURLを設定
         if (APP_STATE.WEB_PREVIEWER) {
             APP_STATE.WEB_PREVIEWER.setURL(previewUrl);
-            APP_STATE.WEB_PREVIEWER.setTitle(APP_STATE.CURRENT_FILE.name);
+            APP_STATE.WEB_PREVIEWER.setTitle("<a href='" + previewUrl + "' target='_blank' title='" + APP_STATE.CURRENT_FILE.name + "を新しいタブで開く'>" + APP_STATE.CURRENT_FILE.name + "</a>");
             APP_STATE.WEB_PREVIEWER.show();
             console.log("Preview URL set:", previewUrl);
         } else {
@@ -195,7 +197,12 @@ async function executeCurrentFile() {
         if (mConsole && typeof mConsole.show === 'function') {
             mConsole.show();
         }
-        
+
+        // mConsoleの内容をクリア
+        if (mConsole && typeof mConsole.clear === 'function') {
+            mConsole.clear();
+        }
+
         // CGI実行（GETパラメータ付き）
         await runPhpCgi(
             APP_STATE.CURRENT_FILE.path,
@@ -345,7 +352,7 @@ async function main(){
                 saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE)
             );
         },
-        "ファイルを保存してPHP構文チェックを実行"
+        "ファイルを保存します"
     );
     editorEditor.menu.left.items.push(saveButton);
     
@@ -356,30 +363,30 @@ async function main(){
         async (e) => {
             await executeCurrentFile();
         },
-        "Webページモード: プレビューで実行 | API開発モード: コンソール出力"
+        "プログラムを実行し、結果を右側に表示します"
     );
     editorEditor.menu.left.items.push(runButton);
 
     // Run mode toggle
-    editorEditor.menu.left.items.push(editor.generateCheckbox(
-        editorEditor.menu.left,
-        "API開発モード",
-        APP_STATE.RUN_MODE === 'API_MODE',
-        (checked) => {
-            APP_STATE.RUN_MODE = checked ? 'API_MODE' : 'WEB_MODE';
-            console.log("Run mode changed - RUN_MODE:", APP_STATE.RUN_MODE);
-            console.log(checked ? "→ API開発モード " : "→ Webページモード");
+    // editorEditor.menu.left.items.push(editor.generateCheckbox(
+    //     editorEditor.menu.left,
+    //     "API開発モード",
+    //     APP_STATE.RUN_MODE === 'API_MODE',
+    //     (checked) => {
+    //         APP_STATE.RUN_MODE = checked ? 'API_MODE' : 'WEB_MODE';
+    //         console.log("Run mode changed - RUN_MODE:", APP_STATE.RUN_MODE);
+    //         console.log(checked ? "→ API開発モード " : "→ Webページモード");
             
-            // localStorageに状態を保存
-            try {
-                localStorage.setItem('runMode', APP_STATE.RUN_MODE);
-                console.log("Run mode saved to localStorage:", APP_STATE.RUN_MODE);
-            } catch (err) {
-                console.error('Failed to save run mode:', err);
-            }
-        },
-        "チェックON: API開発モード | チェックOFF: Webページモード"
-    ));
+    //         // localStorageに状態を保存
+    //         try {
+    //             localStorage.setItem('runMode', APP_STATE.RUN_MODE);
+    //             console.log("Run mode saved to localStorage:", APP_STATE.RUN_MODE);
+    //         } catch (err) {
+    //             console.error('Failed to save run mode:', err);
+    //         }
+    //     },
+    //     "チェックON: API開発モード | チェックOFF: Webページモード"
+    // ));
 
     // QR Code button
     const qrButton = editor.generateButton(
@@ -430,33 +437,34 @@ async function main(){
     };
 
     // Debug button
-    // editorEditor.menu.right.items.push(editor.generateButton(
-    //     editorEditor.menu.right,
-    //     "Debug",
-    //     (e) => {
-    //         console.log("Debug with GET params");
-    //         // dictMenuからGETパラメータを取得
-    //         const getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
-    //         console.log("GET Parameters:", getParams);
-            
-    //         // GETパラメータをlocalStorageに保存
-    //         try {
-    //             localStorage.setItem('getParams', JSON.stringify(getParams));
-    //         } catch (err) {
-    //             console.error('Failed to save GET parameters:', err);
-    //         }
-            
-    //         // CGI実行（GETパラメータ付き）
-    //         runPhpCgi(
-    //             APP_STATE.CURRENT_FILE.path,
-    //             getParams,
-    //             api,
-    //             APP_STATE.CURRENT_FILE,
-    //             (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE),
-    //             mConsole
-    //         );
-    //     },
-    // ));
+    const t = APP_STATE.RUN_MODE === 'API_MODE' ? "Webページモード" : "API開発モード";
+    editorEditor.menu.right.items.push(editor.generateButton(
+        editorEditor.menu.right,
+        t,
+        (e) => {
+            if(APP_STATE.RUN_MODE === 'WEB_MODE'){
+                tabContainer.showTab(dictMenuTab.id);
+                tabContainer.show();
+                tabContainer.hideTab(webPreviewTab.id);
+                APP_STATE.RUN_MODE = 'API_MODE';
+                e.target.innerHTML = "Webページモード";
+            }
+            else if(APP_STATE.RUN_MODE === 'API_MODE'){
+                tabContainer.showTab(webPreviewTab.id);
+                tabContainer.hideTab(dictMenuTab.id);
+                APP_STATE.RUN_MODE = 'WEB_MODE';
+                e.target.innerHTML = "API開発モード";
+            }
+            // localStorageに状態を保存
+            try {
+                localStorage.setItem('runMode', APP_STATE.RUN_MODE);
+                console.log("Run mode saved to localStorage:", APP_STATE.RUN_MODE);
+            } catch (err) {
+                console.error('Failed to save run mode:', err);
+            }
+        },
+        "開発モードを切り替えます"
+    ));
 
 
     // Tab, ポップアップウィンドウのサンプル
@@ -484,6 +492,8 @@ async function main(){
 
     //     }
     // ));
+
+
 
     const explorer = editor.createExplorer(editor.page.main.left, {
         title: "エクスプローラー",
@@ -623,7 +633,8 @@ async function main(){
     // Right panel components
     let tabContainer = editor.tab(editor.page.main.right);
 
-    let dictMenuTab = tabContainer.createTab("API実行");
+    const webPreviewTab = tabContainer.createTab("実行結果");
+    let dictMenuTab = tabContainer.createTab("API開発メニュー");
     let chatTab = tabContainer.createTab("AI Chat");
     // 初期表示タブをGET Parametersタブに設定
     tabContainer.activateTab(dictMenuTab.id);
@@ -740,7 +751,7 @@ async function main(){
 
     // Console setup
     mConsole = editor.console();
-    mConsole.setTitle("実行ログ");
+    mConsole.setTitle("実行結果");
     dictMenuTab.addContent(mConsole);
 
 
@@ -759,16 +770,24 @@ async function main(){
     vstack.getPane(0).element.appendChild(dictMenu.element);
     vstack.getPane(1).element.appendChild(postDictContainer);
     vstack.getPane(2).element.appendChild(mConsole.element);
+    // デバッグメニューをタブコンテナに追加
+    // 初期状態は非表示
     dictMenuTab.setContent(vstack);
 
-
     
-    const webPreviewTab = tabContainer.createTab("実行結果");
     const webPreviewer = editor.webPreviewer(webPreviewTab, "about:blank",{});
     webPreviewer.setTitle("実行ボタンを押すと結果がここに表示されます");
     webPreviewTab.setContent(webPreviewer);
     APP_STATE.WEB_PREVIEWER = webPreviewer;
 
+    if(APP_STATE.RUN_MODE === 'WEB_MODE'){
+        tabContainer.showTab(webPreviewTab.id);
+        tabContainer.hideTab(dictMenuTab.id);
+    }
+    else{
+        tabContainer.showTab(dictMenuTab.id);
+        tabContainer.hideTab(webPreviewTab.id);
+    }
 
 
     // Chat setup

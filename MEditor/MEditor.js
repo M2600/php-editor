@@ -4145,6 +4145,54 @@ export class MEditor {
             container.activeTab = null;
         }
 
+        container.hideTab = (id) => {
+            let tab = container.tabs.find(t => t.id === id);
+            if(!tab){
+                console.error("Tab not found: " + id);
+                return;
+            }
+            tab.hide();
+            // タブボタンを非表示にする
+            let tabButton = container.tabBar.element.querySelector("#" + this.CLASS_NAME_PREFIX + "tab-button-" + id);
+            if(tabButton){
+                tabButton.style.display = "none";
+            }
+            // もし非表示にしたタブがアクティブタブなら、他のタブをアクティブにする
+            if(container.activeTab && container.activeTab.id === id){
+                let otherTab = container.tabs.find(t => t.id !== id);
+                if(otherTab){
+                    container.activateTab(otherTab.id);
+                }
+                else{
+                    container.activeTab = null;
+                }
+            }
+        }
+
+        container.showTab = (id) => {
+            let tab = container.tabs.find(t => t.id === id);
+            if(!tab){
+                console.error("Tab not found: " + id);
+                return;
+            }
+            // タブボタンを表示する
+            let tabButton = container.tabBar.element.querySelector("#" + this.CLASS_NAME_PREFIX + "tab-button-" + id);
+            if(tabButton){
+                tabButton.style.display = "inline-block";
+            }
+            tab.show();
+            container.activateTab(id);
+        }
+
+        // 最初のタブをアクティブにする
+        if(container.tabs.length > 0){
+            container.activateTab(container.tabs[0].id);
+        }
+
+        container.show = () => {
+            this.showComponent(container);
+        }
+
 
         // tab object
         container.createTab = (title="", opt={}) => {
@@ -4217,6 +4265,18 @@ export class MEditor {
                 else{
                     console.error("Invalid content type");
                 }
+            }
+
+            tab.hide = () => {
+                tab.content.element.style.display = "none";
+            }
+
+            tab.show = () => {
+                container.activateTab(tab.id);
+            }
+
+            tab.remove = () => {
+                container.removeTab(tab.id);
             }
 
 

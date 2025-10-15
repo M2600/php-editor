@@ -168,20 +168,28 @@ export class MEditor {
     
 
     constructor(options = {}) {
-        // script path
+        // script path and version parameter extraction
         if (options.rootPath) {
             // 外部から明示的にルートパスが指定された場合
             this.root = options.rootPath.endsWith('/') ? options.rootPath : options.rootPath + '/';
+            this.version = options.version || '';
         } else if (typeof import.meta !== 'undefined' && import.meta.url) {
             // ESモジュールの場合はimport.meta.urlを使用
             const url = new URL(import.meta.url);
+            // バージョンパラメータを抽出 (例: ?v=1.0.0)
+            this.version = url.search || '';
             // ブラウザ環境では相対パスに変換
             const currentPath = url.pathname.substring(0, url.pathname.lastIndexOf('/') + 1);
             const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
             this.root = currentPath.replace(basePath, './').replace(/^\//, './') || './';
         } else {
             // 通常のscriptタグの場合は従来通り
-            this.root = document.querySelector('script[src*="MEditor.js"]')?.outerHTML.match(/\"(.*)MEditor.js(.*)\"/)?.[1] || './';
+            const scriptTag = document.querySelector('script[src*="MEditor.js"]');
+            const scriptSrc = scriptTag?.getAttribute('src') || '';
+            // バージョンパラメータを抽出
+            const versionMatch = scriptSrc.match(/\?v=[^"']*/);
+            this.version = versionMatch ? versionMatch[0] : '';
+            this.root = scriptTag?.outerHTML.match(/\"(.*)MEditor.js(.*)\"/)?.[1] || './';
         }
 
 
@@ -1079,7 +1087,9 @@ export class MEditor {
         parentObj.css.loader = {};
         parentObj.css.loader.element = document.createElement("link");
         parentObj.css.loader.element.rel = "stylesheet";
-        parentObj.css.loader.element.href = cssPath;
+        // CSSファイルにバージョンパラメータを付与
+        const cssPathWithVersion = this.version ? `${cssPath}${this.version}` : cssPath;
+        parentObj.css.loader.element.href = cssPathWithVersion;
 
         parentObj.element.appendChild(parentObj.css.loader.element);
 

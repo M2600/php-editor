@@ -1,12 +1,11 @@
 <?php
+// 統一されたセッション初期化
+require_once(__DIR__ . '/session_init.php');
+
 header('Content-Type: application/json; charset=utf-8');
 
-session_start();
-// ログインしていない場合はエラーを返す
-if(!isset($_SESSION["id"])){
-    echo json_encode(array("status" => "session_error", "error" => "Not logged in"));
-    exit();
-}
+// ログイン認証チェック
+requireLogin();
 // セッション情報を早期に取得（AI処理前に必要な情報を全て取得）
 $sessionId = session_id();
 $userId = isset($_SESSION['id']) ? $_SESSION['id'] : null;

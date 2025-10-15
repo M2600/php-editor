@@ -1,8 +1,7 @@
 
 <?php
-if(!isset($_SESSION)){
-    session_start();
-}
+// 統一されたセッション初期化（ログインページでは認証チェックしない）
+require_once(__DIR__ . '/api/session_init.php');
 
 // デバッグ: セッション情報をログ出力
 error_log("login.php - Session ID exists: " . (isset($_SESSION["id"]) ? "yes" : "no"));

@@ -1,13 +1,11 @@
 <?php
+// 統一されたセッション初期化
+require_once(__DIR__ . '/session_init.php');
+
 header('Content-Type: application/json');
 
-// Session cookie settings: enable secure only when HTTPS is used
-$secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
-ini_set('session.use_only_cookies', 1);
-ini_set('session.cookie_httponly', 1);
-ini_set('session.cookie_secure', $secure ? 1 : 0);
-
-session_start();
+// ログイン認証チェック
+requireLogin();
 
 function json_response($data, $code = 200) {
     http_response_code($code);

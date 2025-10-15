@@ -1,5 +1,9 @@
 <?php
-session_start();
+// 統一されたセッション初期化
+require_once(__DIR__ . '/session_init.php');
+
+// ログイン認証チェック
+requireLogin();
 
 // 強化されたログシステムを読み込み
 require_once(__DIR__ . '/logger.php');

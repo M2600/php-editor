@@ -1,21 +1,14 @@
 
 <?php
+// 統一されたセッション初期化（ログインAPIでは認証チェックしない）
+require_once(__DIR__ . '/session_init.php');
+
 header('Content-Type: application/json');
 
 //$iniConf = parse_ini_file("../config.ini");
 
 $userRoot = posix_getpwuid(posix_getuid())["dir"];
 $DATA_PATH = $userRoot . "/data/php_editor/user.csv";
-
-
-// Session cookie settings: enable secure only when HTTPS is used
-$secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
-ini_set('session.use_only_cookies', 1);
-ini_set('session.cookie_httponly', 1);
-// $secureを参照することでHTTPS時のみSecure属性を付与
-// しかしcloudflareのような特殊な環境化で使用予定なので常に1を設定
-//ini_set('session.cookie_secure', $secure ? '1' : '0');
-ini_set('session.cookie_secure', '1');
 
 
 $comments = array(
@@ -92,7 +85,7 @@ function json_error($msg, $code = 400){
 }
 
 if($_SERVER['REQUEST_METHOD'] === 'POST'){
-	session_start();
+	// セッションは既にsession_init_no_auth.phpで開始済み
 
 	$raw = file_get_contents('php://input');
 	$params = json_decode($raw, true);

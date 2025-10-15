@@ -626,10 +626,11 @@ export async function runPhpCgi(path, GETParams={}, api, currentFile, saveFile, 
         }
     }
 
-    // オプションからHTTPメソッド、POSTパラメータ、Content-Typeを取得
+    // オプションからHTTPメソッド、POSTパラメータ、Content-Type、完了後コールバックを取得
     const method = options.method || "GET";
     const POSTParams = options.POSTParams || {};
     const contentType = options.contentType || "application/x-www-form-urlencoded";
+    const onComplete = options.onComplete || null; // 実行完了後のコールバック
 
     let ret;
     let body = {
@@ -680,6 +681,16 @@ export async function runPhpCgi(path, GETParams={}, api, currentFile, saveFile, 
             mConsole.print(message.replaceAll("\n", "<br>"), "info");
         }
     })
+    
+    // 実行完了後のコールバックを実行
+    if (onComplete && typeof onComplete === 'function') {
+        try {
+            await onComplete(ret);
+        } catch (error) {
+            console.error('Error in onComplete callback:', error);
+        }
+    }
+    
     return ret;
 }
 

@@ -1491,6 +1491,25 @@ export class MEditor {
         });
         parentObj.explorer.menu.control.items.push(sortButton);
         
+        // Reload button
+        const reloadButton = this.generateButton(
+            parentObj.explorer.menu.control,
+            "⟳",
+            (e) => {
+                if (parentObj.explorer.reloadClickAction) {
+                    parentObj.explorer.reloadClickAction();
+                }
+            },
+            "エクスプローラーを再読み込み"
+        );
+        parentObj.explorer.menu.control.items.push(reloadButton);
+        parentObj.explorer.reloadClickAction = () => {
+            console.log("Reload explorer action");
+        }; // ユーザーが設定するためのプレースホルダー
+        parentObj.explorer.setReloadClickAction = (func) => {
+            parentObj.explorer.reloadClickAction = func;
+        };
+
         //parentObj.explorer.menu.control.items.push(this.generateButton(parentObj.explorer.menu.control, "New Folder", this.EXPLORER_NEW_DIR_ACTION));
         let otherButton = this.generateButton(
             parentObj.explorer.menu.control,

@@ -6,6 +6,7 @@
 import { UserConfig, changeTheme, CONFIG, APP_STATE } from './modules/core/config.js';
 import { loadExplorer, saveSortSettings } from './modules/core/file-manager.js';
 import { startSessionPulse } from './modules/core/pulse.js';
+import { ExplorerAutoReload } from './modules/core/explorer-auto-reload.js';
 
 // UI modules
 import { MEditor } from '../MEditor/MEditor.js';
@@ -52,6 +53,17 @@ export const userConfig = new UserConfig();
 export const editor = new MEditor();
 export const chatHistoryManager = new ChatHistoryManager(CONFIG.CHAT_STORAGE_KEY, CONFIG.DEBUG);
 
+// エクスプローラー自動リロードインスタンス
+// ユーザー設定から間隔と有効/無効を読み込む
+const savedInterval = userConfig.get('explorerAutoReloadInterval');
+const savedEnabled = userConfig.get('explorerAutoReloadEnabled');
+
+export const explorerAutoReload = new ExplorerAutoReload({
+    interval: savedInterval !== null ? savedInterval : CONFIG.EXPLORER_AUTO_RELOAD_INTERVAL,
+    enabled: savedEnabled !== null ? savedEnabled : true,
+    debug: CONFIG.DEBUG
+});
+
 // Global variables
 let mConsole;
 let dictMenu;
@@ -61,6 +73,19 @@ let jsonCheck;
 let chat;
 let modelSelect;
 let fetchAIChat;
+
+/**
+ * エクスプローラー自動リロード設定を保存
+ */
+function saveExplorerAutoReloadConfig() {
+    const config = explorerAutoReload.getConfig();
+    userConfig.set('explorerAutoReloadInterval', config.interval);
+    userConfig.set('explorerAutoReloadEnabled', config.enabled);
+    console.log('Explorer auto-reload config saved:', config);
+}
+
+// グローバルに公開（コンソールから設定保存できるように）
+window.saveExplorerAutoReloadConfig = saveExplorerAutoReloadConfig;
 
 /**
  * 実行処理を共通化した関数
@@ -129,6 +154,17 @@ async function executeCurrentFile() {
 
             console.error("WEB_PREVIEWER not available");
         }
+        
+        // Webページモードでも実行後にエクスプローラーをリロード
+        // ファイル生成や変更が行われる可能性があるため
+        if (CONFIG.RELOAD_EXPLORER_AFTER_EXECUTION && 
+            explorerAutoReload && 
+            typeof explorerAutoReload.reloadAfter === 'function') {
+            console.log('Scheduling explorer reload after web execution...');
+            explorerAutoReload.reloadAfter(CONFIG.RELOAD_EXPLORER_EXECUTION_DELAY).catch(err => {
+                console.error('Failed to reload explorer after web execution:', err);
+            });
+        }
     } else {
         // API開発モード: コンソールに出力
         console.log("Run in debug mode with GET params:", getParams);
@@ -161,7 +197,7 @@ async function executeCurrentFile() {
         }
         
         // CGI実行（GETパラメータ付き）
-        runPhpCgi(
+        await runPhpCgi(
             APP_STATE.CURRENT_FILE.path,
             getParams,
             api,
@@ -172,6 +208,18 @@ async function executeCurrentFile() {
                 method: method,
                 POSTParams: postParams,
                 contentType: contentType,
+                onComplete: async (result) => {
+                    // プログラム実行後にエクスプローラーをリロード
+                    // 少し遅延させてファイルシステムの変更を確実に反映
+                    if (CONFIG.RELOAD_EXPLORER_AFTER_EXECUTION && 
+                        explorerAutoReload && 
+                        typeof explorerAutoReload.reloadAfter === 'function') {
+                        console.log('Scheduling explorer reload after program execution...');
+                        explorerAutoReload.reloadAfter(CONFIG.RELOAD_EXPLORER_EXECUTION_DELAY).catch(err => {
+                            console.error('Failed to reload explorer after execution:', err);
+                        });
+                    }
+                }
             }
         );
     }
@@ -555,7 +603,22 @@ async function main(){
         loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
     });
 
+    explorer.setReloadClickAction(() => {
+        loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
+    });
+
     await loadExplorer("/", api, APP_STATE, editor);
+
+    // エクスプローラー自動リロードの設定
+    explorerAutoReload.setReloadFunction(async () => {
+        await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
+    });
+    
+    // 自動リロードを開始
+    if (CONFIG.EXPLORER_AUTO_RELOAD_INTERVAL > 0) {
+        explorerAutoReload.start();
+        console.log(`Explorer auto-reload started (interval: ${CONFIG.EXPLORER_AUTO_RELOAD_INTERVAL}ms)`);
+    }
 
     // Right panel components
     let tabContainer = editor.tab(editor.page.main.right);
@@ -922,6 +985,7 @@ main().catch(error => {
 window.editor = editor;
 window.userConfig = userConfig;
 window.chatHistoryManager = chatHistoryManager;
+window.explorerAutoReload = explorerAutoReload;
 
 // api関数をグローバルに定義（既存のコードとの互換性のため）
 window.api = api;

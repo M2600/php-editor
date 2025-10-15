@@ -22,7 +22,12 @@ $isHttps = (
 ini_set('session.use_only_cookies', 1);          // URLパラメータでのセッションID送信を無効化
 ini_set('session.cookie_httponly', 1);           // JavaScriptからのアクセスを防止
 ini_set('session.cookie_secure', $isHttps ? 1 : 0);  // HTTPS時のみセキュアCookieを使用
-ini_set('session.cookie_samesite', 'Lax');       // CSRF対策
+ini_set('session.cookie_samesite', 'Strict');    // CSRF対策（Strictに変更）
+
+// セッションCookieのDomainを設定してサブドメイン分離を推奨
+// 本番環境では editor.example.com と user-programs.example.com のように
+// 異なるサブドメインでホストすることを強く推奨
+// ini_set('session.cookie_domain', '.editor.example.com');
 
 // セッション名の設定（デフォルトのPHPSESSIDから変更してセキュリティ向上）
 ini_set('session.name', 'PHP_EDITOR_SID');

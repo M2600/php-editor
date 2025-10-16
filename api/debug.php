@@ -103,8 +103,22 @@ class Debug {
         $userRoot = getUserRoot();
         
         // コマンドを構築（open_basedirでユーザーディレクトリに制限）
-        // display_errors=Off: HTMLエスケープされたエラーをstdoutに出力しない（stderrのみ使用）
-        $cmd = 'php-cgi -d open_basedir=' . escapeshellarg($userRoot) . ' -d display_errors=Off ' . escapeshellarg($scriptPath);
+        // PHPエラー出力設定:
+        // - display_errors=0: HTMLエスケープされたエラーをstdoutに出力しない
+        // - html_errors=0: HTMLタグを使用しない（プレーンテキストのみ）
+        // - log_errors=1: エラーをstderr（エラーログ）に出力
+        $phpOptions = [
+            'open_basedir=' . escapeshellarg($userRoot),
+            'display_errors=0',
+            'html_errors=0',
+            'log_errors=1'
+        ];
+        
+        $cmd = 'php-cgi';
+        foreach ($phpOptions as $option) {
+            $cmd .= ' -d ' . $option;
+        }
+        $cmd .= ' ' . escapeshellarg($scriptPath);
         
         // 環境変数を追加
         foreach ($env as $key => $value) {

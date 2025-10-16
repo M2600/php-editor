@@ -119,6 +119,10 @@ class Debug {
         // CGIヘッダーを除去（Content-type: text/html など）
         $output = preg_replace('/^.*?\r?\n\r?\n/s', '', $output, 1);
         
+        // サーバーの内部パスをユーザーパスに変換（セキュリティのため）
+        $output = sanitizeOutputPaths($output);
+        $errors = sanitizeOutputPaths($errors);
+        
         return [
             'success' => $exitCode === 0,
             'output' => $output,
@@ -260,6 +264,10 @@ class Debug {
         
         // CGIヘッダーを除去
         $output = preg_replace('/^.*?\r?\n\r?\n/s', '', $output, 1);
+        
+        // サーバーの内部パスをユーザーパスに変換（セキュリティのため）
+        $output = sanitizeOutputPaths($output);
+        $errors = sanitizeOutputPaths($errors);
         
         return [
             'success' => $exitCode === 0,

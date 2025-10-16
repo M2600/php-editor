@@ -195,10 +195,9 @@ if($action == "cgi_run"){
             'exit_code' => $result['exit_code']
         ]);
         
-        // 出力をユーザールートパスに変換してエスケープ
+        // 出力をHTMLエスケープ（パス変換はDebugクラスで既に実施済み）
         $outputLines = explode("\n", $result['output']);
         for($i = 0; $i < count($outputLines); $i++){
-            $outputLines[$i] = str_replace(getUserRoot(), "", $outputLines[$i]);
             $outputLines[$i] = htmlspecialchars($outputLines[$i], ENT_QUOTES);
         }
         
@@ -207,7 +206,6 @@ if($action == "cgi_run"){
         if (!empty($result['errors'])) {
             $errorLines = explode("\n", $result['errors']);
             for($i = 0; $i < count($errorLines); $i++){
-                $errorLines[$i] = str_replace(getUserRoot(), "", $errorLines[$i]);
                 $errorLines[$i] = htmlspecialchars($errorLines[$i], ENT_QUOTES);
             }
         }

@@ -131,10 +131,62 @@ function convertUserPath($path){
     return $serverPath;
 }
 
-// convert server path to user path
+/**
+ * サーバーパスをユーザーパスに変換
+ * ユーザーに表示する際にサーバーの内部構造を隠すために使用
+ * @param string $path サーバー上の絶対パス
+ * @return string ユーザー向けの相対パス
+ */
 function convertServerPath($path){
     $userPath = str_replace(getUserRoot(), "", $path);
     return $userPath;
+}
+
+/**
+ * 文字列内のすべてのサーバーパスをユーザーパスに変換
+ * エラーメッセージや実行結果からサーバーの内部パスを除去するために使用
+ * @param string|array $output 変換する文字列または文字列の配列
+ * @return string|array 変換後の文字列または配列
+ */
+function sanitizeOutputPaths($output){
+    if (is_array($output)) {
+        // 配列の場合は各要素を変換
+        foreach ($output as $key => $value) {
+            if (is_string($value)) {
+                $output[$key] = convertServerPath($value);
+            } elseif (is_array($value)) {
+                $output[$key] = sanitizeOutputPaths($value);
+            }
+        }
+        return $output;
+    } elseif (is_string($output)) {
+        // 文字列の場合はconvertServerPath()を使用
+        return convertServerPath($output);
+    }
+    
+    return $output;
+}
+
+/**
+ * エラーレスポンスを生成する際にパスを安全化
+ * JSON形式でエラーを返す前に内部パスを除去
+ * @param string $message エラーメッセージ
+ * @param mixed $context 追加のコンテキスト情報（オプション）
+ * @return array エラーレスポンス配列
+ */
+function createSafeErrorResponse($message, $context = null){
+    $message = sanitizeOutputPaths($message);
+    
+    $response = array(
+        "status" => "error",
+        "error" => $message
+    );
+    
+    if ($context !== null) {
+        $response["context"] = sanitizeOutputPaths($context);
+    }
+    
+    return $response;
 }
 
 function shellEscape($str){
@@ -208,7 +260,7 @@ function getFile($userPath){
     }
     catch(Exception $e){
         logError("File read failed", ['path' => $userPath, 'error' => $e->getMessage()]);
-        echo json_encode(array("status" => "error", "error" => $e->getMessage()));
+        echo json_encode(createSafeErrorResponse($e->getMessage()));
         exit();
     }
 }
@@ -249,7 +301,7 @@ function saveFile($userPath, $file){
     }
     catch(Exception $e){
         logError("File save failed", ['path' => $userPath, 'error' => $e->getMessage()]);
-        echo json_encode(array("status" => "error", "error" => $e->getMessage()));
+        echo json_encode(createSafeErrorResponse($e->getMessage()));
         exit();
     }
 }
@@ -485,10 +537,13 @@ function phpSyntaxError($userPath){
     try{
         $serverPath = convertUserPath($userPath);
         exec("php -l " . shellEscape($serverPath) . " 2>&1", $output, $return);
+        
+        // サーバーパスをユーザーパスに変換してからHTMLエスケープ
+        $output = sanitizeOutputPaths($output);
         for($i = 0; $i < count($output); $i++){
-            $output[$i] = str_replace(getUserRoot(), "", $output[$i]);
             $output[$i] = htmlspecialchars($output[$i], ENT_QUOTES);
         }
+        
         if($return != 0){
             return array("status" => true, "message" => $output);
         }
@@ -505,7 +560,6 @@ function phpRunError($userPath){
     try{
         $serverPath = convertUserPath($userPath);
         $realPath = realpath($serverPath);
-        $userPath = str_replace(getUserRoot(), "", $serverPath);
 
         // 実行するファイルのディレクトリに移動
         $fileDirectory = dirname($serverPath);
@@ -518,10 +572,21 @@ function phpRunError($userPath){
         $command .= shellEscape($serverPath) . " ";
         $command .= "2>&1";
         exec($command, $output, $return);
+        
+        // サーバーパスをユーザーパスに変換
+        // realpath()で解決されたパスも変換する
+        $output = sanitizeOutputPaths($output);
+        if ($realPath) {
+            for($i = 0; $i < count($output); $i++){
+                $output[$i] = str_replace($realPath, convertServerPath($realPath), $output[$i]);
+            }
+        }
+        
+        // HTMLエスケープ
         for($i = 0; $i < count($output); $i++){
-            $output[$i] = str_replace($realPath, $userPath, $output[$i]);
             $output[$i] = htmlspecialchars($output[$i], ENT_QUOTES);
         }
+        
         if($return != 0){
             return array("status" => true, "message" => $output);
         }
@@ -568,8 +633,9 @@ function phpCgiRun($userPath, $printHttpHeaders=false, $GETParams=array()){
         logDebug("Executing PHP CGI command", ['command' => $command]);
         exec($command, $output, $return);
         
+        // サーバーパスをユーザーパスに変換してからHTMLエスケープ
+        $output = sanitizeOutputPaths($output);
         for($i = 0; $i < count($output); $i++){
-            $output[$i] = str_replace(getUserRoot(), "", $output[$i]);
             $output[$i] = htmlspecialchars($output[$i], ENT_QUOTES);
         }
         

@@ -101,12 +101,14 @@ class Debug {
         // ユーザーのルートディレクトリを取得（セキュリティのためopen_basedirを設定）
         require_once(__DIR__ . '/file_functions.php');
         $userRoot = getUserRoot();
+
+        $systemUserRoot = posix_getpwuid(posix_getuid())["dir"];
         
         // ライブラリ自動ロードスクリプトのパス
         // ユーザーのルートディレクトリに _autoload.php があれば自動的にロード
         $autoloadScripts = [
             $userRoot . '_autoload.php',
-            '/data/php_editor/sandbox/php.ini',
+            $systemUserRoot . '/data/php_editor/sandbox/php.ini',
         ];
         
         // コマンドを構築（open_basedirでユーザーディレクトリに制限）
@@ -116,7 +118,7 @@ class Debug {
         // - log_errors=1: エラーをstderr（エラーログ）に出力
         // - auto_prepend_file: スクリプト実行前に自動的にロードするファイル
         $phpOptions = [
-            'open_basedir=' . escapeshellarg($userRoot),
+            'open_basedir=' . escapeshellarg($FILE_ROOT),
             'display_errors=0',
             'html_errors=0',
             'log_errors=1'
@@ -125,7 +127,7 @@ class Debug {
         // _autoload.php が存在する場合は自動ロードを設定
         foreach ($autoloadScripts as $autoloadScript) {
             if (file_exists($autoloadScript)) {
-                $phpOptions[] = 'auto_prepend_file=' . escapeshellarg($autoloadScript);
+                $cmd .= ' -c ' . escapeshellarg($autoloadScript);
             }
         }
         

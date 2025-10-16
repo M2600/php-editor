@@ -92,10 +92,10 @@ export class ExplorerAutoReload {
         }
 
         try {
-            this.log('Reloading explorer...');
+            //this.log('Reloading explorer...');
             await this.reloadFunction();
             this.lastReloadTime = Date.now();
-            this.log('Explorer reloaded successfully');
+            //this.log('Explorer reloaded successfully');
         } catch (error) {
             console.error('ExplorerAutoReload: Reload failed', error);
         }

@@ -106,10 +106,7 @@ class Debug {
         
         // ライブラリ自動ロードスクリプトのパス
         // ユーザーのルートディレクトリに _autoload.php があれば自動的にロード
-        $autoloadScripts = [
-            $userRoot . '_autoload.php',
-            $systemUserRoot . 'data/php_editor/sandbox/php.ini',
-        ];
+        $autoloadScript = $systemUserRoot . 'data/php_editor/sandbox/php.ini';
         
         // コマンドを構築（open_basedirでユーザーディレクトリに制限）
         // PHPエラー出力設定:
@@ -117,25 +114,23 @@ class Debug {
         // - html_errors=0: HTMLタグを使用しない（プレーンテキストのみ）
         // - log_errors=1: エラーをstderr（エラーログ）に出力
         // - auto_prepend_file: スクリプト実行前に自動的にロードするファイル
-        $phpOptions = [
-            'open_basedir=' . escapeshellarg($FILE_ROOT),
-            'display_errors=0',
-            'html_errors=0',
-            'log_errors=1'
-        ];
+        // $phpOptions = [
+        //     'open_basedir=' . escapeshellarg($FILE_ROOT),
+        //     'display_errors=0',
+        //     'html_errors=0',
+        //     'log_errors=1'
+        // ];
         
         $cmd = 'php-cgi';
         
         // _autoload.php が存在する場合は自動ロードを設定
-        foreach ($autoloadScripts as $autoloadScript) {
-            if (file_exists($autoloadScript)) {
-                $cmd .= ' -c ' . escapeshellarg($autoloadScript);
-            }
+        if (file_exists($autoloadScript)) {
+            $cmd .= ' -c ' . escapeshellarg($autoloadScript);
         }
         
-        foreach ($phpOptions as $option) {
-            $cmd .= ' -d ' . $option;
-        }
+        // foreach ($phpOptions as $option) {
+        //     $cmd .= ' -d ' . $option;
+        // }
         $cmd .= ' ' . escapeshellarg($scriptPath);
         
         // 環境変数を追加

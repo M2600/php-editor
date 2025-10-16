@@ -103,7 +103,8 @@ class Debug {
         $userRoot = getUserRoot();
         
         // コマンドを構築（open_basedirでユーザーディレクトリに制限）
-        $cmd = 'php-cgi -d open_basedir=' . escapeshellarg($userRoot) . ' ' . escapeshellarg($scriptPath);
+        // display_errors=Off: HTMLエスケープされたエラーをstdoutに出力しない（stderrのみ使用）
+        $cmd = 'php-cgi -d open_basedir=' . escapeshellarg($userRoot) . ' -d display_errors=Off ' . escapeshellarg($scriptPath);
         
         // 環境変数を追加
         foreach ($env as $key => $value) {

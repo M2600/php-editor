@@ -1665,6 +1665,20 @@ export class MEditor {
          */
         parentObj.explorer.openFile = (filePath) => {
             console.log("Opening file:", filePath);
+            
+            // ファイルのハイライト処理（クリック時と同じ動作）
+            // 既存のハイライトを削除
+            let oldSelected = document.getElementsByClassName(this.CLASS_NAME_PREFIX + "file-selected");
+            for(let i=0; i<oldSelected.length; i++) {
+                oldSelected[i].classList.remove(this.CLASS_NAME_PREFIX + "file-selected");
+            }
+            
+            // 該当するファイル要素を探してハイライト
+            const fileElement = document.getElementById(filePath);
+            if (fileElement) {
+                fileElement.classList.add(this.CLASS_NAME_PREFIX + "file-selected");
+            }
+            
             if (typeof parentObj.explorer.fileClickAction === 'function') {
                 // エクスプローラーのファイルリストから該当するファイル情報を検索
                 let fileInfo = null;

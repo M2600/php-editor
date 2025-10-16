@@ -46,7 +46,7 @@ try {
     }
 
     if($action == "mkdir"){
-        $newPath = $params["newPath"];
+        $newPath = $params["path"];
         $newPath = makeDirectory($newPath);
         echo json_encode(array("status" => "success", "newPath" => $newPath));
         exit();

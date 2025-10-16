@@ -22,15 +22,10 @@ $USER_SCRIPT_PHP_INI = $userRoot . "/data/php_editor/sandbox/php.ini";
 // 既存のmyLog関数は logger.php で定義済み（後方互換性のため）
 
 
-// make safe file name
-function safePath($path){
-    $safe = str_replace("../", "./", $path);
-    //$safe = str_replace("/", "", $safe);
-    //$safe = basename($path);
-
-    return $safe;
-}
-
+/**
+ * ユーザーのルートディレクトリを取得
+ * @return string ユーザーのルートディレクトリの絶対パス（末尾に/付き）
+ */
 function getUserRoot(){
     global $FILE_ROOT;
     $userRoot = $FILE_ROOT . basename($_SESSION["id"]) . "/";
@@ -38,12 +33,102 @@ function getUserRoot(){
     return $userRoot;
 }
 
-// convert user path to server path
+/**
+ * パスがユーザーのルートディレクトリ内にあるか検証
+ * ディレクトリトラバーサル攻撃を防ぐための重要な関数
+ * @param string $path 検証するパス
+ * @param string $userRoot ユーザーのルートディレクトリ
+ * @return bool ユーザーのルートディレクトリ内であればtrue、外であればfalse
+ */
+function isPathInUserRoot($path, $userRoot){
+    // パスを正規化
+    $realPath = realpath($path);
+    $realUserRoot = realpath($userRoot);
+    
+    // ファイルが存在しない場合はrealpathがfalseを返すので、親ディレクトリで検証
+    if($realPath === false){
+        $parentDir = dirname($path);
+        // 親ディレクトリが存在するか確認
+        if(file_exists($parentDir)){
+            $realPath = realpath($parentDir) . '/' . basename($path);
+        } else {
+            // 親ディレクトリも存在しない場合は再帰的にチェック
+            return isPathInUserRoot($parentDir, $userRoot) && basename($path) !== '..';
+        }
+    }
+    
+    $realUserRoot = realpath($userRoot);
+    if($realUserRoot === false){
+        logError("User root directory does not exist", ['user_root' => $userRoot]);
+        return false;
+    }
+    
+    // パスがユーザールート配下にあるかチェック
+    // strpos() === 0 は「文字列が指定した文字列で始まる」という意味
+    $isInside = strpos($realPath, $realUserRoot) === 0;
+    
+    if(!$isInside){
+        logWarning("Path traversal attempt detected", [
+            'attempted_path' => $path,
+            'real_path' => $realPath,
+            'user_root' => $realUserRoot,
+            'user_id' => $_SESSION["id"] ?? 'unknown'
+        ]);
+    }
+    
+    return $isInside;
+}
+
+/**
+ * パスを安全化（危険な文字列を除去）
+ * @deprecated この関数は十分なセキュリティを提供しません。isPathInUserRoot()と併用してください
+ * @param string $path 安全化するパス
+ * @return string 安全化されたパス
+ */
+function safePath($path){
+    // Null byteを除去
+    $safe = str_replace("\0", "", $path);
+    // 単純な../の置換（注意: これだけでは不十分）
+    $safe = str_replace("../", "./", $safe);
+    
+    return $safe;
+}
+
+/**
+ * ユーザーパスをサーバーパスに変換し、セキュリティチェックを実施
+ * @param string $path ユーザーが指定したパス
+ * @return string サーバー上の絶対パス
+ * @throws Exception パスがユーザーのルートディレクトリ外の場合
+ */
 function convertUserPath($path){
-    $userPath = getUserRoot() . safePath($path);
-    $userPath = str_replace("//", "/", $userPath);
-    //error_log("userpath: ".$userPath);
-    return $userPath;
+    $userRoot = getUserRoot();
+    
+    // ユーザールートが存在しない場合は作成
+    if(!file_exists($userRoot)){
+        mkdir($userRoot, 0777, true);
+        logInfo("Created user root directory", ['user_root' => $userRoot]);
+    }
+    
+    // パスを安全化
+    $safePath = safePath($path);
+    
+    // サーバーパスを構築
+    $serverPath = $userRoot . $safePath;
+    $serverPath = str_replace("//", "/", $serverPath);
+    
+    // セキュリティチェック: パスがユーザールート内にあるか検証
+    if(!isPathInUserRoot($serverPath, $userRoot)){
+        logError("Unauthorized path access attempt", [
+            'user_id' => $_SESSION["id"] ?? 'unknown',
+            'requested_path' => $path,
+            'resolved_path' => $serverPath,
+            'user_root' => $userRoot
+        ]);
+        throw new Exception("Access denied: Path is outside user directory");
+    }
+    
+    //error_log("userpath: ".$serverPath);
+    return $serverPath;
 }
 
 // convert server path to user path

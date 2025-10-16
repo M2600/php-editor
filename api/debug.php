@@ -63,8 +63,12 @@ class Debug {
             'REDIRECT_STATUS' => '200', // php-cgi に必要
         ];
         
-        // コマンドを構築
-        $cmd = 'php-cgi ' . escapeshellarg($scriptPath);
+        // ユーザーのルートディレクトリを取得（セキュリティのためopen_basedirを設定）
+        require_once(__DIR__ . '/file_functions.php');
+        $userRoot = getUserRoot();
+        
+        // コマンドを構築（open_basedirでユーザーディレクトリに制限）
+        $cmd = 'php-cgi -d open_basedir=' . escapeshellarg($userRoot) . ' ' . escapeshellarg($scriptPath);
         
         // 環境変数を追加
         foreach ($env as $key => $value) {
@@ -202,8 +206,12 @@ class Debug {
             $env['CONTENT_LENGTH'] = $contentLength;
         }
         
-        // コマンドを構築
-        $cmd = 'php-cgi ' . escapeshellarg($scriptPath);
+        // ユーザーのルートディレクトリを取得（セキュリティのためopen_basedirを設定）
+        require_once(__DIR__ . '/file_functions.php');
+        $userRoot = getUserRoot();
+        
+        // コマンドを構築（open_basedirでユーザーディレクトリに制限）
+        $cmd = 'php-cgi -d open_basedir=' . escapeshellarg($userRoot) . ' ' . escapeshellarg($scriptPath);
         
         // 環境変数を追加
         foreach ($env as $key => $value) {

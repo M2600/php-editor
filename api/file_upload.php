@@ -36,6 +36,9 @@ if($action == "upload"){
                 // ファイル名とパスを取得
                 $fileName = $files['files']['name'][$i];
                 $tmpName = $files['files']['tmp_name'][$i];
+                
+                // convertUserPath() は内部でパストラバーサルチェックを行う
+                // 不正なパスの場合は例外がスローされる
                 $serverPath = convertUserPath($path . $fileName);
                 
                 // ディレクトリが存在しない場合は作成
@@ -47,6 +50,11 @@ if($action == "upload"){
                 // ファイルを移動
                 if(move_uploaded_file($tmpName, $serverPath)){
                     $filePaths[] = str_replace(getUserRoot(), "", $serverPath);
+                    logInfo("File uploaded successfully", [
+                        'file_name' => $fileName,
+                        'path' => $path . $fileName,
+                        'user_id' => $_SESSION["id"] ?? 'unknown'
+                    ]);
                 } else {
                     throw new Exception("ファイルの移動に失敗しました: " . $fileName);
                 }
@@ -57,6 +65,13 @@ if($action == "upload"){
         echo(json_encode(array("status" => "success", "paths" => $filePaths)));
     }
     catch(Exception $e){
+        // セキュリティ関連のエラーをログに記録
+        logError("File upload failed", [
+            'path' => $path,
+            'error' => $e->getMessage(),
+            'user_id' => $_SESSION["id"] ?? 'unknown'
+        ]);
+        
         echo(json_encode(array("status" => "error", "error" => $e->getMessage())));
     }
 

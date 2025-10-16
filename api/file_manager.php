@@ -24,69 +24,87 @@ $params = json_decode(file_get_contents('php://input'), true);
 $action = $params["action"];
 $path = htmlspecialchars_decode($params["path"], ENT_QUOTES);
 
-if($action == "get"){
-    $ret = getFile($path);
-    echo json_encode(array("status" => "success", "content" => $ret["file"], "fileType" => $ret["fileType"]));
-    exit();
-}
+// すべてのファイル操作をtry-catchで囲み、パストラバーサル攻撃を防ぐ
+try {
+    if($action == "get"){
+        $ret = getFile($path);
+        echo json_encode(array("status" => "success", "content" => $ret["file"], "fileType" => $ret["fileType"]));
+        exit();
+    }
 
-if($action == "save"){
-    $file = $params["content"];
-    saveFile($path, $file);
-    echo json_encode(array("status" => "success"));
-    exit();
-}
+    if($action == "save"){
+        $file = $params["content"];
+        saveFile($path, $file);
+        echo json_encode(array("status" => "success"));
+        exit();
+    }
 
-if($action == "touch"){
-    $createdFilePath = touchFile($path);
-    echo json_encode(array("status" => "success", "createdFilePath" => $createdFilePath));
-    exit();
-}
+    if($action == "touch"){
+        $createdFilePath = touchFile($path);
+        echo json_encode(array("status" => "success", "createdFilePath" => $createdFilePath));
+        exit();
+    }
 
-if($action == "mkdir"){
-    $newPath = $params["newPath"];
-    $newPath = makeDirectory($path, $newPath);
-    echo json_encode(array("status" => "success", "newPath" => $newPath));
-    exit();
-}
+    if($action == "mkdir"){
+        $newPath = $params["newPath"];
+        $newPath = makeDirectory($newPath);
+        echo json_encode(array("status" => "success", "newPath" => $newPath));
+        exit();
+    }
 
-if($action == "rename"){
-    $newPath = $params["newPath"];
-    $newPath = renameFile($path, $newPath);
-    echo json_encode(array("status" => "success", "newPath" => $newPath));
-    exit();
-}
+    if($action == "rename"){
+        $newPath = $params["newPath"];
+        $newPath = renameFile($path, $newPath);
+        echo json_encode(array("status" => "success", "newPath" => $newPath));
+        exit();
+    }
 
-if($action == "renameDir"){
-    $newPath = $params["newPath"];
-    $newPath = renameDirectory($path, $newPath);
-    echo json_encode(array("status" => "success", "newPath" => $newPath));
-    exit();
-}
+    if($action == "renameDir"){
+        $newPath = $params["newPath"];
+        $newPath = renameDirectory($path, $newPath);
+        echo json_encode(array("status" => "success", "newPath" => $newPath));
+        exit();
+    }
 
-if($action == "duplicate"){
-    $newPath = explode(".", $path)[0] . "_copy." . explode(".", $path)[1];
-    $newPath = duplicateFile($path, $newPath);
-    echo json_encode(array("status" => "success", "newPath" => $newPath));
-    exit();
-}
+    if($action == "duplicate"){
+        $newPath = explode(".", $path)[0] . "_copy." . explode(".", $path)[1];
+        $newPath = duplicateFile($path, $newPath);
+        echo json_encode(array("status" => "success", "newPath" => $newPath));
+        exit();
+    }
 
-if($action == "upload"){
-    $fileInfo = $_FILES["file"];
-    uploadFile($path, $fileInfo);
-    echo json_encode(array("status" => "success"));
-    exit();
-}
+    if($action == "upload"){
+        $fileInfo = $_FILES["file"];
+        uploadFile($path, $fileInfo);
+        echo json_encode(array("status" => "success"));
+        exit();
+    }
 
-if($action == "delete"){
-    deleteFile($path);
-    echo json_encode(array("status" => "success"));
-    exit();
-}
+    if($action == "delete"){
+        deleteFile($path);
+        echo json_encode(array("status" => "success"));
+        exit();
+    }
 
-if($action == "deleteDir"){
-    deleteDirectory($path);
-    echo json_encode(array("status" => "success"));
+    if($action == "deleteDir"){
+        deleteDirectory($path);
+        echo json_encode(array("status" => "success"));
+        exit();
+    }
+} catch (Exception $e) {
+    // セキュリティ関連のエラーをログに記録
+    logError("File operation failed", [
+        'action' => $action,
+        'path' => $path,
+        'error' => $e->getMessage(),
+        'user_id' => $_SESSION["id"] ?? 'unknown'
+    ]);
+    
+    // クライアントには詳細を隠した一般的なエラーメッセージを返す
+    echo json_encode(array(
+        "status" => "error", 
+        "error" => "Access denied or invalid operation"
+    ));
     exit();
 }
 

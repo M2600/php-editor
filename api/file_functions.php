@@ -134,11 +134,23 @@ function convertUserPath($path){
 /**
  * サーバーパスをユーザーパスに変換
  * ユーザーに表示する際にサーバーの内部構造を隠すために使用
+ * シンボリックリンクの実態パスも考慮する
  * @param string $path サーバー上の絶対パス
  * @return string ユーザー向けの相対パス
  */
 function convertServerPath($path){
-    $userPath = str_replace(getUserRoot(), "", $path);
+    $userRoot = getUserRoot();
+    
+    // 通常のパス置換
+    $userPath = str_replace($userRoot, "", $path);
+    
+    // シンボリックリンクの実態パスも置換
+    // user-programs がシンボリックリンクの場合、実態パスからも置換する
+    $realUserRoot = realpath($userRoot);
+    if ($realUserRoot !== false && $realUserRoot !== $userRoot) {
+        $userPath = str_replace($realUserRoot, "", $userPath);
+    }
+    
     return $userPath;
 }
 

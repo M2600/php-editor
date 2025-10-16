@@ -108,7 +108,7 @@ class Debug {
         // ユーザーのルートディレクトリに _autoload.php があれば自動的にロード
         $autoloadScripts = [
             $userRoot . '_autoload.php',
-            $systemUserRoot . '/data/php_editor/sandbox/php.ini',
+            $systemUserRoot . 'data/php_editor/sandbox/php.ini',
         ];
         
         // コマンドを構築（open_basedirでユーザーディレクトリに制限）
@@ -124,6 +124,8 @@ class Debug {
             'log_errors=1'
         ];
         
+        $cmd = 'php-cgi';
+        
         // _autoload.php が存在する場合は自動ロードを設定
         foreach ($autoloadScripts as $autoloadScript) {
             if (file_exists($autoloadScript)) {
@@ -131,7 +133,6 @@ class Debug {
             }
         }
         
-        $cmd = 'php-cgi';
         foreach ($phpOptions as $option) {
             $cmd .= ' -d ' . $option;
         }

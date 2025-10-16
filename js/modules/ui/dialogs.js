@@ -182,7 +182,8 @@ export function newFileDialog(dir, editor, api, mConsole, currentFile, saveFile,
     }
 
     let create = async () => {
-        console.log("Create: ", currentDir + input.value);
+        const newFilePath = currentDir + input.value;
+        console.log("Create: ", newFilePath);
         DEBUG && console.log("popup window: ", popupWindow);
         popupWindow.remove();
         if(currentFile && !currentFile.readonly){
@@ -190,8 +191,13 @@ export function newFileDialog(dir, editor, api, mConsole, currentFile, saveFile,
             mConsole.print("File saved: " + currentFile.path, "success");
         }
         hideAllPreviewer();
-        await createFile(currentDir + input.value, api, mConsole);
+        await createFile(newFilePath, api, mConsole);
         await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
+        
+        // 新規作成したファイルを自動で開く
+        if (editor.explorer && typeof editor.explorer.openFile === 'function') {
+            editor.explorer.openFile(newFilePath);
+        }
     }
 
     console.log("New file: " + currentDir);

@@ -1347,7 +1347,7 @@ export class MEditor {
                 }
                 explorerContents.files.unshift(parentDir);
             }
-            this.DEBUG && console.log("explorer.loadExplorer() explorerContents: ", explorerContents);
+            //this.DEBUG && console.log("explorer.loadExplorer() explorerContents: ", explorerContents);
             
             let explorerContent = this.explorer;
             // clear old contents
@@ -1656,6 +1656,36 @@ export class MEditor {
          */
         parentObj.explorer.show = () => {
             this.showComponent(parentObj.explorer);
+        }
+
+        /**
+         * Open a file in the editor
+         * ファイルをエディタで開く
+         * @param {string} filePath - The path of the file to open
+         */
+        parentObj.explorer.openFile = (filePath) => {
+            console.log("Opening file:", filePath);
+            if (typeof parentObj.explorer.fileClickAction === 'function') {
+                // エクスプローラーのファイルリストから該当するファイル情報を検索
+                let fileInfo = null;
+                if (parentObj.explorer.files && Array.isArray(parentObj.explorer.files)) {
+                    const foundFile = parentObj.explorer.files.find(f => f.path === filePath);
+                    if (foundFile) {
+                        fileInfo = {
+                            name: foundFile.name,
+                            type: foundFile.type,
+                            path: foundFile.path
+                        };
+                    }
+                }
+                
+                // ファイル情報が見つからない場合は、パスのみで呼び出す（後方互換性）
+                if (!fileInfo) {
+                    fileInfo = { path: filePath };
+                }
+                
+                parentObj.explorer.fileClickAction(fileInfo);
+            }
         }
 
 

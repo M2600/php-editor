@@ -101,36 +101,45 @@ class Debug {
         // ユーザーのルートディレクトリを取得（セキュリティのためopen_basedirを設定）
         require_once(__DIR__ . '/file_functions.php');
         $userRoot = getUserRoot();
-
         $systemUserRoot = posix_getpwuid(posix_getuid())["dir"];
         
         // ライブラリ自動ロードスクリプトのパス
-        // ユーザーのルートディレクトリに _autoload.php があれば自動的にロード
-        $autoloadScript = $systemUserRoot . 'data/php_editor/sandbox/php.ini';
+        $autoloadScript = $userRoot . '_autoload.php';
+        $debugConfig = $systemUserRoot . '/data/php_editor/sandbox/php.ini';
         
-        // コマンドを構築（open_basedirでユーザーディレクトリに制限）
-        // PHPエラー出力設定:
+        // コマンドを構築
+        // PHPエラー出力設定とセキュリティ設定:
+        // - open_basedir: ユーザーディレクトリに制限（セキュリティ）
         // - display_errors=0: HTMLエスケープされたエラーをstdoutに出力しない
         // - html_errors=0: HTMLタグを使用しない（プレーンテキストのみ）
         // - log_errors=1: エラーをstderr（エラーログ）に出力
         // - auto_prepend_file: スクリプト実行前に自動的にロードするファイル
-        // $phpOptions = [
-        //     'open_basedir=' . escapeshellarg($FILE_ROOT),
-        //     'display_errors=0',
-        //     'html_errors=0',
-        //     'log_errors=1'
-        // ];
-        
-        $cmd = 'php-cgi';
+        $phpOptions = [
+        //    'open_basedir=' . escapeshellarg($systemUserRoot . '/data/php_editor/sandbox'),
+        //    'display_errors=0',
+        //    'html_errors=0',
+        //    'log_errors=1'
+        ];
         
         // _autoload.php が存在する場合は自動ロードを設定
         if (file_exists($autoloadScript)) {
-            $cmd .= ' -c ' . escapeshellarg($autoloadScript);
+            $phpOptions[] = 'auto_prepend_file=' . escapeshellarg($autoloadScript);
+            error_log("[Debug] Autoload script found: " . $autoloadScript);
         }
         
-        // foreach ($phpOptions as $option) {
-        //     $cmd .= ' -d ' . $option;
-        // }
+        $cmd = 'php-cgi';
+        
+        // カスタム php.ini を使用（存在する場合）
+        if (file_exists($debugConfig)) {
+            $cmd .= ' -c ' . escapeshellarg($debugConfig);
+        }
+        
+        // -d オプションで設定を上書き（php.ini より優先）
+        // 注意: -d オプションの値全体をエスケープすると動作しないため、値のみをエスケープ
+        foreach ($phpOptions as $option) {
+            $cmd .= ' -d ' . $option;
+        }
+        
         $cmd .= ' ' . escapeshellarg($scriptPath);
         
         // 環境変数を追加

@@ -254,6 +254,14 @@ export async function loadExplorer(path, api, appState, editor) {
     pruneAceList(appState.ACE_LIST, appState.FILE_LIST);
     // 同一パスの重複Aceを排除
     dedupeAceListByPath(appState.ACE_LIST);
+    
+        // エクスプローラーリロード後、現在開いているファイルのハイライトを復元
+        if (appState.CURRENT_FILE && 
+            appState.CURRENT_FILE.path && 
+            editor.explorer && 
+            typeof editor.explorer.openFile === 'function') {
+            editor.explorer.openFile(appState.CURRENT_FILE.path);
+        }
     });
 }
 
@@ -870,5 +878,13 @@ export function refreshExplorerSort(appState, editor) {
         
         // エクスプローラーを再描画
         editor.explorer.loadExplorer(appState.FILE_LIST);
+        
+        // 再描画後、現在開いているファイルのハイライトを復元
+        if (appState.CURRENT_FILE && 
+            appState.CURRENT_FILE.path && 
+            editor.explorer && 
+            typeof editor.explorer.openFile === 'function') {
+            editor.explorer.openFile(appState.CURRENT_FILE.path);
+        }
     }
 }

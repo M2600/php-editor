@@ -42,8 +42,18 @@ export function renameFileDialog(path, editor, api, mConsole, DEBUG) {
         DEBUG && console.log("popup window: ", popupWindow);
         popupWindow.remove();
         hideAllPreviewer();
-        await renameFile(path, input.value, api, mConsole);
+        const newPath = await renameFile(path, input.value, api, mConsole);
         await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
+        
+        // リネーム成功時、新しいファイル名でファイルを開く
+        if (newPath && editor.explorer && editor.explorer.files && Array.isArray(editor.explorer.files)) {
+            // newPathが相対パスの場合、先頭に/を追加
+            const normalizedPath = newPath.startsWith('/') ? newPath : '/' + newPath;
+            const fileInfo = editor.explorer.files.find(f => f.path === normalizedPath);
+            if (fileInfo && typeof editor.explorer.fileClickAction === 'function') {
+                editor.explorer.fileClickAction(fileInfo);
+            }
+        }
     }
 
     let contents = document.createElement("div");
@@ -195,8 +205,11 @@ export function newFileDialog(dir, editor, api, mConsole, currentFile, saveFile,
         await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
         
         // 新規作成したファイルを自動で開く
-        if (editor.explorer && typeof editor.explorer.openFile === 'function') {
-            editor.explorer.openFile(newFilePath);
+        if (editor.explorer && editor.explorer.files && Array.isArray(editor.explorer.files)) {
+            const fileInfo = editor.explorer.files.find(f => f.path === newFilePath);
+            if (fileInfo && typeof editor.explorer.fileClickAction === 'function') {
+                editor.explorer.fileClickAction(fileInfo);
+            }
         }
     }
 

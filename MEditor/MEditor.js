@@ -1663,7 +1663,7 @@ export class MEditor {
          * エクスプローラー内のファイルをハイライト表示する（ファイルは開かない）
          * @param {string} filePath - The path of the file to highlight
          */
-        parentObj.explorer.openFile = (filePath) => {
+        parentObj.explorer.highlightFile = (filePath) => {
             //console.log("Highlighting file:", filePath);
             
             // エクスプローラーのファイルリストから該当するファイルが存在するか確認

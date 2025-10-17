@@ -259,8 +259,8 @@ export async function loadExplorer(path, api, appState, editor) {
         if (appState.CURRENT_FILE && 
             appState.CURRENT_FILE.path && 
             editor.explorer && 
-            typeof editor.explorer.openFile === 'function') {
-            editor.explorer.openFile(appState.CURRENT_FILE.path);
+            typeof editor.explorer.highlightFile === 'function') {
+            editor.explorer.highlightFile(appState.CURRENT_FILE.path);
         }
     });
 }
@@ -883,8 +883,8 @@ export function refreshExplorerSort(appState, editor) {
         if (appState.CURRENT_FILE && 
             appState.CURRENT_FILE.path && 
             editor.explorer && 
-            typeof editor.explorer.openFile === 'function') {
-            editor.explorer.openFile(appState.CURRENT_FILE.path);
+            typeof editor.explorer.highlightFile === 'function') {
+            editor.explorer.highlightFile(appState.CURRENT_FILE.path);
         }
     }
 }

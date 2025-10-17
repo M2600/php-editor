@@ -2100,11 +2100,25 @@ export class MEditor {
         mConsole.element.appendChild(consoleMenu.element);
         mConsole.menu = consoleMenu;
 
+        // Left menu container (title and left-aligned items)
+        let consoleMenuLeft = {};
+        consoleMenuLeft.element = document.createElement("div");
+        consoleMenuLeft.element.classList.add(this.CLASS_NAME_PREFIX + "console-menu-left");
+        consoleMenu.element.appendChild(consoleMenuLeft.element);
+        mConsole.menuLeft = consoleMenuLeft;
+
         const title = document.createElement("div");
         title.classList.add(this.CLASS_NAME_PREFIX + "console-title");
         title.innerHTML = "Console";
-        consoleMenu.element.appendChild(title);
+        consoleMenuLeft.element.appendChild(title);
         mConsole.title = title;
+
+        // Right menu container (right-aligned items)
+        let consoleMenuRight = {};
+        consoleMenuRight.element = document.createElement("div");
+        consoleMenuRight.element.classList.add(this.CLASS_NAME_PREFIX + "console-menu-right");
+        consoleMenu.element.appendChild(consoleMenuRight.element);
+        mConsole.menuRight = consoleMenuRight;
 
         let consoleContent = {};
         consoleContent.element = document.createElement("div");
@@ -2188,6 +2202,54 @@ export class MEditor {
          */
         mConsole.setTitle = (title) => {
             mConsole.title.innerHTML = title;
+        }
+
+        /**
+         * Add component to left menu (next to title)
+         * タイトルの右側（左寄せエリア）にコンポーネントを追加
+         * @param {Object|HTMLElement} component - Component to add (MEditor component object or DOM element)
+         */
+        mConsole.addMenuComponent = (component) => {
+            if (component && component.element instanceof HTMLElement) {
+                consoleMenuLeft.element.appendChild(component.element);
+            } else if (component instanceof HTMLElement) {
+                consoleMenuLeft.element.appendChild(component);
+            } else {
+                console.error("Invalid component: must have .element property or be an HTMLElement");
+            }
+        }
+
+        /**
+         * Add component to right menu (right-aligned)
+         * 右寄せエリアにコンポーネントを追加
+         * @param {Object|HTMLElement} component - Component to add (MEditor component object or DOM element)
+         */
+        mConsole.addRightMenuComponent = (component) => {
+            if (component && component.element instanceof HTMLElement) {
+                consoleMenuRight.element.appendChild(component.element);
+            } else if (component instanceof HTMLElement) {
+                consoleMenuRight.element.appendChild(component);
+            } else {
+                console.error("Invalid component: must have .element property or be an HTMLElement");
+            }
+        }
+
+        /**
+         * Remove all components from left menu (except title)
+         * 左メニューからタイトル以外のすべてのコンポーネントを削除
+         */
+        mConsole.clearMenuComponents = () => {
+            while (consoleMenuLeft.element.children.length > 1) {
+                consoleMenuLeft.element.removeChild(consoleMenuLeft.element.lastChild);
+            }
+        }
+
+        /**
+         * Remove all components from right menu
+         * 右メニューからすべてのコンポーネントを削除
+         */
+        mConsole.clearRightMenuComponents = () => {
+            consoleMenuRight.element.innerHTML = "";
         }
 
         return mConsole;

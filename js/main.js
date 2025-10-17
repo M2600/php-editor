@@ -426,6 +426,7 @@ async function main(){
         saveButton.setEnabled(hasFile);
         runButton.setEnabled(hasFile);
         qrButton.setEnabled(hasFile);
+        consoleRunButton.setEnabled(hasFile);
     }
 
     // ファイル操作用のボタンを参照として保持
@@ -752,6 +753,31 @@ async function main(){
     // Console setup
     mConsole = editor.console();
     mConsole.setTitle("実行結果");
+    
+    // 左メニュー（タイトルの右）に実行ボタンを追加
+    const consoleRunButton = editor.generateButton(
+        null,
+        "▶実行",
+        async () => {
+            await executeCurrentFile();
+        },
+        "プログラムを実行し、結果を表示します"
+    );
+    mConsole.addMenuComponent(consoleRunButton);
+    
+    // 右メニューにクリアボタンを追加
+    const consoleClearButton = editor.generateButton(
+        null,
+        "🗑クリア",
+        () => {
+            mConsole.clear();
+        },
+        "実行結果をクリア"
+    );
+    mConsole.addRightMenuComponent(consoleClearButton);
+    // 初期状態を無効化
+    consoleRunButton.setEnabled(false);
+    
     dictMenuTab.addContent(mConsole);
 
 

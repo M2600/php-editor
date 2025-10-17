@@ -584,8 +584,36 @@ i {
 
 .meditor-console-menu {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
     width: 100%;
+    box-sizing: border-box;
     height: 1.5em;
+    gap: 0.5em;
+}
+
+.meditor-console-menu-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    flex-shrink: 0;
+}
+
+.meditor-console-menu-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* コンソールメニュー内のボタンのサイズ調整 */
+.meditor-console-menu-left .meditor-button,
+.meditor-console-menu-right .meditor-button {
+    padding: 0.1em 0.4em;
+    font-size: 0.85em;
+    height: auto;
+    line-height: 1.2;
 }
 
 .meditor-console-content {

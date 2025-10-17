@@ -1659,14 +1659,25 @@ export class MEditor {
         }
 
         /**
-         * Open a file in the editor
-         * ファイルをエディタで開く
-         * @param {string} filePath - The path of the file to open
+         * Highlight a file in the explorer
+         * エクスプローラー内のファイルをハイライト表示する（ファイルは開かない）
+         * @param {string} filePath - The path of the file to highlight
          */
         parentObj.explorer.openFile = (filePath) => {
-            console.log("Opening file:", filePath);
+            //console.log("Highlighting file:", filePath);
             
-            // ファイルのハイライト処理（クリック時と同じ動作）
+            // エクスプローラーのファイルリストから該当するファイルが存在するか確認
+            let fileExists = false;
+            if (parentObj.explorer.files && Array.isArray(parentObj.explorer.files)) {
+                fileExists = parentObj.explorer.files.some(f => f.path === filePath);
+            }
+            
+            // ファイルが存在しない場合は何もしない（削除済みまたは名前変更済み）
+            if (!fileExists) {
+                //console.log("File not found in explorer, skipping highlight:", filePath);
+                return;
+            }
+            
             // 既存のハイライトを削除
             let oldSelected = document.getElementsByClassName(this.CLASS_NAME_PREFIX + "file-selected");
             for(let i=0; i<oldSelected.length; i++) {
@@ -1677,28 +1688,8 @@ export class MEditor {
             const fileElement = document.getElementById(filePath);
             if (fileElement) {
                 fileElement.classList.add(this.CLASS_NAME_PREFIX + "file-selected");
-            }
-            
-            if (typeof parentObj.explorer.fileClickAction === 'function') {
-                // エクスプローラーのファイルリストから該当するファイル情報を検索
-                let fileInfo = null;
-                if (parentObj.explorer.files && Array.isArray(parentObj.explorer.files)) {
-                    const foundFile = parentObj.explorer.files.find(f => f.path === filePath);
-                    if (foundFile) {
-                        fileInfo = {
-                            name: foundFile.name,
-                            type: foundFile.type,
-                            path: foundFile.path
-                        };
-                    }
-                }
-                
-                // ファイル情報が見つからない場合は、パスのみで呼び出す（後方互換性）
-                if (!fileInfo) {
-                    fileInfo = { path: filePath };
-                }
-                
-                parentObj.explorer.fileClickAction(fileInfo);
+            } else {
+                //console.log("File element not found in DOM:", filePath);
             }
         }
 

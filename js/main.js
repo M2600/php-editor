@@ -171,27 +171,7 @@ async function executeCurrentFile() {
         // API開発モード: コンソールに出力
         console.log("Run in debug mode with GET params:", getParams);
         
-        // GETパラメータをlocalStorageに保存
-        try {
-            localStorage.setItem('getParams', JSON.stringify(getParams));
-        } catch (err) {
-            console.error('Failed to save GET parameters:', err);
-        }
-        
-        // POSTパラメータをlocalStorageに保存
-        try {
-            localStorage.setItem('postParams', JSON.stringify(postParams));
-        } catch (err) {
-            console.error('Failed to save POST parameters:', err);
-        }
-        
-        // POST設定（POSTチェックボックス、JSONチェックボックス）を保存
-        try {
-            localStorage.setItem('postCheckState', postCheck.getState().toString());
-            localStorage.setItem('jsonCheckState', jsonCheck.getState().toString());
-        } catch (err) {
-            console.error('Failed to save POST settings:', err);
-        }
+        // パラメータと設定は編集時に自動保存されるため、ここでの保存処理は不要
         
         // Show console automatically when running program
         if (mConsole && typeof mConsole.show === 'function') {
@@ -659,6 +639,16 @@ async function main(){
     // 末尾に空の行を追加しておく
     dictMenu.addItem({'':''});
 
+    // GETパラメータが変更されたときにlocalStorageに保存
+    dictMenu.onChange((params) => {
+        try {
+            localStorage.setItem('getParams', JSON.stringify(params));
+            console.log('GET parameters saved:', params);
+        } catch (err) {
+            console.error('Failed to save GET parameters:', err);
+        }
+    });
+
     let hr = document.createElement("hr");
     dictMenuTab.addContent(hr);
 
@@ -671,6 +661,13 @@ async function main(){
         (checked) => {
             postDictMenu.setEnabled(checked);
             jsonCheck.setEnabled(checked);
+            // POSTチェックボックスの状態を保存
+            try {
+                localStorage.setItem('postCheckState', checked.toString());
+                console.log('POST checkbox state saved:', checked);
+            } catch (err) {
+                console.error('Failed to save POST checkbox state:', err);
+            }
         }
     );
     dictMenuTab.addContent(postCheck);
@@ -681,7 +678,13 @@ async function main(){
         "JSON形式で送信",
         false,
         (checked) => {
-            // 今のところ特に処理は不要
+            // JSONチェックボックスの状態を保存
+            try {
+                localStorage.setItem('jsonCheckState', checked.toString());
+                console.log('JSON checkbox state saved:', checked);
+            } catch (err) {
+                console.error('Failed to save JSON checkbox state:', err);
+            }
         }
     );
     dictMenuTab.addContent(jsonCheck);
@@ -734,6 +737,16 @@ async function main(){
     
     // 末尾に空の行を追加しておく
     postDictMenu.addItem({'':''});
+    
+    // POSTパラメータが変更されたときにlocalStorageに保存
+    postDictMenu.onChange((params) => {
+        try {
+            localStorage.setItem('postParams', JSON.stringify(params));
+            console.log('POST parameters saved:', params);
+        } catch (err) {
+            console.error('Failed to save POST parameters:', err);
+        }
+    });
     
     // 初期状態では無効化（復元された状態に応じて有効化される）
     if (savedPostCheckState !== 'true') {

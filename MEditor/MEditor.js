@@ -2863,6 +2863,7 @@ export class MEditor {
         }
         dictMenu.items = [];
         dictMenu.itemElements = [];
+        dictMenu.onChangeCallback = null; // 変更時のコールバック
 
         let dictMenuTitle = {};
         dictMenuTitle.element = document.createElement("div");
@@ -2895,6 +2896,10 @@ export class MEditor {
             button.element.addEventListener("click", (e) => {
                 let item = {"":""};
                 dictMenu.addItem(item);
+                // 追加時もコールバックを実行
+                if (dictMenu.onChangeCallback) {
+                    dictMenu.onChangeCallback(dictMenu.getItemsAsObject());
+                }
             })
             dictMenu.element.appendChild(button.element);
         }
@@ -2925,6 +2930,10 @@ export class MEditor {
                 keyInput.value = k;
                 keyInput.addEventListener("change", (e) => {
                     dict["key"] = keyInput.value;
+                    // 変更時コールバックを実行
+                    if (dictMenu.onChangeCallback) {
+                        dictMenu.onChangeCallback(dictMenu.getItemsAsObject());
+                    }
                 });
                 key.appendChild(keyInput);
 
@@ -2937,6 +2946,10 @@ export class MEditor {
                 valueInput.value = item[k];
                 valueInput.addEventListener("change", (e) => {
                     dict["value"] = valueInput.value;
+                    // 変更時コールバックを実行
+                    if (dictMenu.onChangeCallback) {
+                        dictMenu.onChangeCallback(dictMenu.getItemsAsObject());
+                    }
                 })
                 value.appendChild(valueInput);
                 
@@ -2951,6 +2964,10 @@ export class MEditor {
                 deleteButton.addEventListener("click", (e) => {
                     dictMenu.items = dictMenu.items.filter((i) => i != dict);
                     itemElement.remove();
+                    // 削除時もコールバックを実行
+                    if (dictMenu.onChangeCallback) {
+                        dictMenu.onChangeCallback(dictMenu.getItemsAsObject());
+                    }
                 });
                 itemElement.appendChild(key);
                 itemElement.appendChild(separator);
@@ -2980,6 +2997,10 @@ export class MEditor {
             dictMenu.element.querySelectorAll("input, button").forEach((el) => {
                 el.disabled = !bool;
             });
+        }
+
+        dictMenu.onChange = (callback) => {
+            dictMenu.onChangeCallback = callback;
         }
 
         return dictMenu;

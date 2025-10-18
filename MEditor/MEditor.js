@@ -1755,7 +1755,7 @@ export class MEditor {
         fileMenu.element.classList.add(this.CLASS_NAME_PREFIX + "file-menu");
         fileMenu.addTrigger("click", (e) => {
             e.stopPropagation();
-            console.log("file menu clicked:", fileInfo);
+            //console.log("file menu clicked:", fileInfo);
             this.popupMenu(fileMenu, [
                 {text: "名前変更", title: "ファイル名を変更", clickAction: (e) => {this.explorer.renameClickAction(fileInfo);}},
                 {text: "移動", title: "ファイルを別のフォルダに移動", clickAction: (e) => {
@@ -1811,7 +1811,7 @@ export class MEditor {
             file.element.addEventListener("contextmenu", function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log("file right-click menu:", fileInfo);
+                //console.log("file right-click menu:", fileInfo);
                 this.popupMenu(file, 
                     [
                         {text: "名前変更", title: "ファイル名を変更", clickAction: (e) => {this.explorer.renameClickAction(fileInfo);}},
@@ -1923,7 +1923,7 @@ export class MEditor {
         dirMenu.element.classList.add(this.CLASS_NAME_PREFIX + "dir-menu-button");
         dirMenu.addTrigger("click", (e) => {
             e.stopPropagation();
-            console.log("dir menu clicked:", dirInfo);
+            //console.log("dir menu clicked:", dirInfo);
             this.popupMenu(dirMenu, [
                 {text: "名前変更", title: "フォルダ名を変更", clickAction: (e) => {
                     //console.log("rename: ", dirInfo);
@@ -1980,7 +1980,7 @@ export class MEditor {
         dirMenu.element.addEventListener("contextmenu", function(e) {
             e.preventDefault();
             e.stopPropagation();
-            console.log("dir right-click menu:", dirInfo);
+            //console.log("dir right-click menu:", dirInfo);
             this.popupMenu(dirMenu, [
                 {text: "名前変更", title: "フォルダ名を変更", clickAction: (e) => {this.explorer.renameDirClickAction(dirInfo);}},
                 {text: "新しいファイル", title: "フォルダ内に新しいファイルを作成", clickAction: (e) => {
@@ -4029,7 +4029,7 @@ export class MEditor {
         //     menu.element.style.top = parentObj.element.getBoundingClientRect().top - gap + "px";
         // }
         if (opt.pos && Array.isArray(opt.pos) && opt.pos.length === 2) {
-            console.log("popup menu at specified position:", opt.pos);
+            //console.log("popup menu at specified position:", opt.pos);
             let posX = opt.pos[0];
             let posY = opt.pos[1];
             

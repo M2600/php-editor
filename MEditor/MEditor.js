@@ -1806,6 +1806,29 @@ export class MEditor {
             file.element.addEventListener("click", function a(e) {
                 this.explorer.fileClickAction(fileInfo);
             }.bind(this));
+            
+            // 右クリックメニューを追加
+            file.element.addEventListener("contextmenu", function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log("file right-click menu:", fileInfo);
+                this.popupMenu(file, 
+                    [
+                        {text: "名前変更", title: "ファイル名を変更", clickAction: (e) => {this.explorer.renameClickAction(fileInfo);}},
+                        {text: "移動", title: "ファイルを別のフォルダに移動", clickAction: (e) => {
+                            e.stopPropagation();
+                            this.explorer.moveClickAction(fileInfo);
+                        }},
+                        {text: "複製", title: "ファイルを複製", clickAction: (e) => {this.explorer.duplicateClickAction(fileInfo);}},
+                        {text: "削除", title: "ファイルを削除", clickAction: (e) => {this.explorer.deleteClickAction(fileInfo);}},
+                    ],
+                    {pos: [e.clientX, e.clientY]},
+                );
+                this.page.popupMenuCloseAction = () => {
+                    this.explorer.content.element.style.overflowY = "auto";
+                }
+                this.explorer.content.element.style.overflowY = "hidden";
+            }.bind(this));
         }
 
         let fileName = {};
@@ -1952,6 +1975,37 @@ export class MEditor {
             //this.explorer.toggleExpand(dir.path);
             this.explorer.dirClickAction(dirInfo);
         });
+        
+        // フォルダに右クリックメニューを追加
+        dirMenu.element.addEventListener("contextmenu", function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log("dir right-click menu:", dirInfo);
+            this.popupMenu(dirMenu, [
+                {text: "名前変更", title: "フォルダ名を変更", clickAction: (e) => {this.explorer.renameDirClickAction(dirInfo);}},
+                {text: "新しいファイル", title: "フォルダ内に新しいファイルを作成", clickAction: (e) => {
+                    //console.log("new file: ", dirInfo);
+                    this.explorer.newFileClickAction(dirInfo);
+                }},
+                {text: "新しいフォルダ", title: "フォルダ内に新しいフォルダを作成", clickAction: (e) => {
+                    //console.log("new folder: ", dirInfo);
+                    this.explorer.newDirClickAction(dirInfo);
+                }},
+                {text: "アップロード", title: "フォルダ内にファイルをアップロード", clickAction: (e) => {
+                    //console.log("upload: ", dirInfo);
+                    this.explorer.uploadClickAction(dirInfo);
+                }},
+                {text: "削除", title: "フォルダを削除", clickAction: (e) => {
+                    //console.log("delete: ", dirInfo);
+                    this.explorer.deleteDirClickAction(dirInfo);
+                }}
+            ], {pos: [e.clientX, e.clientY]});
+            this.page.popupMenuCloseAction = () => {
+                this.explorer.content.element.style.overflowY = "auto";
+            }
+            this.explorer.content.element.style.overflowY = "hidden";
+        }.bind(this));
+        
         dir.element.appendChild(dirMenu.element);
         dir.menu = dirMenu;
 
@@ -3930,7 +3984,8 @@ export class MEditor {
 
     popupMenu(
         parentObj, 
-        contents=[{text: "Menu1", title: "desc", clickAction: (e) => {console.log("menu1");}}]
+        contents=[{text: "Menu1", title: "desc", clickAction: (e) => {console.log("menu1");}}],
+        opt={}
     ) {
 
         this.removePopupMenus();
@@ -3973,13 +4028,50 @@ export class MEditor {
         // else{
         //     menu.element.style.top = parentObj.element.getBoundingClientRect().top - gap + "px";
         // }
-        if(parentObj.element.getBoundingClientRect().bottom + menu.element.clientHeight > this.page.element.getBoundingClientRect().bottom){
-            menu.element.style.top = parentObj.element.getBoundingClientRect().bottom - menu.element.clientHeight + "px";
+        if (opt.pos && Array.isArray(opt.pos) && opt.pos.length === 2) {
+            console.log("popup menu at specified position:", opt.pos);
+            let posX = opt.pos[0];
+            let posY = opt.pos[1];
+            
+            // 一旦位置を設定してメニューのサイズを取得
+            menu.element.style.top = posY + "px";
+            menu.element.style.left = posX + "px";
+            
+            // メニューのサイズを取得
+            const menuRect = menu.element.getBoundingClientRect();
+            const pageRect = this.page.element.getBoundingClientRect();
+            
+            // 右端からはみ出る場合は左にずらす
+            if (menuRect.right > pageRect.right) {
+                posX = pageRect.right - menuRect.width;
+            }
+            // 左端からはみ出る場合は右にずらす
+            if (posX < pageRect.left) {
+                posX = pageRect.left;
+            }
+            
+            // 下端からはみ出る場合は上にずらす
+            if (menuRect.bottom > pageRect.bottom) {
+                posY = pageRect.bottom - menuRect.height;
+            }
+            // 上端からはみ出る場合は下にずらす
+            if (posY < pageRect.top) {
+                posY = pageRect.top;
+            }
+            
+            // 調整後の位置を設定
+            menu.element.style.top = posY + "px";
+            menu.element.style.left = posX + "px";
         }
-        else{
-            menu.element.style.top = parentObj.element.getBoundingClientRect().top + window.scrollY + "px";
+        else {
+            if(parentObj.element.getBoundingClientRect().bottom + menu.element.clientHeight > this.page.element.getBoundingClientRect().bottom){
+                menu.element.style.top = parentObj.element.getBoundingClientRect().bottom - menu.element.clientHeight + "px";
+            }
+            else{
+                menu.element.style.top = parentObj.element.getBoundingClientRect().top + window.scrollY + "px";
+            }
+            menu.element.style.left = parentObj.element.getBoundingClientRect().right + window.scrollX + "px";
         }
-        menu.element.style.left = parentObj.element.getBoundingClientRect().right + window.scrollX + "px";
 
         window.addEventListener("click", this.removePopupMenus.bind(this));
         window.addEventListener("keydown", (e) => {

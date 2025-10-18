@@ -79,15 +79,15 @@ export function renderThinkingBlocks(thinkingBlocks) {
 export function processAIResponseWithDOM(text) {
     if (!text || typeof text !== 'string') return '';
     
-    console.log("Processing AI response with DOM:", text.substring(0, 200) + "...");
+    //console.log("Processing AI response with DOM:", text.substring(0, 200) + "...");
     
     // Step 1: Thinkingブロックを抽出（完了・未完了両方）
     const { processedText, thinkingBlocks } = processThinkingBlocks(text);
-    console.log("Extracted thinking blocks:", thinkingBlocks.length);
-    console.log("Thinking blocks:", thinkingBlocks.map(b => ({
-        content: b.content.substring(0, 50) + "...",
-        isComplete: b.isComplete
-    })));
+    //console.log("Extracted thinking blocks:", thinkingBlocks.length);
+    // console.log("Thinking blocks:", thinkingBlocks.map(b => ({
+    //     content: b.content.substring(0, 50) + "...",
+    //     isComplete: b.isComplete
+    // })));
     
     if (thinkingBlocks.length === 0) {
         return sanitizeAIResponse(marked.parse(text));
@@ -95,7 +95,7 @@ export function processAIResponseWithDOM(text) {
     
     // Step 2: 通常のMarkdownレンダリング
     let renderedHtml = marked.parse(processedText);
-    console.log("Rendered HTML before replacement:", renderedHtml);
+    //console.log("Rendered HTML before replacement:", renderedHtml);
     
     // Step 3: Thinkingブロックをレンダリング
     const renderedThinking = renderThinkingBlocks(thinkingBlocks);
@@ -104,9 +104,9 @@ export function processAIResponseWithDOM(text) {
     renderedThinking.forEach((block, index) => {
         const placeholder = `[[[THINKING_${index}]]]`;
         
-        console.log(`Replacing ${placeholder} with thinking content (complete: ${block.isComplete}):`, block.content.substring(0, 100));
-        console.log("Thinking HTML:", block.html);
-        console.log("HTML contains placeholder?", renderedHtml.includes(placeholder));
+        //console.log(`Replacing ${placeholder} with thinking content (complete: ${block.isComplete}):`, block.content.substring(0, 100));
+        //console.log("Thinking HTML:", block.html);
+        //console.log("HTML contains placeholder?", renderedHtml.includes(placeholder));
         
         // プレースホルダーを置換（段落で囲まれている場合も考慮）
         const beforeReplace = renderedHtml;
@@ -114,14 +114,14 @@ export function processAIResponseWithDOM(text) {
         renderedHtml = renderedHtml.replace(new RegExp(`\\[\\[\\[THINKING_${index}\\]\\]\\]`, 'g'), block.html);
         
         if (beforeReplace !== renderedHtml) {
-            console.log("Successfully replaced placeholder");
+            //console.log("Successfully replaced placeholder");
         } else {
             console.log("Failed to replace placeholder");
         }
     });
     
     const result = renderedHtml;
-    console.log("Final result:", result.substring(0, 300) + "...");
+    //console.log("Final result:", result.substring(0, 300) + "...");
     
     return sanitizeAIResponse(result);
 }
@@ -368,7 +368,7 @@ export function restoreChatHistoryToUI(chatHistory, chat) {
         } else if (msg.role === "assistant") {
             // 履歴復元時も新しい処理を適用
             const processedContent = processAIResponseWithDOM(msg.content);
-            console.log("Restoring AI message:", processedContent);
+            //console.log("Restoring AI message:", processedContent);
             chat.addMessage(processedContent, "ai", true);
         }
     });

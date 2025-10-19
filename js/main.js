@@ -1010,7 +1010,7 @@ async function main(){
 
     // セッション生存確認を開始
     startSessionPulse({
-        interval: 180000, // 3分間隔
+        interval: CONFIG.SESSION_PULSE_INTERVAL || 60000, // デフォルト1分
         onSessionValid: function(data) {
             // セッション有効時の処理
             // nothing to do

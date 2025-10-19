@@ -73,6 +73,7 @@ export const CONFIG = {
     FILE_PAGE_BASE_URL: "/user-programs/",
     MAX_CHAT_HISTORY: 6,
     CHAT_STORAGE_KEY: "php-editor-chat-history",
+    SESSION_PULSE_INTERVAL: 300000, // セッション維持のためのパルス送信間隔（ミリ秒）
     EXPLORER_AUTO_RELOAD_INTERVAL: 3600000, // エクスプローラー自動リロード間隔（ミリ秒、0で無効）
     RELOAD_EXPLORER_AFTER_EXECUTION: true, // プログラム実行後にエクスプローラーをリロードするか
     RELOAD_EXPLORER_EXECUTION_DELAY: 1500, // 実行後のリロード遅延時間（ミリ秒）

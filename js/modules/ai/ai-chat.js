@@ -9,6 +9,21 @@ import { loadSelectedModel, saveSelectedModel } from '../utils/cookie.js';
 import { AITool } from './ai-tool.js';
 export { AITool };
 
+// Markedのセキュリティ設定（一度だけ実行）
+if (typeof marked !== 'undefined' && !marked._securityConfigured) {
+    marked.setOptions({
+        // インラインHTMLを無効化（セキュリティ強化）
+        sanitize: false, // 後でsanitizeAIResponseで処理するため
+        // コードブロック内のHTMLエスケープを有効化（デフォルトで有効だが明示）
+        gfm: true,
+        breaks: true,
+        // XSS対策
+        headerIds: false, // IDによるXSSを防ぐ
+        mangle: false // メールアドレスの難読化を無効化（不要）
+    });
+    marked._securityConfigured = true;
+}
+
 // AI関連のユーティリティ関数
 export function extractMarkdownCodeBlocks(text) {
     const codeBlockRegex = /```\S*\s(.*?)```/gs;
@@ -18,6 +33,13 @@ export function extractMarkdownCodeBlocks(text) {
         codeBlocks.push(matches[1].trim());
     }
     return codeBlocks;
+}
+
+// HTMLエスケープ用のヘルパー関数
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // <think>ブロックを抽出・処理する関数（ストリーム対応）
@@ -63,15 +85,17 @@ export function processThinkingBlocks(text) {
 // Thinkingブロックを適切なHTMLに変換（ストリーム対応）
 export function renderThinkingBlocks(thinkingBlocks) {
     return thinkingBlocks.map(block => {
-        // thinking内容もMarkdownとして処理
-        const renderedContent = marked.parse(block.content);
+        // thinking内容はHTMLエスケープしてプレーンテキストとして表示
+        // 改行は<br>に変換
+        const escapedContent = escapeHtml(block.content)
+            .replace(/\n/g, '<br>');
         
         // 未完了の場合は特別なクラスを追加
         const thinkClass = block.isComplete ? 'ai-think' : 'ai-think ai-think-streaming';
         
         return {
             ...block,
-            html: `<div class="${thinkClass}">${renderedContent}</div>`
+            html: `<div class="${thinkClass}">${escapedContent}</div>`
         };
     });
 }
@@ -143,7 +167,11 @@ export function sanitizeAIResponse(html) {
         
         // javascript: プロトコルを除去
         .replace(/href\s*=\s*["']javascript:[^"']*["']/gi, 'href="#"')
-        .replace(/src\s*=\s*["']javascript:[^"']*["']/gi, 'src="#"');
+        .replace(/src\s*=\s*["']javascript:[^"']*["']/gi, 'src="#"')
+        
+        // data: プロトコル（Base64エンコードされたスクリプト）を除去
+        .replace(/href\s*=\s*["']data:text\/html[^"']*["']/gi, 'href="#"')
+        .replace(/src\s*=\s*["']data:text\/html[^"']*["']/gi, 'src="#"');
     
     return sanitized;
 }
@@ -706,7 +734,8 @@ export async function sendAIMessage({
                             editor: editor,
                             mConsole: mConsole,
                             currentFile: currentFile,
-                            api: api
+                            api: api,
+                            baseDir: baseDir  // ベースディレクトリを追加
                         };
                         
                         // チャットにツール実行通知を表示

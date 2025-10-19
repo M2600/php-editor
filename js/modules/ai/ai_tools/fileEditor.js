@@ -8,6 +8,80 @@
 import { api } from '../../utils/api.js';
 
 /**
+ * 相対パスをベースディレクトリと結合して絶対パスにする
+ * @param {string} filePath - ファイルパス（相対または絶対）
+ * @param {string} baseDir - ベースディレクトリ
+ * @returns {string} - 結合された絶対パス
+ */
+function resolveFilePath(filePath, baseDir) {
+    // 既に絶対パスの場合はそのまま返す
+    if (filePath.startsWith('/')) {
+        return filePath;
+    }
+    
+    // baseDirが設定されていない場合は相対パスをそのまま返す
+    if (!baseDir) {
+        return filePath;
+    }
+    
+    // baseDirの末尾のスラッシュを削除
+    const normalizedBase = baseDir.replace(/\/$/, '');
+    
+    // 相対パスの先頭のスラッシュを削除
+    const normalizedFile = filePath.replace(/^\/+/, '');
+    
+    // 結合
+    return `${normalizedBase}/${normalizedFile}`;
+}
+
+/**
+ * ファイルパスが現在のベースディレクトリ配下にあるか検証
+ * @param {string} filePath - 検証するファイルパス（絶対パス）
+ * @param {string} baseDir - ベースディレクトリ
+ * @returns {boolean} - 許可された範囲内であればtrue
+ */
+function validateFilePath(filePath, baseDir) {
+    if (!baseDir) {
+        console.warn('Base directory not provided, allowing all paths');
+        return true; // ベースディレクトリが設定されていない場合は制限なし
+    }
+    
+    // パスを正規化（../ などの相対パスを解決）
+    const normalizePathForComparison = (path) => {
+        // 先頭の / を削除して正規化
+        const cleaned = path.replace(/^\/+/, '');
+        // 連続する / を単一に
+        const normalized = cleaned.replace(/\/+/g, '/');
+        // 末尾の / を削除
+        return normalized.replace(/\/$/, '');
+    };
+    
+    const normalizedBase = normalizePathForComparison(baseDir);
+    const normalizedFile = normalizePathForComparison(filePath);
+    
+    // ファイルパスがベースディレクトリで始まるかチェック
+    if (!normalizedFile.startsWith(normalizedBase)) {
+        console.error('Path validation failed:', {
+            filePath: normalizedFile,
+            baseDir: normalizedBase,
+            reason: 'File path is outside base directory'
+        });
+        return false;
+    }
+    
+    // パストラバーサル攻撃を防ぐ（../ を含むパスを拒否）
+    if (filePath.includes('..')) {
+        console.error('Path validation failed:', {
+            filePath: filePath,
+            reason: 'Path traversal attempt detected'
+        });
+        return false;
+    }
+    
+    return true;
+}
+
+/**
  * ツール実行履歴をサーバーに記録
  */
 async function logToolExecution(tool, parameters, status, result, approvalTime = null) {
@@ -87,15 +161,32 @@ function showEditConfirmation(editor, file, newContent, startTime) {
  */
 export async function createFile(filename, content, options = {}) {
     const startTime = Date.now();
-    const { skipConfirmation = false, editor, mConsole, api: apiFunc } = options;
+    const { skipConfirmation = false, editor, mConsole, api: apiFunc, baseDir } = options;
     
     // デバッグ: 渡されたオプションを確認
-    console.log('createFile options:', { skipConfirmation, hasEditor: !!editor, hasMConsole: !!mConsole, hasApi: !!apiFunc });
+    console.log('createFile options:', { skipConfirmation, hasEditor: !!editor, hasMConsole: !!mConsole, hasApi: !!apiFunc, baseDir });
     
     try {
         // APIが渡されていない場合はエラー
         if (!apiFunc) {
             throw new Error('API関数が渡されていません');
+        }
+        
+        // ファイルパスをベースディレクトリと結合
+        const fullPath = resolveFilePath(filename, baseDir);
+        
+        // ファイルパスの検証
+        if (!validateFilePath(fullPath, baseDir)) {
+            const errorMsg = `アクセス拒否: ファイル "${filename}" は現在のディレクトリ配下にありません`;
+            await logToolExecution('createFile', { filename, content }, 'rejected', { error: 'path_validation_failed' });
+            if (mConsole) {
+                mConsole.print(errorMsg, 'error');
+            }
+            return {
+                success: false,
+                error: 'path_validation_failed',
+                message: errorMsg
+            };
         }
         
         // ファイルが既に存在するかチェック
@@ -119,10 +210,10 @@ export async function createFile(filename, content, options = {}) {
             };
         }
         
-        // ファイル作成API呼び出し
+        // ファイル作成API呼び出し（ベースディレクトリと結合したパスを使用）
         const result = await apiFunc('/api/file_manager.php', {
             action: 'create',
-            path: filename,
+            path: fullPath,
             content: content
         });
         
@@ -178,7 +269,7 @@ export async function createFile(filename, content, options = {}) {
  * ファイルを読み込み
  */
 export async function readFile(filename, options = {}) {
-    const { api: apiFunc, mConsole } = options;
+    const { api: apiFunc, mConsole, baseDir } = options;
     
     try {
         // APIが渡されていない場合はエラー
@@ -186,9 +277,26 @@ export async function readFile(filename, options = {}) {
             throw new Error('API関数が渡されていません');
         }
         
+        // ファイルパスをベースディレクトリと結合
+        const fullPath = resolveFilePath(filename, baseDir);
+        
+        // ファイルパスの検証
+        if (!validateFilePath(fullPath, baseDir)) {
+            const errorMsg = `アクセス拒否: ファイル "${filename}" は現在のディレクトリ配下にありません`;
+            await logToolExecution('readFile', { filename }, 'rejected', { error: 'path_validation_failed' });
+            if (mConsole) {
+                mConsole.print(errorMsg, 'error');
+            }
+            return {
+                success: false,
+                error: 'path_validation_failed',
+                message: errorMsg
+            };
+        }
+        
         const result = await apiFunc('/api/file_manager.php', {
             action: 'read',
-            path: filename
+            path: fullPath
         });
         
         // デバッグ: APIレスポンスを確認
@@ -235,7 +343,8 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
         editor, 
         mConsole, 
         currentFile,
-        api: apiFunc 
+        api: apiFunc,
+        baseDir
     } = toolOptions;
     
     try {
@@ -244,8 +353,25 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
             throw new Error('API関数が渡されていません');
         }
         
-        // ファイル内容を取得
-        const fileContent = await readFile(filename, { api: apiFunc });
+        // ファイルパスをベースディレクトリと結合
+        const fullPath = resolveFilePath(filename, baseDir);
+        
+        // ファイルパスの検証
+        if (!validateFilePath(fullPath, baseDir)) {
+            const errorMsg = `アクセス拒否: ファイル "${filename}" は現在のディレクトリ配下にありません`;
+            await logToolExecution('editFileByReplace', { filename, searchText, replaceText }, 'rejected', { error: 'path_validation_failed' });
+            if (mConsole) {
+                mConsole.print(errorMsg, 'error');
+            }
+            return {
+                success: false,
+                error: 'path_validation_failed',
+                message: errorMsg
+            };
+        }
+        
+        // ファイル内容を取得（既に結合されたパスを使用）
+        const fileContent = await readFile(filename, { api: apiFunc, baseDir });
         if (!fileContent.success) {
             throw new Error(fileContent.message);
         }
@@ -322,10 +448,10 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
             };
         }
         
-        // ファイルを保存
+        // ファイルを保存（ベースディレクトリと結合したパスを使用）
         const saveResult = await apiFunc('/api/file_manager.php', {
             action: 'save',
-            path: filename,
+            path: fullPath,
             content: newContent
         });
         
@@ -374,7 +500,8 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
         editor, 
         mConsole, 
         currentFile,
-        api: apiFunc 
+        api: apiFunc,
+        baseDir
     } = options;
     
     try {
@@ -383,8 +510,25 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
             throw new Error('API関数が渡されていません');
         }
         
-        // ファイル内容を取得
-        const fileContent = await readFile(filename, { api: apiFunc });
+        // ファイルパスをベースディレクトリと結合
+        const fullPath = resolveFilePath(filename, baseDir);
+        
+        // ファイルパスの検証
+        if (!validateFilePath(fullPath, baseDir)) {
+            const errorMsg = `アクセス拒否: ファイル "${filename}" は現在のディレクトリ配下にありません`;
+            await logToolExecution('editFileByLines', { filename, lineStart, lineEnd }, 'rejected', { error: 'path_validation_failed' });
+            if (mConsole) {
+                mConsole.print(errorMsg, 'error');
+            }
+            return {
+                success: false,
+                error: 'path_validation_failed',
+                message: errorMsg
+            };
+        }
+        
+        // ファイル内容を取得（既に結合されたパスを使用）
+        const fileContent = await readFile(filename, { api: apiFunc, baseDir });
         if (!fileContent.success) {
             throw new Error(fileContent.message);
         }
@@ -432,10 +576,10 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
             };
         }
         
-        // ファイルを保存
+        // ファイルを保存（ベースディレクトリと結合したパスを使用）
         const saveResult = await apiFunc('/api/file_manager.php', {
             action: 'save',
-            path: filename,
+            path: fullPath,
             content: updatedContent
         });
         
@@ -479,12 +623,29 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
  */
 export async function deleteFile(filename, options = {}) {
     const startTime = Date.now();
-    const { skipConfirmation = false, editor, mConsole, api: apiFunc } = options;
+    const { skipConfirmation = false, editor, mConsole, api: apiFunc, baseDir } = options;
     
     try {
         // APIが渡されていない場合はエラー
         if (!apiFunc) {
             throw new Error('API関数が渡されていません');
+        }
+        
+        // ファイルパスをベースディレクトリと結合
+        const fullPath = resolveFilePath(filename, baseDir);
+        
+        // ファイルパスの検証
+        if (!validateFilePath(fullPath, baseDir)) {
+            const errorMsg = `アクセス拒否: ファイル "${filename}" は現在のディレクトリ配下にありません`;
+            await logToolExecution('deleteFile', { filename }, 'rejected', { error: 'path_validation_failed' });
+            if (mConsole) {
+                mConsole.print(errorMsg, 'error');
+            }
+            return {
+                success: false,
+                error: 'path_validation_failed',
+                message: errorMsg
+            };
         }
         
         let approved = true;
@@ -505,7 +666,7 @@ export async function deleteFile(filename, options = {}) {
         
         const result = await apiFunc('/api/file_manager.php', {
             action: 'delete',
-            path: filename
+            path: fullPath
         });
         
         if (result.status === 'success') {

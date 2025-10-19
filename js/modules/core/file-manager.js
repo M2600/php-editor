@@ -627,7 +627,7 @@ export async function runPhpCgi(path, GETParams={}, api, currentFile, saveFile, 
         return;
     }
 
-    if(!currentFile.readonly){
+    if(!currentFile.readonly && currentFile.changed){
         let res = await saveFile(path, currentFile.aceObj.editor.getValue());
         if(res) {
             //mConsole.print("File saved: " + path, "success");

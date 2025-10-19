@@ -9,4 +9,5 @@ return [
     'excluded_models' => [], // 除外するモデルのIDを配列で指定（例: ['model1', 'model2']）
      // APIの種類: 'OpenAI' または 'klab_generic' などを指定
     'api_type' => 'OpenAI',
+    'generation_timeout' => 600, // 応答生成のタイムアウト時間（秒）
 ];

@@ -19,7 +19,7 @@ require_once __DIR__ . '/ai_context_compression.php';
 /**
  * AIサーバーにリクエストを送信してストリーミングレスポンスを処理する
  */
-function sendAIRequest($apiUrl, $apiKey, $payload) {
+function sendAIRequest($apiUrl, $apiKey, $payload, $timeout = 600) {
     try {
         $chat_url = $apiUrl . '/chat/completions';
         $ch = curl_init($chat_url);
@@ -35,7 +35,7 @@ function sendAIRequest($apiUrl, $apiKey, $payload) {
             'Authorization: Bearer ' . $apiKey
         ]);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_TIMEOUT, 600); // タイムアウトを600秒に設定
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout); // タイムアウトを600秒に設定
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
         curl_setopt($ch, CURLOPT_FAILONERROR, false); // HTTPエラーでも継続
         
@@ -207,6 +207,7 @@ if (!file_exists($configFile)) {
 $config = require $configFile;
 $API_URL = $config['api_base_url'] ?? '';
 $API_KEY = $config['api_key'] ?? '';
+$GENERATION_TIMEOUT = $config['generation_timeout'] ?? 600; // デフォルト600秒
 
 
 
@@ -354,5 +355,5 @@ log_chat_request($logFile, $payload, $userId);
 
 // AIサーバーにリクエストを送信
 //sendAIRequest($API_URL, $API_KEY, $payload);
-sendAIRequest($API_URL, $API_KEY, $payload);
+sendAIRequest($API_URL, $API_KEY, $payload, $GENERATION_TIMEOUT);
 exit;

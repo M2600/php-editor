@@ -5,6 +5,57 @@
 import { sessionError } from '../utils/helpers.js';
 import { Path } from '../utils/api.js';
 
+/**
+ * エクスプローラーで開いているファイルのハイライトを復元する
+ * ファイルが含まれるディレクトリを自動的に展開してからハイライト表示する
+ * @param {Object} appState - アプリケーションの状態
+ * @param {Object} editor - エディタオブジェクト
+ */
+export function restoreFileHighlight(appState, editor) {
+    if (!appState.CURRENT_FILE || 
+        !appState.CURRENT_FILE.path || 
+        !editor.explorer || 
+        typeof editor.explorer.highlightFile !== 'function') {
+        return;
+    }
+    
+    const filePath = appState.CURRENT_FILE.path;
+    const dirPath = filePath.substring(0, filePath.lastIndexOf('/') + 1);
+    
+    // ファイルが含まれるディレクトリを展開
+    if (dirPath && dirPath !== editor.BASE_DIR) {
+        const pathParts = dirPath.split('/').filter(p => p);
+        let currentPath = '';
+        
+        for (const part of pathParts) {
+            currentPath = currentPath + '/' + part;
+            
+            if (currentPath !== editor.BASE_DIR.replace(/\/$/, '')) {
+                const dirElement = document.getElementById(currentPath + '/');
+                
+                if (dirElement) {
+                    const dirName = dirElement.querySelector('.' + editor.CLASS_NAME_PREFIX + 'dir-name');
+                    const dirContent = dirElement.querySelector('.' + editor.CLASS_NAME_PREFIX + 'dir-content');
+                    const dirIcon = dirElement.querySelector('.' + editor.CLASS_NAME_PREFIX + 'dir-icon');
+                    
+                    if (dirName && dirContent) {
+                        const isExpanded = dirName.classList.contains(editor.CLASS_NAME_PREFIX + 'dir-name-expanded');
+                        
+                        if (!isExpanded) {
+                            dirName.classList.add(editor.CLASS_NAME_PREFIX + 'dir-name-expanded');
+                            dirContent.classList.add(editor.CLASS_NAME_PREFIX + 'dir-content-show');
+                            if (dirIcon) dirIcon.innerHTML = '▼';
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // ハイライトを即座に復元（遅延なし）
+    editor.explorer.highlightFile(appState.CURRENT_FILE.path);
+}
+
 export function aceObjFromFileList(fileList, path) {
     //DEBUG && console.log("aceObjFromFileList: ", fileList, path);
     let aceObj = null;
@@ -256,12 +307,7 @@ export async function loadExplorer(path, api, appState, editor) {
     dedupeAceListByPath(appState.ACE_LIST);
     
         // エクスプローラーリロード後、現在開いているファイルのハイライトを復元
-        if (appState.CURRENT_FILE && 
-            appState.CURRENT_FILE.path && 
-            editor.explorer && 
-            typeof editor.explorer.highlightFile === 'function') {
-            editor.explorer.highlightFile(appState.CURRENT_FILE.path);
-        }
+        restoreFileHighlight(appState, editor);
     });
 }
 
@@ -880,11 +926,6 @@ export function refreshExplorerSort(appState, editor) {
         editor.explorer.loadExplorer(appState.FILE_LIST);
         
         // 再描画後、現在開いているファイルのハイライトを復元
-        if (appState.CURRENT_FILE && 
-            appState.CURRENT_FILE.path && 
-            editor.explorer && 
-            typeof editor.explorer.highlightFile === 'function') {
-            editor.explorer.highlightFile(appState.CURRENT_FILE.path);
-        }
+        restoreFileHighlight(appState, editor);
     }
 }

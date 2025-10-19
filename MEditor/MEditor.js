@@ -1349,12 +1349,27 @@ export class MEditor {
             }
             //this.DEBUG && console.log("explorer.loadExplorer() explorerContents: ", explorerContents);
             
+            // 現在選択されているファイルのパスを保存
+            let selectedFilePath = null;
+            const selectedElements = document.getElementsByClassName(this.CLASS_NAME_PREFIX + "file-selected");
+            if (selectedElements.length > 0) {
+                selectedFilePath = selectedElements[0].id;
+            }
+            
             let explorerContent = this.explorer;
             // clear old contents
             explorerContent.content.element.innerHTML = "";
             //console.log(this.explorer);
             explorer.files = [];
             this.explorerRecursive(explorerContent, explorerContents, this.BASE_DIR);
+            
+            // ハイライトを即座に復元
+            if (selectedFilePath) {
+                const fileElement = document.getElementById(selectedFilePath);
+                if (fileElement) {
+                    fileElement.classList.add(this.CLASS_NAME_PREFIX + "file-selected");
+                }
+            }
         }
 
 
@@ -1664,20 +1679,6 @@ export class MEditor {
          * @param {string} filePath - The path of the file to highlight
          */
         parentObj.explorer.highlightFile = (filePath) => {
-            //console.log("Highlighting file:", filePath);
-            
-            // エクスプローラーのファイルリストから該当するファイルが存在するか確認
-            let fileExists = false;
-            if (parentObj.explorer.files && Array.isArray(parentObj.explorer.files)) {
-                fileExists = parentObj.explorer.files.some(f => f.path === filePath);
-            }
-            
-            // ファイルが存在しない場合は何もしない（削除済みまたは名前変更済み）
-            if (!fileExists) {
-                //console.log("File not found in explorer, skipping highlight:", filePath);
-                return;
-            }
-            
             // 既存のハイライトを削除
             let oldSelected = document.getElementsByClassName(this.CLASS_NAME_PREFIX + "file-selected");
             for(let i=0; i<oldSelected.length; i++) {
@@ -1688,8 +1689,6 @@ export class MEditor {
             const fileElement = document.getElementById(filePath);
             if (fileElement) {
                 fileElement.classList.add(this.CLASS_NAME_PREFIX + "file-selected");
-            } else {
-                //console.log("File element not found in DOM:", filePath);
             }
         }
 

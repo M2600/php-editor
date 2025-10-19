@@ -1532,6 +1532,29 @@ i {
     width: 100%;
     height: 2em;
     overflow-x: hidden;
+    align-items: center;
+    gap: 0.5em;
+}
+.meditor-web-previewer-title {
+    flex: 1;
+    padding-left: 0.5em;
+}
+.meditor-web-previewer-reload-btn {
+    margin-right: 0.5em;
+    padding: 0 0.4em;
+    cursor: pointer;
+    background-color: var(--me-color-bg);
+    color: var(--me-color-text);
+    border: 1px solid var(--me-color-border);
+    border-radius: 0.3em;
+    font-size: 1em;
+    height: 1.5em;
+}
+.meditor-web-previewer-reload-btn:hover {
+    background-color: var(--me-color-bg-active);
+}
+.meditor-web-previewer-reload-btn:active {
+    /*transform: scale(0.95);*/
 }
 .meditor-web-previewer-iframe {
     flex: 1;

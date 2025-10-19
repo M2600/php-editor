@@ -3934,6 +3934,23 @@ export class MEditor {
         previewer.title.element.innerHTML = "Web Previewer";
         previewer.menu.element.appendChild(previewer.title.element);
 
+        // リロードボタン
+        previewer.reloadBtn = {};
+        previewer.reloadBtn.element = document.createElement("button");
+        previewer.reloadBtn.element.classList.add(this.CLASS_NAME_PREFIX + "web-previewer-reload-btn");
+        previewer.reloadBtn.element.innerHTML = "表示中のファイルを再実行";
+        previewer.reloadBtn.element.title = "このファイルを再度実行";
+        previewer.reloadBtn.element.addEventListener("click", async () => {
+            // onReloadコールバックが設定されている場合は実行
+            if (previewer.onReload) {
+                await previewer.onReload();
+            } else {
+                // デフォルトはiframeのリロードのみ
+                previewer.reload();
+            }
+        });
+        previewer.menu.element.appendChild(previewer.reloadBtn.element);
+
         previewer.iframe = document.createElement("iframe");
         previewer.iframe.classList.add(this.CLASS_NAME_PREFIX + "web-previewer-iframe");
         previewer.iframe.src = url;

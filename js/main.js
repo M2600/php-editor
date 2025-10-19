@@ -819,6 +819,25 @@ async function main(){
     webPreviewTab.setContent(webPreviewer);
     APP_STATE.WEB_PREVIEWER = webPreviewer;
 
+    // リロードボタンのコールバックを設定（保存してからリロード）
+    webPreviewer.onReload = async () => {
+        //console.log("Reload button clicked - executing file with save");
+        if (APP_STATE.CURRENT_FILE && !APP_STATE.CURRENT_FILE.readonly && APP_STATE.CURRENT_FILE.changed) {
+            await saveFile(
+                APP_STATE.CURRENT_FILE.path,
+                APP_STATE.CURRENT_FILE.aceObj.editor.getValue(),
+                api,
+                APP_STATE.CURRENT_FILE,
+                mConsole,
+                CONFIG.DEBUG,
+                phpSyntaxCheck,
+                editor,
+                APP_STATE
+            );
+        }
+        await webPreviewer.reload();
+    };
+
     if(APP_STATE.RUN_MODE === 'WEB_MODE'){
         tabContainer.showTab(webPreviewTab.id);
         tabContainer.hideTab(dictMenuTab.id);

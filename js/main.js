@@ -973,6 +973,10 @@ async function main(){
             baseDir: editor.BASE_DIR,
             customUrl: customUrl,
             customApiKey: customApiKey,
+            editor: editor,
+            mConsole: mConsole,
+            api: api,
+            enableTools: true,  // ツール機能を有効化
             requestAIMergeAndPreview: async (aiCode) => {
                 // この関数は必要に応じて実装
                 console.log("requestAIMergeAndPreview called with:", aiCode);

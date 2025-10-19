@@ -65,14 +65,15 @@ class SmoothTextStreamer {
     }
 }
 
-export async function fetchAIChat({messages, model, fileContext, dirContext, onDelta, onError, signal, smoothOutput = true, customUrl = null, customApiKey = null}) {
+export async function fetchAIChat({messages, model, fileContext, dirContext, tools, onDelta, onError, signal, smoothOutput = true, customUrl = null, customApiKey = null}) {
     try {
         // リクエストボディを作成
         const requestBody = {
             messages, 
             model, 
             fileContext: fileContext ?? null, 
-            dirContext: dirContext ?? null
+            dirContext: dirContext ?? null,
+            tools: tools ?? null  // AI tools (OpenAI Function Calling format)
         };
         
         // カスタムURL及びAPIキーがある場合は追加
@@ -177,6 +178,12 @@ export async function fetchAIChat({messages, model, fileContext, dirContext, onD
                                 // 通常出力の場合は直接コールバック
                                 onDelta && onDelta(delta.content, chunk);
                             }
+                        }
+                        
+                        // tool_callsがあれば処理
+                        if (delta && delta.tool_calls) {
+                            // ツール呼び出し情報をコールバックに渡す
+                            onDelta && onDelta('', chunk, false, delta.tool_calls);
                         }
                     } catch(e) {
                         // JSONパースエラーは無視

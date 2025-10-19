@@ -6,7 +6,8 @@ import { CONFIG } from '../core/config.js';
 import { loadSelectedModel, saveSelectedModel } from '../utils/cookie.js';
 
 // AIToolクラスをインポート
-export { AITool } from './ai-tool.js';
+import { AITool } from './ai-tool.js';
+export { AITool };
 
 // AI関連のユーティリティ関数
 export function extractMarkdownCodeBlocks(text) {
@@ -329,7 +330,14 @@ export class ChatHistoryManager {
     }
 
     addMessage(role, content) {
-        this.chatHistory.push({role, content});
+        // contentがオブジェクトの場合（tool messageやtool_calls付きメッセージ）
+        if (typeof content === 'object' && content !== null && !Array.isArray(content)) {
+            // contentがメッセージ全体の場合（role, content, tool_callsなどを含む）
+            this.chatHistory.push(content);
+        } else {
+            // 通常のメッセージ
+            this.chatHistory.push({role, content});
+        }
         this.saveChatHistory();
     }
 
@@ -366,10 +374,22 @@ export function restoreChatHistoryToUI(chatHistory, chat) {
         if (msg.role === "user") {
             chat.addMessage(msg.content, "user");
         } else if (msg.role === "assistant") {
-            // 履歴復元時も新しい処理を適用
-            const processedContent = processAIResponseWithDOM(msg.content);
-            //console.log("Restoring AI message:", processedContent);
-            chat.addMessage(processedContent, "ai", true);
+            // contentが文字列の場合のみ処理（ツール呼び出しメッセージはスキップ）
+            if (msg.content && typeof msg.content === 'string') {
+                // 履歴復元時も新しい処理を適用
+                const processedContent = processAIResponseWithDOM(msg.content);
+                //console.log("Restoring AI message:", processedContent);
+                chat.addMessage(processedContent, "ai", true);
+            }
+            // tool_callsがある場合は、ツール呼び出しを示すメッセージを表示
+            if (msg.tool_calls && Array.isArray(msg.tool_calls)) {
+                msg.tool_calls.forEach(toolCall => {
+                    chat.addMessage(`🔧 ツール呼び出し: ${toolCall.function.name}`, "system");
+                });
+            }
+        } else if (msg.role === "tool") {
+            // ツール実行結果を表示
+            chat.addMessage(`📋 ツール結果: ${msg.name}`, "system");
         }
     });
     // スクロールを最下部に
@@ -498,7 +518,11 @@ export async function sendAIMessage({
     baseDir,
     requestAIMergeAndPreview,
     customUrl = null,
-    customApiKey = null
+    customApiKey = null,
+    editor = null,
+    mConsole = null,
+    api = null,
+    enableTools = true  // ツール機能を有効にするかどうか
 }) {
     try {
         if(historyManager.getStreaming()) return;
@@ -511,6 +535,16 @@ export async function sendAIMessage({
         // 履歴カーソルをリセット
         chat.inputArea.textarea._historyCursor = -1;
         chat.inputArea.textarea._historyDraft = '';
+
+        historyManager.addMessage("user", userMsg);
+        historyManager.setStreaming(true);
+
+        // ローディング表示
+        if (typeof chat.showLoading === 'function') chat.showLoading();
+
+        // AIツールの準備
+        const aiTool = enableTools ? new AITool() : null;
+        const tools = enableTools ? aiTool.getAvailableTools() : null;
 
         historyManager.addMessage("user", userMsg);
         historyManager.setStreaming(true);
@@ -566,17 +600,49 @@ export async function sendAIMessage({
         const selectedModel = modelSelect.getValue() || undefined;
         aiMsgBuffer = "";
         
+        // ツール呼び出しバッファ（ストリーム対応）
+        let toolCallsBuffer = {};
+        
         if (typeof fetchAIChat === 'function') {
             fetchAIChat({
                 messages: historyManager.getHistory(),
                 model: selectedModel,
                 fileContext: fileContext ?? null,
                 dirContext: dirContext ?? null,
+                tools: tools,  // ツール定義を追加
                 signal: controller.signal,
                 smoothOutput: true, // スムーズ出力を有効化
                 customUrl: customUrl,
                 customApiKey: customApiKey,
-                onDelta: (delta, chunk, isSmooth) => {
+                onDelta: async (delta, chunk, isSmooth, tool_calls) => {
+                    // ツール呼び出しの処理
+                    if (tool_calls && aiTool) {
+                        // ツール呼び出し情報をバッファに追加（ストリームで少しずつ来る）
+                        for (const toolCall of tool_calls) {
+                            const index = toolCall.index ?? 0;  // indexがない場合は0をデフォルトに
+                            if (!toolCallsBuffer[index]) {
+                                toolCallsBuffer[index] = {
+                                    id: toolCall.id || '',
+                                    type: toolCall.type || 'function',
+                                    function: {
+                                        name: toolCall.function?.name || '',
+                                        arguments: toolCall.function?.arguments || ''
+                                    }
+                                };
+                            } else {
+                                // 既存のバッファに追加
+                                if (toolCall.id) toolCallsBuffer[index].id = toolCall.id;
+                                if (toolCall.function?.name) {
+                                    toolCallsBuffer[index].function.name += toolCall.function.name;
+                                }
+                                if (toolCall.function?.arguments) {
+                                    toolCallsBuffer[index].function.arguments += toolCall.function.arguments;
+                                }
+                            }
+                        }
+                        return; // ツール呼び出し中はテキスト出力しない
+                    }
+                    
                     if (isSmooth) {
                         // スムーズ出力の場合はdeltaが完全なテキスト
                         aiMsgBuffer = delta;
@@ -597,13 +663,180 @@ export async function sendAIMessage({
                     if (typeof chat.hideLoading === 'function') chat.hideLoading();
                     console.error("AI応答エラー:", errMsg);
                 }
-            }).then(() => {
-                // 最終的なテキストを履歴に保存（元のテキスト形式で保存）
-                console.log("Final AI message:", aiMsgBuffer);
-                historyManager.addMessage("assistant", aiMsgBuffer);
-                historyManager.setStreaming(false);
-                if (typeof chat.hideLoading === 'function') chat.hideLoading();
-                ensureLinksOpenInNewTab(chat?.content?.element);
+            }).then(async () => {
+                // ツール呼び出しを処理する関数（再帰的に呼び出し可能）
+                const processToolCalls = async (depth = 0) => {
+                    const MAX_TOOL_CALL_DEPTH = 5; // 無限ループ防止
+                    
+                    if (depth >= MAX_TOOL_CALL_DEPTH) {
+                        console.warn("Maximum tool call depth reached");
+                        return;
+                    }
+                    
+                    if (Object.keys(toolCallsBuffer).length === 0 || !aiTool) {
+                        return;
+                    }
+                    
+                    console.log(`Tool calls detected (depth ${depth}):`, toolCallsBuffer);
+                    
+                    // ツール呼び出し結果を格納
+                    const toolResults = [];
+                    
+                    // 各ツールを順次実行
+                    for (const index in toolCallsBuffer) {
+                        const toolCall = toolCallsBuffer[index];
+                        const toolName = toolCall.function.name;
+                        let args;
+                        
+                        try {
+                            args = JSON.parse(toolCall.function.arguments);
+                        } catch (e) {
+                            console.error("Failed to parse tool arguments:", e);
+                            toolResults.push({
+                                tool_call_id: toolCall.id,
+                                role: "tool",
+                                name: toolName,
+                                content: JSON.stringify({ success: false, error: "引数のパースに失敗しました" })
+                            });
+                            continue;
+                        }
+                        
+                        // ツール実行コンテキストを準備
+                        const toolContext = {
+                            editor: editor,
+                            mConsole: mConsole,
+                            currentFile: currentFile,
+                            api: api
+                        };
+                        
+                        // チャットにツール実行通知を表示
+                        chat.addMessage(`🔧 ツール実行中: ${toolName}`, "system");
+                        
+                        // ツールを実行
+                        const result = await aiTool.callTool(toolName, args, toolContext);
+                        
+                        // 結果をチャットに表示
+                        if (result.success) {
+                            chat.addMessage(`✅ ツール実行完了: ${toolName}`, "system");
+                        } else {
+                            chat.addMessage(`❌ ツール実行失敗: ${toolName} - ${result.error || '不明なエラー'}`, "system");
+                        }
+                        
+                        // ツール実行結果を履歴に追加
+                        toolResults.push({
+                            tool_call_id: toolCall.id,
+                            role: "tool",
+                            name: toolName,
+                            content: JSON.stringify(result)
+                        });
+                    }
+                    
+                    // ツール実行結果を履歴に追加して、AIに再度問い合わせ
+                    if (toolResults.length > 0) {
+                        // AIのツール呼び出しメッセージを履歴に追加
+                        const toolCallMessage = {
+                            role: "assistant",
+                            content: aiMsgBuffer || null,
+                            tool_calls: Object.values(toolCallsBuffer)
+                        };
+                        // メッセージ全体をそのまま追加（第2引数にオブジェクトを渡す）
+                        historyManager.addMessage("assistant", toolCallMessage);
+                        
+                        // ツール実行結果を履歴に追加
+                        for (const toolResult of toolResults) {
+                            // ツールメッセージ全体をそのまま追加
+                            historyManager.addMessage("tool", toolResult);
+                        }
+                        
+                        // AIに再度問い合わせ（ツール実行結果を含む）
+                        historyManager.setStreaming(true);
+                        aiMsgBuffer = "";
+                        toolCallsBuffer = {};
+                        
+                        chat.addMessage("", "ai", true);
+                        
+                        await fetchAIChat({
+                            messages: historyManager.getHistory(),
+                            model: selectedModel,
+                            fileContext: fileContext ?? null,
+                            dirContext: dirContext ?? null,
+                            tools: tools,
+                            signal: controller.signal,
+                            smoothOutput: true,
+                            customUrl: customUrl,
+                            customApiKey: customApiKey,
+                            onDelta: (delta, chunk, isSmooth, tool_calls) => {
+                                // 2回目以降のツール呼び出しにも対応
+                                if (tool_calls && aiTool) {
+                                    for (const toolCall of tool_calls) {
+                                        const index = toolCall.index ?? 0;
+                                        if (!toolCallsBuffer[index]) {
+                                            toolCallsBuffer[index] = {
+                                                id: toolCall.id || '',
+                                                type: toolCall.type || 'function',
+                                                function: {
+                                                    name: toolCall.function?.name || '',
+                                                    arguments: toolCall.function?.arguments || ''
+                                                }
+                                            };
+                                        } else {
+                                            if (toolCall.id) toolCallsBuffer[index].id = toolCall.id;
+                                            if (toolCall.function?.name) {
+                                                toolCallsBuffer[index].function.name += toolCall.function.name;
+                                            }
+                                            if (toolCall.function?.arguments) {
+                                                toolCallsBuffer[index].function.arguments += toolCall.function.arguments;
+                                            }
+                                        }
+                                    }
+                                    return; // ツール呼び出し中はテキスト出力しない
+                                }
+                                
+                                if (isSmooth) {
+                                    aiMsgBuffer = delta;
+                                    const processedHtml = processAIResponseWithDOM(aiMsgBuffer);
+                                    chat.updateLastAIMessage(processedHtml, true);
+                                    ensureLinksOpenInNewTab(chat?.content?.element);
+                                } else {
+                                    aiMsgBuffer += delta;
+                                    const processedHtml = processAIResponseWithDOM(aiMsgBuffer);
+                                    chat.updateLastAIMessage(processedHtml, true);
+                                    ensureLinksOpenInNewTab(chat?.content?.element);
+                                }
+                            },
+                            onError: (errMsg) => {
+                                chat.updateLastAIMessage('<span style="color:red">AI応答エラー: '+errMsg+'</span>', true);
+                                historyManager.setStreaming(false);
+                                if (typeof chat.hideLoading === 'function') chat.hideLoading();
+                                console.error("AI応答エラー:", errMsg);
+                            }
+                        }).then(async () => {
+                            // 2回目以降のツール呼び出しを処理
+                            await processToolCalls(depth + 1);
+                            
+                            // すべてのツール実行が完了したら終了処理
+                            if (Object.keys(toolCallsBuffer).length === 0) {
+                                console.log("Final AI message:", aiMsgBuffer);
+                                historyManager.addMessage("assistant", aiMsgBuffer);
+                                historyManager.setStreaming(false);
+                                if (typeof chat.hideLoading === 'function') chat.hideLoading();
+                                ensureLinksOpenInNewTab(chat?.content?.element);
+                            }
+                        });
+                    }
+                };
+                
+                // 最初のツール呼び出しを処理
+                await processToolCalls(0);
+                
+                // ツール呼び出しがない場合は通常の終了処理
+                if (Object.keys(toolCallsBuffer).length === 0) {
+                    console.log("Final AI message:", aiMsgBuffer);
+                    historyManager.addMessage("assistant", aiMsgBuffer);
+                    historyManager.setStreaming(false);
+                    if (typeof chat.hideLoading === 'function') chat.hideLoading();
+                    ensureLinksOpenInNewTab(chat?.content?.element);
+                }
             });
         } else {
             chat.updateLastAIMessage('<span style="color:red">AI APIモジュールが利用できません</span>', true);

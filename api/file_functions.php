@@ -248,7 +248,8 @@ function getFile($userPath){
         $serverPath = convertUserPath($userPath);
         if(!file_exists($serverPath)){
             logWarning("File not found", ['user_path' => $userPath, 'server_path' => $serverPath]);
-            return "";
+            // 配列形式で返す（一貫性のため）
+            return array("file" => "", "fileType" => "text", "error" => "File not found");
         }
 
         $fileType = getFileType($serverPath);
@@ -338,6 +339,39 @@ function touchFile($userPath){
         exit();
     }
     
+}
+
+/**
+ * ファイルを作成して内容を書き込む（AIツール用）
+ */
+function createFileWithContent($userPath, $content = ""){
+    logInfo("File creation with content started", ['path' => $userPath, 'content_length' => strlen($content)]);
+    try{
+        $serverPath = convertUserPath($userPath);
+        $serverDir = dirname($serverPath);
+        
+        // ディレクトリが存在しない場合は作成
+        if(!file_exists($serverDir)){
+            mkdir($serverDir, 0777, true);
+            logDebug("Created directory", ['dir' => $serverDir]);
+        }
+        
+        // ファイルが既に存在する場合はエラー
+        if(file_exists($serverPath)){
+            throw new Exception("ファイルが既に存在します: " . $userPath);
+        }
+        
+        // ファイルを作成して内容を書き込む
+        file_put_contents($serverPath, $content);
+        
+        $resultPath = str_replace(getUserRoot(), "", $serverPath);
+        logFileOp("create", $userPath, true, ['server_path' => $serverPath, 'content_length' => strlen($content)]);
+        return $resultPath;
+    }
+    catch(Exception $e){
+        logError("File creation with content failed", ['path' => $userPath, 'error' => $e->getMessage()]);
+        throw $e; // 呼び出し元でエラーハンドリング
+    }
 }
 
 function makeDirectory($userPath){

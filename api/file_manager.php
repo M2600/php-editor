@@ -26,9 +26,14 @@ $path = htmlspecialchars_decode($params["path"], ENT_QUOTES);
 
 // すべてのファイル操作をtry-catchで囲み、パストラバーサル攻撃を防ぐ
 try {
-    if($action == "get"){
+    if($action == "get" || $action == "read"){
+        // read は get のエイリアス（AIツール互換性のため）
         $ret = getFile($path);
-        echo json_encode(array("status" => "success", "content" => $ret["file"], "fileType" => $ret["fileType"]));
+        if(isset($ret["error"])){
+            echo json_encode(array("status" => "error", "message" => $ret["error"]));
+        } else {
+            echo json_encode(array("status" => "success", "content" => $ret["file"], "fileType" => $ret["fileType"]));
+        }
         exit();
     }
 
@@ -42,6 +47,18 @@ try {
     if($action == "touch"){
         $createdFilePath = touchFile($path);
         echo json_encode(array("status" => "success", "createdFilePath" => $createdFilePath));
+        exit();
+    }
+
+    if($action == "create"){
+        // ファイルを作成して内容を書き込む
+        try {
+            $content = isset($params["content"]) ? $params["content"] : "";
+            $createdFilePath = createFileWithContent($path, $content);
+            echo json_encode(array("status" => "success", "path" => $createdFilePath, "message" => "ファイルを作成しました"));
+        } catch (Exception $e) {
+            echo json_encode(array("status" => "error", "message" => $e->getMessage()));
+        }
         exit();
     }
 

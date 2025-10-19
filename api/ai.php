@@ -133,12 +133,15 @@ function objectToJsonText($obj) {
 function formatPromptMessages($messages) {
     /*
     メッセージはuserとassistantのロールを交互に持つ必要があります。
+    ただし、tool呼び出しとtoolレスポンスは例外として扱います。
     例:
     [
         ['role' => 'user', 'content' => 'ユーザーのメッセージ'],
         ['role' => 'assistant', 'content' => 'AIの応答'],
         ['role' => 'user', 'content' => '次のユーザーのメッセージ'],
-        // ...
+        // ツール使用の場合:
+        ['role' => 'assistant', 'content' => '', 'tool_calls' => [...]],
+        ['role' => 'tool', 'tool_call_id' => '...', 'content' => '...'],
     ] 
     この関数では、メッセージのロールが正しく交互になっているかをチェックし、必要に応じてフォーマットします。
 
@@ -157,9 +160,30 @@ function formatPromptMessages($messages) {
     $formatted = [];
     $lastRole = null;
     foreach (array_reverse($messages) as $message) {
-        if (!isset($message['role']) || !isset($message['content'])) {
-            continue; // ロールまたはコンテンツがないメッセージはスキップ
+        if (!isset($message['role'])) {
+            continue; // ロールがないメッセージはスキップ
         }
+        
+        // toolメッセージは常に追加（tool_call_idとnameが必須）
+        if ($message['role'] === 'tool') {
+            if (isset($message['tool_call_id']) && isset($message['content'])) {
+                $formatted[] = $message;
+            }
+            continue;
+        }
+        
+        // assistantメッセージでtool_callsがある場合も常に追加
+        if ($message['role'] === 'assistant' && isset($message['tool_calls'])) {
+            $formatted[] = $message;
+            $lastRole = 'assistant';
+            continue;
+        }
+        
+        // 通常のメッセージ（contentが必須）
+        if (!isset($message['content'])) {
+            continue;
+        }
+        
         if ($message['role'] !== $lastRole || $lastRole === null) {
             $formatted[] = $message; // ロールが変わった場合のみ追加
             $lastRole = $message['role'];
@@ -318,6 +342,12 @@ $payload = [
     'messages' => array_merge($basePrompt, $messages),
     'stream' => true
 ];
+
+// ツール定義が送信されていれば追加
+if (isset($input['tools']) && is_array($input['tools']) && !empty($input['tools'])) {
+    $payload['tools'] = $input['tools'];
+    $payload['tool_choice'] = 'auto'; // AIが必要に応じてツールを使用
+}
 
 // ログ保存（早期取得したセッション情報を使用）
 log_chat_request($logFile, $payload, $userId);

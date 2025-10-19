@@ -13,7 +13,18 @@
 function estimateTokenCount($messages) {
     $totalChars = 0;
     foreach ($messages as $msg) {
-        $totalChars += mb_strlen($msg['content'] ?? '', 'UTF-8');
+        // contentが文字列の場合
+        if (isset($msg['content']) && is_string($msg['content'])) {
+            $totalChars += mb_strlen($msg['content'], 'UTF-8');
+        }
+        // contentが配列の場合（tool messageなど）
+        elseif (isset($msg['content']) && is_array($msg['content'])) {
+            $totalChars += mb_strlen(json_encode($msg['content'], JSON_UNESCAPED_UNICODE), 'UTF-8');
+        }
+        // tool_callsがある場合
+        if (isset($msg['tool_calls']) && is_array($msg['tool_calls'])) {
+            $totalChars += mb_strlen(json_encode($msg['tool_calls'], JSON_UNESCAPED_UNICODE), 'UTF-8');
+        }
     }
     // 1トークン ≈ 4文字（日本語）として概算
     return intval($totalChars / 4);
@@ -27,6 +38,12 @@ function removeCodeFromMessages($messages) {
     
     foreach ($messages as $message) {
         if (!isset($message['content'])) {
+            $processedMessages[] = $message;
+            continue;
+        }
+        
+        // contentが配列の場合（tool messageなど）はそのまま
+        if (is_array($message['content'])) {
             $processedMessages[] = $message;
             continue;
         }
@@ -99,6 +116,10 @@ function compressMessages($messages, $maxTokens = 3000) {
             if ($msg['role'] === 'user') {
                 // ユーザーの質問から主要キーワードを抽出
                 $content = $msg['content'];
+                // contentが配列の場合はスキップ
+                if (!is_string($content)) {
+                    continue;
+                }
                 if (mb_strlen($content) > 100) {
                     $content = mb_substr($content, 0, 100) . '...';
                 }
@@ -126,6 +147,7 @@ function compressFileContext($messages) {
     foreach ($messages as &$message) {
         if ($message['role'] === 'system' && 
             isset($message['content']) && 
+            is_string($message['content']) &&
             strpos($message['content'], '[ファイル内容]') === 0) {
             
             $content = $message['content'];
@@ -185,7 +207,12 @@ function compressMessagesWithAI($messages, $apiUrl, $apiKey) {
     $conversationText = "";
     foreach ($oldMessages as $msg) {
         $role = $msg['role'] === 'user' ? 'ユーザー' : 'AI';
-        $conversationText .= "【{$role}】\n" . $msg['content'] . "\n\n";
+        $content = $msg['content'];
+        // contentが配列の場合はJSON化
+        if (is_array($content)) {
+            $content = json_encode($content, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        }
+        $conversationText .= "【{$role}】\n" . $content . "\n\n";
     }
     
     // AI要約用プロンプト

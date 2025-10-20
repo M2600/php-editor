@@ -1120,6 +1120,33 @@ export class MEditor {
 
 
 
+    label(parentObj, text="", tooltip="") {
+        let label = {};
+        label.element = document.createElement("span");
+        label.element.classList.add(this.CLASS_NAME_PREFIX + "label");
+        label.element.innerHTML = text;
+        if(tooltip) label.element.title = tooltip;
+
+        if (parentObj && typeof parentObj.element === "object"){
+            parentObj.element.appendChild(label.element);
+        }else{
+            console.warn("parentObj has no element property");
+        }
+
+        label.setContent = (content) => {
+            if (typeof content === "string") {
+                label.element.innerHTML = content;
+            } else if (content instanceof HTMLElement) {
+                label.element.innerHTML = "";
+                label.element.appendChild(content);
+            }
+        }
+        return label;
+    }
+    generateLabel(parentObj, text="", tooltip="") {
+        let label = this.label(parentObj, text, tooltip);
+        return label;
+    }
 
     generateButton(parentObj, text, clickAction, tooltip="") {
         let button = {};

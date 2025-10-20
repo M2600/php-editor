@@ -354,6 +354,15 @@ async function main(){
     editor.registerPanelToggleButton('right', rightPanelToggle);
     editor.registerPanelToggleButton('bottom', bottomPanelToggle);
 
+
+    const editModeLabel = editor.generateLabel(
+        null,
+        "モード:",
+        "現在の開発モードが表示されます。エディタ上部のボタンで切り替え可能です。",
+    );
+    editModeLabel.setContent(APP_STATE.RUN_MODE === 'WEB_MODE' ? "開発モード: Webページ" : "開発モード: API開発");
+    editor.page.header.header.menu.items.push(editModeLabel);
+    editor.page.header.header.menu.element.prepend(editModeLabel.element);
     
 
     const editorEditor = editor.workPlace(editor.page.main.mid.container.main);
@@ -459,7 +468,7 @@ async function main(){
     };
 
     // Debug button
-    const t = APP_STATE.RUN_MODE === 'API_MODE' ? "Webページモード" : "API開発モード";
+    const t = APP_STATE.RUN_MODE === 'API_MODE' ? "Webページモードへ" : "API開発モードへ";
     editorEditor.menu.right.items.push(editor.generateButton(
         editorEditor.menu.right,
         t,
@@ -469,13 +478,15 @@ async function main(){
                 tabContainer.show();
                 tabContainer.hideTab(webPreviewTab.id);
                 APP_STATE.RUN_MODE = 'API_MODE';
-                e.target.innerHTML = "Webページモード";
+                e.target.innerHTML = "Webページモードへ";
+                editModeLabel.setContent("開発モード: API開発");
             }
             else if(APP_STATE.RUN_MODE === 'API_MODE'){
                 tabContainer.showTab(webPreviewTab.id);
                 tabContainer.hideTab(dictMenuTab.id);
                 APP_STATE.RUN_MODE = 'WEB_MODE';
-                e.target.innerHTML = "API開発モード";
+                e.target.innerHTML = "API開発モードへ";
+                editModeLabel.setContent("開発モード: Webページ");
             }
             // localStorageに状態を保存
             try {

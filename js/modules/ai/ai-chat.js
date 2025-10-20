@@ -575,12 +575,6 @@ export async function sendAIMessage({
         const aiTool = enableTools ? new AITool() : null;
         const tools = enableTools ? aiTool.getAvailableTools() : null;
 
-        historyManager.addMessage("user", userMsg);
-        historyManager.setStreaming(true);
-
-        // ローディング表示
-        if (typeof chat.showLoading === 'function') chat.showLoading();
-
         // AIメッセージ表示用
         let aiMsgBuffer = "";
         // まず空のAIメッセージを追加

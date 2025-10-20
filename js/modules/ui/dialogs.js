@@ -33,6 +33,30 @@ function checkWindowExists(windowName, editor, DEBUG) {
     return windowExists;
 }
 
+/**
+ * ファイル名の妥当性をチェック
+ * @param {string} fileName - チェック対象のファイル名
+ * @returns {Object} { valid: boolean, message: string }
+ */
+function validateFileName(fileName) {
+    if (!fileName || fileName.trim() === "") {
+        return { valid: false, message: "ファイル名を入力してください" };
+    }
+    
+    // 特殊文字のチェック（ファイルシステムで使用禁止の文字）
+    const invalidChars = /[<>:"|?*\\/\s]/;
+    if (invalidChars.test(fileName)) {
+        return { valid: false, message: "使用できない文字が含まれています: < > : \" | ? * \\ / スペース" };
+    }
+    
+    // ドットのみの場合（.や..）
+    if (/^\.+$/.test(fileName)) {
+        return { valid: false, message: "ファイル名として無効です" };
+    }
+    
+    return { valid: true, message: "" };
+}
+
 export function renameFileDialog(path, editor, api, mConsole, DEBUG) {
     let windowName = "Rename file";
     if (checkWindowExists(windowName, editor, DEBUG)) {
@@ -43,6 +67,14 @@ export function renameFileDialog(path, editor, api, mConsole, DEBUG) {
         const newPath = input.value.startsWith('/') ? input.value : '/' + input.value;
         console.log("Rename: ", path, " -> ", newPath);
         DEBUG && console.log("popup window: ", popupWindow);
+        
+        // ファイル名の妥当性をチェック
+        const fileName = input.value.startsWith('/') ? input.value.substring(1) : input.value;
+        const validation = validateFileName(fileName);
+        if (!validation.valid) {
+            mConsole.print("Error: " + validation.message, "error");
+            return;
+        }
         
         // 同名のファイルが既に存在するかチェック（元のパスと異なる場合のみ）
         if (path !== newPath && fileExistsInList(APP_STATE.FILE_LIST.files, newPath)) {
@@ -87,6 +119,15 @@ export function renameFileDialog(path, editor, api, mConsole, DEBUG) {
     // 入力値の変更を監視
     input.addEventListener("input", () => {
         const newPath = input.value.startsWith('/') ? input.value : '/' + input.value;
+        const fileName = input.value.startsWith('/') ? input.value.substring(1) : input.value;
+        
+        // ファイル名の妥当性をチェック
+        const validation = validateFileName(fileName);
+        if (!validation.valid) {
+            statusMessage.style.display = "block";
+            statusMessage.innerHTML = "❌ " + validation.message;
+            return;
+        }
         
         // 元のパスと同じか、ファイルが使用可能な場合
         if (path === newPath || !fileExistsInList(APP_STATE.FILE_LIST.files, newPath)) {
@@ -258,6 +299,13 @@ export function newFileDialog(dir, editor, api, mConsole, currentFile, saveFile,
         console.log("Create: ", newFilePath);
         DEBUG && console.log("popup window: ", popupWindow);
         
+        // ファイル名の妥当性をチェック
+        const validation = validateFileName(input.value);
+        if (!validation.valid) {
+            mConsole.print("Error: " + validation.message, "error");
+            return;
+        }
+        
         // 同名のファイルが既に存在するかチェック
         if (fileExistsInList(APP_STATE.FILE_LIST.files, newFilePath)) {
             mConsole.print("Error: A file with the same name already exists: " + newFilePath, "error");
@@ -303,6 +351,16 @@ export function newFileDialog(dir, editor, api, mConsole, currentFile, saveFile,
     // 入力値の変更を監視
     input.addEventListener("input", () => {
         const newFilePath = currentDir + input.value;
+        
+        // ファイル名の妥当性をチェック
+        const validation = validateFileName(input.value);
+        if (!validation.valid) {
+            statusMessage.style.display = "block";
+            statusMessage.innerHTML = "❌ " + validation.message;
+            return;
+        }
+        
+        // 同名ファイルのチェック
         if (input.value === "" || !fileExistsInList(APP_STATE.FILE_LIST.files, newFilePath)) {
             statusMessage.style.display = "none";
         } else {
@@ -358,6 +416,13 @@ export function newDirDialog(dir, editor, api, mConsole, DEBUG) {
         console.log("Create: ", newDirPath);
         DEBUG && console.log("popup window: ", popupWindow);
         
+        // ファイル名の妥当性をチェック
+        const validation = validateFileName(input.value);
+        if (!validation.valid) {
+            mConsole.print("Error: " + validation.message, "error");
+            return;
+        }
+        
         // 同名のフォルダが既に存在するかチェック
         if (fileExistsInList(APP_STATE.FILE_LIST.files, newDirPath + "/")) {
             mConsole.print("Error: A folder with the same name already exists: " + newDirPath, "error");
@@ -374,6 +439,39 @@ export function newDirDialog(dir, editor, api, mConsole, DEBUG) {
     let input = document.createElement("input");
     input.type = "text";
     input.placeholder = "Folder name";
+    input.style.width = "100%";
+    input.style.boxSizing = "border-box";
+    
+    // ステータスメッセージ要素（警告のみ表示）
+    let statusMessage = document.createElement("div");
+    statusMessage.style.marginTop = ".3rem";
+    statusMessage.style.marginBottom = ".5rem";
+    statusMessage.style.color = "red";
+    statusMessage.style.fontSize = "0.85em";
+    statusMessage.style.display = "none";
+    contents.appendChild(statusMessage);
+    
+    // 入力値の変更を監視
+    input.addEventListener("input", () => {
+        const newDirPath = currentDir + input.value;
+        
+        // ファイル名の妥当性をチェック
+        const validation = validateFileName(input.value);
+        if (!validation.valid) {
+            statusMessage.style.display = "block";
+            statusMessage.innerHTML = "❌ " + validation.message;
+            return;
+        }
+        
+        // 同名フォルダのチェック
+        if (input.value === "" || !fileExistsInList(APP_STATE.FILE_LIST.files, newDirPath + "/")) {
+            statusMessage.style.display = "none";
+        } else {
+            statusMessage.style.display = "block";
+            statusMessage.innerHTML = "⚠️ このフォルダ名は既に使用されています";
+        }
+    });
+    
     input.addEventListener("keydown", (e) => {
         if (e.key == "Enter") {
             create();
@@ -405,6 +503,14 @@ export function renameDirDialog(path, editor, api, mConsole, DEBUG) {
     let rename = async () => {
         console.log("Rename: ", path);
         DEBUG && console.log("popup window: ", popupWindow);
+        
+        // ファイル名の妥当性をチェック
+        const validation = validateFileName(input.value);
+        if (!validation.valid) {
+            mConsole.print("Error: " + validation.message, "error");
+            return;
+        }
+        
         popupWindow.remove();
         await renameDir(path, input.value, api, mConsole);
         await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
@@ -415,6 +521,30 @@ export function renameDirDialog(path, editor, api, mConsole, DEBUG) {
     input.type = "text";
     input.placeholder = "Folder name";
     input.value = path;
+    input.style.width = "100%";
+    input.style.boxSizing = "border-box";
+    
+    // ステータスメッセージ要素（警告のみ表示）
+    let statusMessage = document.createElement("div");
+    statusMessage.style.marginTop = ".3rem";
+    statusMessage.style.marginBottom = ".5rem";
+    statusMessage.style.color = "red";
+    statusMessage.style.fontSize = "0.85em";
+    statusMessage.style.display = "none";
+    contents.appendChild(statusMessage);
+    
+    // 入力値の変更を監視
+    input.addEventListener("input", () => {
+        // ファイル名の妥当性をチェック
+        const validation = validateFileName(input.value);
+        if (!validation.valid) {
+            statusMessage.style.display = "block";
+            statusMessage.innerHTML = "❌ " + validation.message;
+        } else {
+            statusMessage.style.display = "none";
+        }
+    });
+    
     input.addEventListener("keydown", (e) => {
         if (e.key == "Enter") {
             rename();

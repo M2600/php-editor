@@ -280,9 +280,9 @@ async function main(){
 
     editor.page.header.header.menu.items.push(editor.generateButton(
         editor.page.header.header.menu,
-        "初期UIへ",
+        "旧UIへ",
         (e) => {window.location.href = "/1.php";},
-        "初期バージョンのUIに切り替えます"
+        "旧バージョンのUIに切り替えます"
     ))
 
     editor.page.header.header.menu.items.push(editor.generateButton(

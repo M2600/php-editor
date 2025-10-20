@@ -23,6 +23,12 @@ $files = $_FILES;
 if($action == "upload"){
     $filePaths = array();
     try{
+        // ファイル名変更マップを取得
+        $fileRenames = [];
+        if(isset($_POST["fileRenames"])){
+            $fileRenames = json_decode($_POST["fileRenames"], true);
+        }
+        
         // 複数ファイルアップロードの正しい処理
         if(isset($files['files'])){
             $fileCount = count($files['files']['name']);
@@ -36,6 +42,14 @@ if($action == "upload"){
                 // ファイル名とパスを取得
                 $fileName = $files['files']['name'][$i];
                 $tmpName = $files['files']['tmp_name'][$i];
+                
+                // ファイル名が変更対象の場合は変更後の名前を使用
+                foreach($fileRenames as $rename){
+                    if($rename['original'] === $fileName){
+                        $fileName = $rename['renamed'];
+                        break;
+                    }
+                }
                 
                 // convertUserPath() は内部でパストラバーサルチェックを行う
                 // 不正なパスの場合は例外がスローされる

@@ -14,7 +14,9 @@ import {
     uploadFiles,
     loadExplorer,
     cleanupAceInstance,
-    cleanupAceInstancesInDir
+    cleanupAceInstancesInDir,
+    fileExistsInList,
+    generateUniqueFileName
 } from '../core/file-manager.js';
 
 // ポップアップ重複チェック関数
@@ -38,17 +40,25 @@ export function renameFileDialog(path, editor, api, mConsole, DEBUG) {
     }
 
     let rename = async () => {
-        console.log("Rename: ", path);
+        const newPath = input.value.startsWith('/') ? input.value : '/' + input.value;
+        console.log("Rename: ", path, " -> ", newPath);
         DEBUG && console.log("popup window: ", popupWindow);
+        
+        // 同名のファイルが既に存在するかチェック（元のパスと異なる場合のみ）
+        if (path !== newPath && fileExistsInList(APP_STATE.FILE_LIST.files, newPath)) {
+            mConsole.print("Error: A file with the same name already exists: " + newPath, "error");
+            return;
+        }
+        
         popupWindow.remove();
         hideAllPreviewer();
-        const newPath = await renameFile(path, input.value, api, mConsole);
+        const renamedPath = await renameFile(path, newPath, api, mConsole);
         await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
         
         // リネーム成功時、新しいファイル名でファイルを開く
-        if (newPath && editor.explorer && editor.explorer.files && Array.isArray(editor.explorer.files)) {
-            // newPathが相対パスの場合、先頭に/を追加
-            const normalizedPath = newPath.startsWith('/') ? newPath : '/' + newPath;
+        if (renamedPath && editor.explorer && editor.explorer.files && Array.isArray(editor.explorer.files)) {
+            // renamedPathが相対パスの場合、先頭に/を追加
+            const normalizedPath = renamedPath.startsWith('/') ? renamedPath : '/' + renamedPath;
             const fileInfo = editor.explorer.files.find(f => f.path === normalizedPath);
             if (fileInfo && typeof editor.explorer.fileClickAction === 'function') {
                 editor.explorer.fileClickAction(fileInfo);
@@ -62,6 +72,33 @@ export function renameFileDialog(path, editor, api, mConsole, DEBUG) {
     input.type = "text";
     input.placeholder = "File name";
     input.value = path;
+    input.style.width = "100%";
+    input.style.boxSizing = "border-box";
+    
+    // ステータスメッセージ要素（警告のみ表示）
+    let statusMessage = document.createElement("div");
+    statusMessage.style.marginTop = ".3rem";
+    statusMessage.style.marginBottom = ".5rem";
+    statusMessage.style.color = "red";
+    statusMessage.style.fontSize = "0.85em";
+    statusMessage.style.display = "none";
+    contents.appendChild(statusMessage);
+    
+    // 入力値の変更を監視
+    input.addEventListener("input", () => {
+        const newPath = input.value.startsWith('/') ? input.value : '/' + input.value;
+        
+        // 元のパスと同じか、ファイルが使用可能な場合
+        if (path === newPath || !fileExistsInList(APP_STATE.FILE_LIST.files, newPath)) {
+            statusMessage.style.display = "none";
+        }
+        // 同名のファイルが存在する場合
+        else {
+            statusMessage.style.display = "block";
+            statusMessage.innerHTML = "⚠️ このファイル名は既に使用されています";
+        }
+    });
+    
     input.addEventListener("keydown", (e) => {
         if (e.key == "Enter") {
             rename();
@@ -80,7 +117,9 @@ export function renameFileDialog(path, editor, api, mConsole, DEBUG) {
         await rename();
     });
     controls.appendChild(renameButton);
-    let popupWindow = editor.popupWindow(windowName, contents);
+    let popupWindow = editor.popupWindow(windowName, contents, {
+        width: "20em"
+    });
     input.focus();
 }
 
@@ -97,7 +136,15 @@ export function moveFileDialog(file, editor, api, mConsole, fileList) {
             text: "../",
             title: getParentDir(editor.BASE_DIR),
             clickAction: async (e) => {
-                let newPath = Path.joinAsFile(getParentDir(editor.BASE_DIR), file.name);
+                let targetDir = getParentDir(editor.BASE_DIR);
+                let newPath = Path.joinAsFile(targetDir, file.name);
+                
+                // 同名ファイルが存在する場合は、ユニークなファイル名に変更
+                if (fileExistsInList(APP_STATE.FILE_LIST.files, newPath)) {
+                    newPath = generateUniqueFileName(newPath, APP_STATE.FILE_LIST.files);
+                    mConsole.print(`File renamed to "${newPath.substring(newPath.lastIndexOf('/') + 1)}" as same name already exists`, "info");
+                }
+                
                 console.log("Move file to: ", file.path, newPath);
                 await renameFile(file.path, newPath, api, mConsole);
                 await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
@@ -112,6 +159,13 @@ export function moveFileDialog(file, editor, api, mConsole, fileList) {
             title: editor.BASE_DIR,
             clickAction: async (e) => {
                 let newPath = Path.joinAsFile(editor.BASE_DIR, file.name);
+                
+                // 同名ファイルが存在する場合は、ユニークなファイル名に変更
+                if (fileExistsInList(APP_STATE.FILE_LIST.files, newPath)) {
+                    newPath = generateUniqueFileName(newPath, APP_STATE.FILE_LIST.files);
+                    mConsole.print(`File renamed to "${newPath.substring(newPath.lastIndexOf('/') + 1)}" as same name already exists`, "info");
+                }
+                
                 console.log("Move file to: ", file.path, newPath);
                 await renameFile(file.path, newPath, api, mConsole);
                 await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
@@ -126,6 +180,13 @@ export function moveFileDialog(file, editor, api, mConsole, fileList) {
                 title: f.path,
                 clickAction: async (e) => {
                     let newPath = Path.joinAsFile(f.path, file.name);
+                    
+                    // 同名ファイルが存在する場合は、ユニークなファイル名に変更
+                    if (fileExistsInList(APP_STATE.FILE_LIST.files, newPath)) {
+                        newPath = generateUniqueFileName(newPath, APP_STATE.FILE_LIST.files);
+                        mConsole.print(`File renamed to "${newPath.substring(newPath.lastIndexOf('/') + 1)}" as same name already exists`, "info");
+                    }
+                    
                     console.log("Move file to: ", file.path, newPath);
                     await renameFile(file.path, newPath, api, mConsole);
                     await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
@@ -176,7 +237,7 @@ export function deleteFileDialog(path, editor, api, mConsole, currentFile, DEBUG
 }
 
 export function newFileDialog(dir, editor, api, mConsole, currentFile, saveFile, DEBUG){
-    let windowName = "New file";
+    let windowName = "新しいファイル";
     if (checkWindowExists(windowName, editor, DEBUG)) {
         return;
     }
@@ -196,6 +257,13 @@ export function newFileDialog(dir, editor, api, mConsole, currentFile, saveFile,
         const newFilePath = currentDir + input.value;
         console.log("Create: ", newFilePath);
         DEBUG && console.log("popup window: ", popupWindow);
+        
+        // 同名のファイルが既に存在するかチェック
+        if (fileExistsInList(APP_STATE.FILE_LIST.files, newFilePath)) {
+            mConsole.print("Error: A file with the same name already exists: " + newFilePath, "error");
+            return;
+        }
+        
         popupWindow.remove();
         if(currentFile && !currentFile.readonly){
             await saveFile(currentFile.path, currentFile.aceObj.editor.getValue());
@@ -219,7 +287,30 @@ export function newFileDialog(dir, editor, api, mConsole, currentFile, saveFile,
     let contents = document.createElement("div");
     let input = document.createElement("input");
     input.type = "text";
-    input.placeholder = "File name";
+    input.placeholder = "ファイル名";
+    input.style.width = "100%";
+    input.style.boxSizing = "border-box";
+    
+    // ステータスメッセージ要素（警告のみ表示）
+    let statusMessage = document.createElement("div");
+    statusMessage.style.marginTop = ".3rem";
+    statusMessage.style.marginBottom = ".5rem";
+    statusMessage.style.color = "red";
+    statusMessage.style.fontSize = "0.85em";
+    statusMessage.style.display = "none";
+    contents.appendChild(statusMessage);
+    
+    // 入力値の変更を監視
+    input.addEventListener("input", () => {
+        const newFilePath = currentDir + input.value;
+        if (input.value === "" || !fileExistsInList(APP_STATE.FILE_LIST.files, newFilePath)) {
+            statusMessage.style.display = "none";
+        } else {
+            statusMessage.style.display = "block";
+            statusMessage.innerHTML = "⚠️ このファイル名は既に使用されています";
+        }
+    });
+    
     input.addEventListener("keydown", (e) => {
         if (e.key == "Enter") {
             create();
@@ -232,13 +323,15 @@ export function newFileDialog(dir, editor, api, mConsole, currentFile, saveFile,
     controls.style.marginTop = ".3rem";
     contents.appendChild(controls);
     let createButton = document.createElement("button");
-    createButton.innerHTML = "Create";
+    createButton.innerHTML = "作成";
     createButton.classList.add("meditor-button");
     createButton.addEventListener("click", async () => {
         await create();
     });
     controls.appendChild(createButton);
-    let popupWindow = editor.popupWindow(windowName, contents);
+    let popupWindow = editor.popupWindow(windowName, contents, {
+        width: "20em"
+    });
     input.focus();
 }
 
@@ -261,10 +354,18 @@ export function newDirDialog(dir, editor, api, mConsole, DEBUG) {
     }
 
     let create = async () => {
-        console.log("Create: ", currentDir + input.value);
+        const newDirPath = currentDir + input.value;
+        console.log("Create: ", newDirPath);
         DEBUG && console.log("popup window: ", popupWindow);
+        
+        // 同名のフォルダが既に存在するかチェック
+        if (fileExistsInList(APP_STATE.FILE_LIST.files, newDirPath + "/")) {
+            mConsole.print("Error: A folder with the same name already exists: " + newDirPath, "error");
+            return;
+        }
+        
         popupWindow.remove();
-        await createDir(currentDir + input.value, api, mConsole);
+        await createDir(newDirPath, api, mConsole);
         await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
     }
 
@@ -402,8 +503,26 @@ export function fileUploadDialog(dir, editor, api, mConsole, DEBUG) {
     uploadButton.classList.add("meditor-button");
     uploadButton.addEventListener("click", async () => {
         DEBUG && console.log("popup window: ", popupWindow);
+        
+        // アップロードするファイルのパスをチェック
+        const files = fileInput.files;
+        const filesToRename = [];
+        
+        for (let file of files) {
+            const targetPath = path + file.name;
+            if (fileExistsInList(APP_STATE.FILE_LIST.files, targetPath)) {
+                // 同名ファイルが存在する場合は、ユニークなファイル名に変更
+                const newName = generateUniqueFileName(targetPath, APP_STATE.FILE_LIST.files);
+                filesToRename.push({
+                    original: file.name,
+                    renamed: newName.substring(newName.lastIndexOf('/') + 1)
+                });
+                mConsole.print(`File "${file.name}" will be renamed to "${filesToRename[filesToRename.length - 1].renamed}" as same name already exists`, "info");
+            }
+        }
+        
         popupWindow.remove();
-        await uploadFiles(fileInput, path, api, mConsole);
+        await uploadFiles(fileInput, path, api, mConsole, filesToRename);
         await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
     });
     controls.appendChild(uploadButton);

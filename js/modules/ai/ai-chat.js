@@ -755,9 +755,32 @@ export async function sendAIMessage({
                         // ツールを実行
                         const result = await aiTool.callTool(toolName, args, toolContext);
                         
-                        // 結果をチャットに表示
+                        // ツール側からのメッセージがある場合は表示
+                        if (result.messages && Array.isArray(result.messages)) {
+                            for (const msg of result.messages) {
+                                if (typeof msg === 'string') {
+                                    chat.addMessage(msg, "system");
+                                } else if (msg.text && msg.type) {
+                                    // {text: "メッセージ", type: "info"|"success"|"warning"|"error"}形式
+                                    const icon = {
+                                        info: 'ℹ️',
+                                        success: '✅',
+                                        warning: '⚠️',
+                                        error: '❌'
+                                    }[msg.type] || '';
+                                    chat.addMessage(`${icon} ${msg.text}`, "system");
+                                } else if (msg.text) {
+                                    chat.addMessage(msg.text, "system");
+                                }
+                            }
+                        }
+                        
+                        // 結果をチャットに表示（デフォルトメッセージ）
                         if (result.success) {
-                            chat.addMessage(`✅ ツール実行完了: ${toolName}`, "system");
+                            // カスタムメッセージがない場合のみデフォルトメッセージを表示
+                            if (!result.messages || result.messages.length === 0) {
+                                chat.addMessage(`✅ ツール実行完了: ${toolName}`, "system");
+                            }
                         } else {
                             chat.addMessage(`❌ ツール実行失敗: ${toolName} - ${result.error || '不明なエラー'}`, "system");
                         }

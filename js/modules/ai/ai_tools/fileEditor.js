@@ -228,7 +228,11 @@ export async function createFile(filename, content, options = {}) {
             return {
                 success: true,
                 message: `${filename} を作成しました`,
-                path: filename
+                path: filename,
+                // チャットに表示するカスタムメッセージ（オプション）
+                messages: [
+                    { text: `ファイル "${filename}" を作成しました`, type: 'success' }
+                ]
             };
         } else {
             // エラーメッセージを詳細に記録
@@ -465,10 +469,22 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
             if (mConsole) {
                 mConsole.print(`ファイル "${filename}" を更新しました`, 'success');
             }
+            
+            // チャットに表示するメッセージを準備
+            const messages = [
+                { text: `ファイル "${filename}" を更新しました`, type: 'success' }
+            ];
+            
+            // エディタに反映された場合は追加メッセージ
+            if (currentFile && currentFile.path === fullPath) {
+                messages.push({ text: `エディタの内容も更新されました`, type: 'info' });
+            }
+            
             return {
                 success: true,
                 message: `${filename} を更新しました`,
-                path: filename
+                path: filename,
+                messages: messages
             };
         } else {
             throw new Error(saveResult.message || 'ファイル保存に失敗しました');
@@ -593,10 +609,22 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
             if (mConsole) {
                 mConsole.print(`ファイル "${filename}" の ${lineStart}-${lineEnd} 行目を更新しました`, 'success');
             }
+            
+            // チャットに表示するメッセージを準備
+            const messages = [
+                { text: `ファイル "${filename}" の ${lineStart}-${lineEnd} 行目を更新しました`, type: 'success' }
+            ];
+            
+            // エディタに反映された場合は追加メッセージ
+            if (currentFile && currentFile.path === fullPath) {
+                messages.push({ text: `エディタの内容も更新されました`, type: 'info' });
+            }
+            
             return {
                 success: true,
                 message: `${filename} を更新しました`,
-                path: filename
+                path: filename,
+                messages: messages
             };
         } else {
             throw new Error(saveResult.message || 'ファイル保存に失敗しました');

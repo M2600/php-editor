@@ -428,7 +428,7 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
         let approved = true;
         let approvalTime = null;
         
-        if (!skipConfirmation && editor && currentFile && currentFile.path === filename) {
+        if (!skipConfirmation && editor && currentFile && currentFile.path === fullPath) {
             // ユーザーに確認
             const confirmation = await showEditConfirmation(editor, currentFile, newContent, startTime);
             approved = confirmation.approved;
@@ -460,6 +460,20 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
         });
         
         if (saveResult.status === 'success') {
+            // 現在開いているファイルが編集対象の場合、エディタにも反映
+            if (currentFile && currentFile.path === fullPath && currentFile.aceObj && currentFile.aceObj.editor) {
+                const currentCursorPos = currentFile.aceObj.editor.getCursorPosition();
+                currentFile.aceObj.editor.setValue(newContent);
+                currentFile.aceObj.editor.clearSelection();
+                // カーソル位置を復元（可能な範囲で）
+                try {
+                    currentFile.aceObj.editor.moveCursorToPosition(currentCursorPos);
+                } catch (e) {
+                    // カーソル位置が範囲外の場合は無視
+                }
+                currentFile.changed = false;
+            }
+            
             await logToolExecution('editFileByReplace', 
                 { filename, searchText, replaceText, options: editOptions }, 
                 'approved', 
@@ -569,7 +583,7 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
         let approved = true;
         let approvalTime = null;
         
-        if (!skipConfirmation && editor && currentFile && currentFile.path === filename) {
+        if (!skipConfirmation && editor && currentFile && currentFile.path === fullPath) {
             // ユーザーに確認
             const confirmation = await showEditConfirmation(editor, currentFile, updatedContent, startTime);
             approved = confirmation.approved;
@@ -600,6 +614,20 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
         });
         
         if (saveResult.status === 'success') {
+            // 現在開いているファイルが編集対象の場合、エディタにも反映
+            if (currentFile && currentFile.path === fullPath && currentFile.aceObj && currentFile.aceObj.editor) {
+                const currentCursorPos = currentFile.aceObj.editor.getCursorPosition();
+                currentFile.aceObj.editor.setValue(updatedContent);
+                currentFile.aceObj.editor.clearSelection();
+                // カーソル位置を復元（可能な範囲で）
+                try {
+                    currentFile.aceObj.editor.moveCursorToPosition(currentCursorPos);
+                } catch (e) {
+                    // カーソル位置が範囲外の場合は無視
+                }
+                currentFile.changed = false;
+            }
+            
             await logToolExecution('editFileByLines', 
                 { filename, lineStart, lineEnd, newContent }, 
                 'approved', 

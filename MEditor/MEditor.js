@@ -1903,7 +1903,7 @@ export class MEditor {
                 if (icon.title) iconElm.title = icon.title;
                 if (icon.class) iconElm.classList.add(icon.class);
             }
-            fileNameDiv.appendChild(iconElm);
+            fileNameDiv.prepend(iconElm);
             return true;
         }
         return false;

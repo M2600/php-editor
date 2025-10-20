@@ -518,8 +518,9 @@ async function main(){
 
 
     const explorer = editor.createExplorer(editor.page.main.left, {
-        title: "エクスプローラー",
+        title: "/",
     });
+    explorer.setMenuTitle("");
 
     // Explorer event handlers
     explorer.setFileClickAction(async function (file) {

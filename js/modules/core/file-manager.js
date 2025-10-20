@@ -283,7 +283,9 @@ export async function loadExplorer(path, api, appState, editor) {
         appState.FILE_LIST = data.files;
         editor.BASE_DIR = path;
         let dir = Path.join(appState.USER_ID, path);
-        editor.explorer.setMenuTitle(dir);
+        //editor.explorer.setMenuTitle(dir);
+        editor.explorer.setTitle(dir);
+        
         
         // サーバーから最新データを取得したのでクライアント側の更新時刻をクリア
         clearClientMtimes();

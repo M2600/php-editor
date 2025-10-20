@@ -36,7 +36,7 @@ function sendAIRequest($apiUrl, $apiKey, $payload, $timeout = 600) {
         ]);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
         curl_setopt($ch, CURLOPT_TIMEOUT, $timeout); // タイムアウトを600秒に設定
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 60);
         curl_setopt($ch, CURLOPT_FAILONERROR, false); // HTTPエラーでも継続
         
         // エラーハンドリング用のバッファ

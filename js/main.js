@@ -246,7 +246,14 @@ async function main(){
 
     editor.page.header.header.menu.items.push(editor.generateButton(
         editor.page.header.header.menu,
-        "logout",
+        "初期UIへ",
+        (e) => {window.location.href = "/1.php";},
+        "初期バージョンのUIに切り替えます"
+    ))
+
+    editor.page.header.header.menu.items.push(editor.generateButton(
+        editor.page.header.header.menu,
+        "ログアウト",
         (e) => {window.location.href = "/logout.php";},
         "ログアウト",
     ));

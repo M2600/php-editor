@@ -3,6 +3,7 @@
  */
 
 import { CONFIG } from '../core/config.js';
+import { AI_CONFIG } from '../core/config.js';
 import { loadSelectedModel, saveSelectedModel } from '../utils/cookie.js';
 
 // AIToolクラスをインポート
@@ -694,10 +695,20 @@ export async function sendAIMessage({
             }).then(async () => {
                 // ツール呼び出しを処理する関数（再帰的に呼び出し可能）
                 const processToolCalls = async (depth = 0) => {
-                    const MAX_TOOL_CALL_DEPTH = 5; // 無限ループ防止
-                    
-                    if (depth >= MAX_TOOL_CALL_DEPTH) {
+                    // 1度の呼び出しでの最大深度を制限
+                    if (depth >= AI_CONFIG.TOOLS_MAX_COUNT) {
                         console.warn("Maximum tool call depth reached");
+                        chat.addMessage(`⚠️ 最大ツール実行回数（${AI_CONFIG.TOOLS_MAX_COUNT}回）に到達しました`, "system");
+                        
+                        // 最大深度到達時も、現在のメッセージを履歴に追加
+                        if (aiMsgBuffer) {
+                            console.log("Final AI message (max depth reached):", aiMsgBuffer);
+                            historyManager.addMessage("assistant", aiMsgBuffer);
+                        }
+                        
+                        // 終了処理を実行
+                        historyManager.setStreaming(false);
+                        if (typeof chat.hideLoading === 'function') chat.hideLoading();
                         return;
                     }
                     

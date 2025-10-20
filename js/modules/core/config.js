@@ -97,6 +97,11 @@ export const CONFIG = {
     ]
 };
 
+// AI Chat
+export const AI_CONFIG = {
+    TOOLS_MAX_COUNT: 20,
+}
+
 // アプリケーション状態変数
 export const APP_STATE = {
     USER_ID: "user_id",

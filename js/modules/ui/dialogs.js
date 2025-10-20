@@ -53,6 +53,7 @@ export function renameFileDialog(path, editor, api, mConsole, DEBUG) {
             if (fileInfo && typeof editor.explorer.fileClickAction === 'function') {
                 editor.explorer.fileClickAction(fileInfo);
             }
+            editor.explorer.highlightFile(normalizedPath);
         }
     }
 
@@ -210,6 +211,7 @@ export function newFileDialog(dir, editor, api, mConsole, currentFile, saveFile,
             if (fileInfo && typeof editor.explorer.fileClickAction === 'function') {
                 editor.explorer.fileClickAction(fileInfo);
             }
+            editor.explorer.highlightFile(newFilePath);
         }
     }
 

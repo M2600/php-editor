@@ -3,6 +3,17 @@
  */
 
 /**
+ * 現在のページパスを取得する
+ * @returns {string} - 現在のページパス
+ */
+function getCurrentPagePath() {
+    // URLからパスを取得（クエリ文字列は除外）
+    const pathname = window.location.pathname;
+    // パスの最後のスラッシュまでを返す
+    return pathname.substring(0, pathname.lastIndexOf('/') + 1) || '/';
+}
+
+/**
  * Cookieを設定する
  * @param {string} name - Cookie名
  * @param {string} value - Cookie値
@@ -12,7 +23,8 @@ export function setCookie(name, value, days = 365) {
     const date = new Date();
     date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
     const expires = "expires=" + date.toUTCString();
-    document.cookie = name + "=" + encodeURIComponent(value) + ";" + expires + ";path=/2.php;SameSite=Lax";
+    const currentPath = getCurrentPagePath();
+    document.cookie = name + "=" + encodeURIComponent(value) + ";" + expires + ";path=" + currentPath + ";SameSite=Lax";
 }
 
 /**
@@ -38,7 +50,8 @@ export function getCookie(name) {
  * @param {string} name - Cookie名
  */
 export function deleteCookie(name) {
-    document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/2.php;";
+    const currentPath = getCurrentPagePath();
+    document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=" + currentPath + ";";
 }
 
 /**

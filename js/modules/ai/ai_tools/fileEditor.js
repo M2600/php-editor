@@ -7,6 +7,8 @@
 
 import { api } from '../../utils/api.js';
 import { loadExplorer } from '../../core/file-manager.js';
+import { AceWrapper } from '../../../../MEditor/MEditor.js';
+import { hideAllPreviewer } from '../../utils/helpers.js';
 
 /**
  * 相対パスをベースディレクトリと結合して絶対パスにする
@@ -102,7 +104,8 @@ async function logToolExecution(tool, parameters, status, result, approvalTime =
 
 /**
  * ユーザーにファイル編集の確認を求める
- * 既存のshowDiff()とdiffApplyMenu()を使用
+ * ファイルが開かれている場合はそのファイルオブジェクトを使用し、
+ * 開かれていない場合は一時的なAceWrapperインスタンスを作成してdiffを表示
  * 
  * @param {Object} editor - MEditorインスタンス
  * @param {Object} file - 編集対象のファイルオブジェクト
@@ -112,39 +115,211 @@ async function logToolExecution(tool, parameters, status, result, approvalTime =
  */
 function showEditConfirmation(editor, file, newContent, startTime) {
     return new Promise((resolve) => {
-        // fileオブジェクトが有効で、エディタで開かれている場合
-        if (file && file.aceObj && file.aceObj.element) {
-            // Diff表示
-            const clearDiff = editor.showDiff(file, newContent);
+        // 既存の全てのviewer（ace含む）を非表示にする
+        hideAllPreviewer();
+        
+        // ファイルを使用する準備
+        let fileForConfirmation = file;
+        let tempAceWrapper = null;
+        let tempAceDOM = null;
+        const isTemporaryFile = !file || !file.aceObj || !file.aceObj.element;
+        
+        // ファイルが開かれていない場合は一時的なAceWrapperインスタンスを作成
+        if (isTemporaryFile) {
+            console.warn('ファイルがエディタで開かれていないため、一時的なAceエディタを作成します');
             
-            // 確認ダイアログを表示（エディタ右下）
-            const menuContainer = file.aceObj.element.parentElement || document.body;
+            // 既存のファイルから現在の内容を取得（APIから読み込む必要がある場合もある）
+            const currentContent = (file && file.aceObj && file.aceObj.editor) 
+                ? file.aceObj.editor.getValue() 
+                : '';
             
-            editor.diffApplyMenu(
-                menuContainer,
-                file,
-                newContent,
-                // 適用ボタン
-                (file, proposed) => {
-                    const approvalTime = (Date.now() - startTime) / 1000; // 秒単位
-                    file.aceObj.editor.setValue(proposed);
-                    file.changed = true;
-                    clearDiff();
-                    resolve({ approved: true, approvalTime });
-                },
-                // 拒否ボタン
-                (file) => {
-                    clearDiff();
-                    resolve({ approved: false, approvalTime: null });
-                }
-            );
+            // 一時的なDOM要素を作成（エディタ領域に配置）
+            tempAceDOM = document.createElement("div");
+            tempAceDOM.id = "temp-ace-diff-" + Date.now();
+            tempAceDOM.classList.add("viewer");
+            tempAceDOM.style.width = "100%";
+            tempAceDOM.style.height = "100%";
+            
+            // エディタ領域に追加
+            if (editor.wp && editor.wp.content && editor.wp.content.element) {
+                editor.wp.content.element.appendChild(tempAceDOM);
+            } else {
+                console.error('エディタ領域が見つかりません');
+                document.body.appendChild(tempAceDOM);
+            }
+            
+            // AceWrapperインスタンスを作成
+            tempAceWrapper = new AceWrapper(tempAceDOM.id);
+            
+            // 初期設定を読み込み
+            tempAceWrapper.loadMySettings();
+            
+            // テーマを適用
+            if (editor.THEME === "dark") {
+                tempAceWrapper.editor.setTheme("ace/theme/monokai");
+            } else {
+                tempAceWrapper.editor.setTheme("ace/theme/chrome");
+            }
+            
+            tempAceWrapper.setValue(currentContent);
+            tempAceWrapper.editor.setReadOnly(true);
+            
+            // aceを表示
+            tempAceWrapper.show();
+            
+            fileForConfirmation = {
+                path: file?.path || 'unnamed',
+                name: file?.name || 'unnamed',
+                aceObj: tempAceWrapper,
+                isDiffView: false
+            };
         } else {
-            // ファイルが開かれていない場合は簡易確認
-            console.warn('ファイルがエディタで開かれていないため、簡易確認を使用します');
-            const approved = confirm('この変更を適用しますか？');
-            const approvalTime = (Date.now() - startTime) / 1000;
-            resolve({ approved, approvalTime: approved ? approvalTime : null });
+            // ファイルが既に開かれている場合も表示
+            if (fileForConfirmation.aceObj && fileForConfirmation.aceObj.show) {
+                fileForConfirmation.aceObj.show();
+            }
         }
+        
+        // Diff表示を開始（isDiffViewフラグが自動的に設定される）
+        const clearDiff = editor.showDiff(fileForConfirmation, newContent);
+        
+        // ファイルオブジェクトにもdiff表示中フラグをコピー
+        fileForConfirmation.isDiffView = true;
+        
+        // 確認ダイアログを表示
+        const menuContainer = tempAceDOM || document.body;
+        
+        // クリーンアップ関数
+        const cleanup = () => {
+            if (tempAceDOM && tempAceDOM.parentNode) {
+                tempAceDOM.parentNode.removeChild(tempAceDOM);
+            }
+            if (tempAceWrapper) {
+                // AceWrapperのクリーンアップ（必要に応じて）
+                tempAceWrapper.editor.destroy();
+            }
+        };
+        
+        editor.diffApplyMenu(
+            menuContainer,
+            fileForConfirmation,
+            newContent,
+            // 適用ボタン
+            (file, proposed) => {
+                const approvalTime = (Date.now() - startTime) / 1000; // 秒単位
+                
+                file.isDiffView = false;
+                clearDiff();
+                cleanup();
+                resolve({ approved: true, approvalTime });
+            },
+            // 拒否ボタン
+            (file) => {
+                file.isDiffView = false;
+                clearDiff();
+                cleanup();
+                resolve({ approved: false, approvalTime: null });
+            }
+        );
+    });
+}
+
+/**
+ * 新規ファイル作成時のユーザー確認
+ * 空のファイルと提案内容をdiffで表示
+ * 
+ * @param {Object} editor - MEditorインスタンス
+ * @param {string} filename - ファイル名
+ * @param {string} proposedContent - 提案されるファイル内容
+ * @param {number} startTime - 確認開始時刻（承認時間計測用）
+ * @returns {Promise<Object>} - {approved: boolean, approvalTime: number|null}
+ */
+function showCreateFileConfirmation(editor, filename, proposedContent, startTime) {
+    return new Promise((resolve) => {
+        // 既存の全てのviewer（ace含む）を非表示にする
+        hideAllPreviewer();
+        
+        // 一時的なDOM要素を作成（エディタ領域に配置）
+        const tempAceDOM = document.createElement("div");
+        tempAceDOM.id = "temp-ace-create-" + Date.now();
+        tempAceDOM.classList.add("viewer");
+        tempAceDOM.style.width = "100%";
+        tempAceDOM.style.height = "100%";
+        
+        // エディタ領域に追加
+        if (editor.wp && editor.wp.content && editor.wp.content.element) {
+            editor.wp.content.element.appendChild(tempAceDOM);
+        } else {
+            console.error('エディタ領域が見つかりません');
+            document.body.appendChild(tempAceDOM);
+        }
+        
+        // AceWrapperインスタンスを作成（空のファイルとして）
+        const tempAceWrapper = new AceWrapper(tempAceDOM.id);
+        
+        // 初期設定を読み込み
+        tempAceWrapper.loadMySettings();
+        
+        // テーマを適用
+        if (editor.THEME === "dark") {
+            tempAceWrapper.editor.setTheme("ace/theme/monokai");
+        } else {
+            tempAceWrapper.editor.setTheme("ace/theme/chrome");
+        }
+        
+        tempAceWrapper.setValue(''); // 空のファイル
+        tempAceWrapper.editor.setReadOnly(true);
+        
+        // aceを表示
+        tempAceWrapper.show();
+        
+        // 一時的なファイルオブジェクトを作成（diff表示用）
+        const tempFile = {
+            path: filename,
+            name: filename,
+            aceObj: tempAceWrapper,
+            isDiffView: false
+        };
+
+        // 空のコンテンツでdiffを開始
+        const clearDiff = editor.showDiff(tempFile, proposedContent);
+        
+        // ファイルオブジェクトにdiff表示中フラグをコピー
+        tempFile.isDiffView = true;
+        
+        // 確認ダイアログを表示
+        const menuContainer = tempAceDOM;
+        
+        // クリーンアップ関数
+        const cleanup = () => {
+            if (tempAceDOM && tempAceDOM.parentNode) {
+                tempAceDOM.parentNode.removeChild(tempAceDOM);
+            }
+            if (tempAceWrapper) {
+                tempAceWrapper.editor.destroy();
+            }
+        };
+        
+        editor.diffApplyMenu(
+            menuContainer,
+            tempFile,
+            proposedContent,
+            // 適用ボタン
+            (file, proposed) => {
+                const approvalTime = (Date.now() - startTime) / 1000; // 秒単位
+                tempFile.isDiffView = false;
+                clearDiff();
+                cleanup();
+                resolve({ approved: true, approvalTime });
+            },
+            // 拒否ボタン
+            (file) => {
+                tempFile.isDiffView = false;
+                clearDiff();
+                cleanup();
+                resolve({ approved: false, approvalTime: null });
+            }
+        );
     });
 }
 
@@ -197,10 +372,12 @@ export async function createFile(filename, content, options = {}) {
         let approvalTime = null;
         
         if (!skipConfirmation && editor) {
-            // TODO: 新規ファイル作成の確認UI実装
-            // 現時点では簡易的な確認
-            approved = confirm(`ファイル "${filename}" を作成しますか？`);
-            approvalTime = (Date.now() - startTime) / 1000;
+            // 新規ファイル作成時もdiff表示で確認
+            // 空のファイルと提案内容を比較
+            const emptyContent = '';
+            const confirmation = await showCreateFileConfirmation(editor, filename, content, startTime);
+            approved = confirmation.approved;
+            approvalTime = confirmation.approvalTime;
         }
         
         if (!approved) {

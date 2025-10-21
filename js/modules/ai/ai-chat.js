@@ -550,6 +550,7 @@ export async function sendAIMessage({
     editor = null,
     mConsole = null,
     api = null,
+    appState = null,  // APP_STATEを追加
     enableTools = true  // ツール機能を有効にするかどうか
 }) {
     try {
@@ -625,6 +626,10 @@ export async function sendAIMessage({
 
         // ストリーム受信（ai_api.js利用）
         const controller = new AbortController();
+        
+        // 停止ボタンが機能するようにchatオブジェクトに設定
+        chat._abortController = controller;
+        
         const selectedModel = modelSelect.getValue() || undefined;
         aiMsgBuffer = "";
         
@@ -690,6 +695,8 @@ export async function sendAIMessage({
                     historyManager.setStreaming(false);
                     if (typeof chat.hideLoading === 'function') chat.hideLoading();
                     console.error("AI応答エラー:", errMsg);
+                    // AbortControllerをクリーンアップ
+                    chat._abortController = null;
                 }
             }).then(async () => {
                 // ツール呼び出しを処理する関数（再帰的に呼び出し可能）
@@ -698,6 +705,10 @@ export async function sendAIMessage({
                     
                     if (depth >= MAX_TOOL_CALL_DEPTH) {
                         console.warn("Maximum tool call depth reached");
+                        historyManager.setStreaming(false);
+                        if (typeof chat.hideLoading === 'function') chat.hideLoading();
+                        // AbortControllerをクリーンアップ
+                        chat._abortController = null;
                         return;
                     }
                     
@@ -735,7 +746,8 @@ export async function sendAIMessage({
                             mConsole: mConsole,
                             currentFile: currentFile,
                             api: api,
-                            baseDir: baseDir  // ベースディレクトリを追加
+                            baseDir: baseDir,  // ベースディレクトリを追加
+                            appState: appState  // APP_STATEを追加（エクスプローラーリロードに必要）
                         };
                         
                         // チャットにツール実行通知を表示
@@ -838,6 +850,8 @@ export async function sendAIMessage({
                                 historyManager.setStreaming(false);
                                 if (typeof chat.hideLoading === 'function') chat.hideLoading();
                                 console.error("AI応答エラー:", errMsg);
+                                // AbortControllerをクリーンアップ
+                                chat._abortController = null;
                             }
                         }).then(async () => {
                             // 2回目以降のツール呼び出しを処理
@@ -850,6 +864,8 @@ export async function sendAIMessage({
                                 historyManager.setStreaming(false);
                                 if (typeof chat.hideLoading === 'function') chat.hideLoading();
                                 ensureLinksOpenInNewTab(chat?.content?.element);
+                                // AbortControllerをクリーンアップ
+                                chat._abortController = null;
                             }
                         });
                     }
@@ -865,17 +881,23 @@ export async function sendAIMessage({
                     historyManager.setStreaming(false);
                     if (typeof chat.hideLoading === 'function') chat.hideLoading();
                     ensureLinksOpenInNewTab(chat?.content?.element);
+                    // AbortControllerをクリーンアップ
+                    chat._abortController = null;
                 }
             });
         } else {
             chat.updateLastAIMessage('<span style="color:red">AI APIモジュールが利用できません</span>', true);
             historyManager.setStreaming(false);
             if (typeof chat.hideLoading === 'function') chat.hideLoading();
+            // AbortControllerをクリーンアップ
+            chat._abortController = null;
         }
     } catch(e) {
         console.error("AI送信処理エラー:", e);
         chat.addMessage('<span style="color:red">AI送信処理エラー: '+e.message+'</span>', "system");
         historyManager.setStreaming(false);
         if (typeof chat.hideLoading === 'function') chat.hideLoading();
+        // AbortControllerをクリーンアップ
+        chat._abortController = null;
     }
 }

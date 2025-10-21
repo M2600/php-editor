@@ -377,6 +377,12 @@ async function main(){
                 console.warn("No file is currently open");
                 return;
             }
+            // Diff表示中は保存をブロック
+            if (APP_STATE.CURRENT_FILE.isDiffView || APP_STATE.CURRENT_FILE.aceObj?.editor?.isDiffView) {
+                mConsole.print("diff確認中のため、ファイル保存がブロックされています", "warning");
+                console.warn("ファイルはdiff表示中です。確認ダイアログで適用/拒否を選択してください");
+                return;
+            }
             console.log("Save: " + APP_STATE.CURRENT_FILE.path);
             pushSaveButton(APP_STATE.CURRENT_FILE, (path, content) => 
                 saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE)

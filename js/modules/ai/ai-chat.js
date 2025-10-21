@@ -3,7 +3,6 @@
  */
 
 import { CONFIG } from '../core/config.js';
-import { AI_CONFIG } from '../core/config.js';
 import { loadSelectedModel, saveSelectedModel } from '../utils/cookie.js';
 
 // AIToolクラスをインポート
@@ -287,7 +286,7 @@ Please provide the merged code only, without any additional text or explanations
                 hasValidStream = true;
             },
             onError: (errMsg) => {
-                console.warn("AI応答エラー:", errMsg);
+                console.error("AI応答エラー:", errMsg);
             }
         }).then(() => {
             if (hasValidStream) {
@@ -421,21 +420,10 @@ export function restoreChatHistoryToUI(chatHistory, chat) {
             chat.addMessage(`📋 ツール結果: ${msg.name}`, "system");
         }
     });
-    
-    // 自動スクロール状態を有効にリセット
-    if (chat) {
-        chat.autoScroll = true;
+    // スクロールを最下部に
+    if (chat.content.element.scrollHeight > chat.content.element.clientHeight) {
+        chat.content.element.scrollTop = chat.content.element.scrollHeight;
     }
-    
-    // スクロールを最下部に（DOM レンダリングを待つため setTimeout を使用）
-    setTimeout(() => {
-        if (chat.messages && chat.messages.container) {
-            chat.messages.container.scrollTop = chat.messages.container.scrollHeight;
-        } else if (chat.content && chat.content.element) {
-            chat.content.element.scrollTop = chat.content.element.scrollHeight;
-        }
-    }, 0);
-    
     // 復元後にリンク属性を調整
     ensureLinksOpenInNewTab(chat.content.element);
 }
@@ -562,7 +550,6 @@ export async function sendAIMessage({
     editor = null,
     mConsole = null,
     api = null,
-    appState = null,  // APP_STATEを追加
     enableTools = true  // ツール機能を有効にするかどうか
 }) {
     try {
@@ -586,6 +573,12 @@ export async function sendAIMessage({
         // AIツールの準備
         const aiTool = enableTools ? new AITool() : null;
         const tools = enableTools ? aiTool.getAvailableTools() : null;
+
+        historyManager.addMessage("user", userMsg);
+        historyManager.setStreaming(true);
+
+        // ローディング表示
+        if (typeof chat.showLoading === 'function') chat.showLoading();
 
         // AIメッセージ表示用
         let aiMsgBuffer = "";
@@ -631,9 +624,7 @@ export async function sendAIMessage({
         }
 
         // ストリーム受信（ai_api.js利用）
-        // AbortControllerをchatオブジェクトに保存してグローバルスコープで利用可能にする
         const controller = new AbortController();
-        chat._abortController = controller;  // 生成停止用に保存
         const selectedModel = modelSelect.getValue() || undefined;
         aiMsgBuffer = "";
         
@@ -695,35 +686,18 @@ export async function sendAIMessage({
                     }
                 },
                 onError: (errMsg) => {
-                    // AbortError の場合はユーザーが停止したと判定（通常エラー扱いしない）
-                    if (errMsg === 'The operation was aborted.') {
-                        console.log("AI生成がユーザーによって停止されました");
-                        chat.updateLastAIMessage('<span style="color:#888">生成が停止されました</span>', true);
-                    } else {
-                        chat.updateLastAIMessage('<span style="color:red">AI応答エラー: '+errMsg+'</span>', true);
-                        console.warn("AI応答エラー:", errMsg);
-                    }
+                    chat.updateLastAIMessage('<span style="color:red">AI応答エラー: '+errMsg+'</span>', true);
                     historyManager.setStreaming(false);
                     if (typeof chat.hideLoading === 'function') chat.hideLoading();
-
+                    console.error("AI応答エラー:", errMsg);
                 }
             }).then(async () => {
                 // ツール呼び出しを処理する関数（再帰的に呼び出し可能）
                 const processToolCalls = async (depth = 0) => {
-                    // 1度の呼び出しでの最大深度を制限
-                    if (depth >= AI_CONFIG.TOOLS_MAX_COUNT) {
+                    const MAX_TOOL_CALL_DEPTH = 5; // 無限ループ防止
+                    
+                    if (depth >= MAX_TOOL_CALL_DEPTH) {
                         console.warn("Maximum tool call depth reached");
-                        chat.addMessage(`⚠️ 最大ツール実行回数（${AI_CONFIG.TOOLS_MAX_COUNT}回）に到達しました`, "system");
-                        
-                        // 最大深度到達時も、現在のメッセージを履歴に追加
-                        if (aiMsgBuffer) {
-                            console.log("Final AI message (max depth reached):", aiMsgBuffer);
-                            historyManager.addMessage("assistant", aiMsgBuffer);
-                        }
-                        
-                        // 終了処理を実行
-                        historyManager.setStreaming(false);
-                        if (typeof chat.hideLoading === 'function') chat.hideLoading();
                         return;
                     }
                     
@@ -761,56 +735,20 @@ export async function sendAIMessage({
                             mConsole: mConsole,
                             currentFile: currentFile,
                             api: api,
-                            baseDir: baseDir,  // ベースディレクトリを追加
-                            appState: appState  // APP_STATEを追加
+                            baseDir: baseDir  // ベースディレクトリを追加
                         };
                         
                         // チャットにツール実行通知を表示
                         chat.addMessage(`🔧 ツール実行中: ${toolName}`, "system");
-                        // スクロール位置を更新
-                        if (chat.content && chat.content.element) {
-                            chat.content.element.scrollTop = chat.content.element.scrollHeight;
-                        }
                         
                         // ツールを実行
                         const result = await aiTool.callTool(toolName, args, toolContext);
                         
-                        // ツール側からのメッセージがある場合は表示
-                        if (result.messages && Array.isArray(result.messages)) {
-                            for (const msg of result.messages) {
-                                if (typeof msg === 'string') {
-                                    chat.addMessage(msg, "system");
-                                } else if (msg.text && msg.type) {
-                                    // {text: "メッセージ", type: "info"|"success"|"warning"|"error"}形式
-                                    const icon = {
-                                        info: 'ℹ️',
-                                        success: '✅',
-                                        warning: '⚠️',
-                                        error: '❌'
-                                    }[msg.type] || '';
-                                    chat.addMessage(`${icon} ${msg.text}`, "system");
-                                } else if (msg.text) {
-                                    chat.addMessage(msg.text, "system");
-                                }
-                            }
-                            // スクロール位置を更新
-                            if (chat.content && chat.content.element) {
-                                chat.content.element.scrollTop = chat.content.element.scrollHeight;
-                            }
-                        }
-                        
-                        // 結果をチャットに表示（デフォルトメッセージ）
+                        // 結果をチャットに表示
                         if (result.success) {
-                            // カスタムメッセージがない場合のみデフォルトメッセージを表示
-                            if (!result.messages || result.messages.length === 0) {
-                                chat.addMessage(`✅ ツール実行完了: ${toolName}`, "system");
-                            }
+                            chat.addMessage(`✅ ツール実行完了: ${toolName}`, "system");
                         } else {
                             chat.addMessage(`❌ ツール実行失敗: ${toolName} - ${result.error || '不明なエラー'}`, "system");
-                        }
-                        // スクロール位置を更新
-                        if (chat.content && chat.content.element) {
-                            chat.content.element.scrollTop = chat.content.element.scrollHeight;
                         }
                         
                         // ツール実行結果を履歴に追加
@@ -896,16 +834,10 @@ export async function sendAIMessage({
                                 }
                             },
                             onError: (errMsg) => {
-                                // AbortError の場合はユーザーが停止したと判定（通常エラー扱いしない）
-                                if (errMsg === 'The operation was aborted.') {
-                                    console.log("AI生成がユーザーによって停止されました");
-                                    chat.updateLastAIMessage('<span style="color:#888">生成が停止されました</span>', true);
-                                } else {
-                                    chat.updateLastAIMessage('<span style="color:red">AI応答エラー: '+errMsg+'</span>', true);
-                                    console.error("AI応答エラー:", errMsg);
-                                }
+                                chat.updateLastAIMessage('<span style="color:red">AI応答エラー: '+errMsg+'</span>', true);
                                 historyManager.setStreaming(false);
                                 if (typeof chat.hideLoading === 'function') chat.hideLoading();
+                                console.error("AI応答エラー:", errMsg);
                             }
                         }).then(async () => {
                             // 2回目以降のツール呼び出しを処理

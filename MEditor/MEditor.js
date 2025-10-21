@@ -4022,17 +4022,11 @@ export class MEditor {
                 chat.addApplyToCodeButtonsToChat(msg.element);
             }
 
-            // AI応答中の場合、ローディングコンテナに追加
-            if (from === "system" && chat.loadingContainer && chat.loadingContainer.element.parentNode) {
-                // AI応答中のシステムメッセージはローディングコンテナに追加
-                chat.loadingContainer.element.appendChild(msg.element);
+            // すべてのメッセージをメッセージコンテナに追加
+            if (chat.messages && chat.messages.container) {
+                chat.messages.container.appendChild(msg.element);
             } else {
-                // 通常のメッセージはメッセージコンテナに追加
-                if (chat.messages && chat.messages.container) {
-                    chat.messages.container.appendChild(msg.element);
-                } else {
-                    chat.content.element.appendChild(msg.element);
-                }
+                chat.content.element.appendChild(msg.element);
             }
             
             // 背景メッセージを非表示にする（メッセージが1つ以上ある場合）

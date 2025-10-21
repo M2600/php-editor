@@ -1120,6 +1120,33 @@ export class MEditor {
 
 
 
+    label(parentObj, text="", tooltip="") {
+        let label = {};
+        label.element = document.createElement("span");
+        label.element.classList.add(this.CLASS_NAME_PREFIX + "label");
+        label.element.innerHTML = text;
+        if(tooltip) label.element.title = tooltip;
+
+        if (parentObj && typeof parentObj.element === "object"){
+            parentObj.element.appendChild(label.element);
+        }else{
+            console.warn("parentObj has no element property");
+        }
+
+        label.setContent = (content) => {
+            if (typeof content === "string") {
+                label.element.innerHTML = content;
+            } else if (content instanceof HTMLElement) {
+                label.element.innerHTML = "";
+                label.element.appendChild(content);
+            }
+        }
+        return label;
+    }
+    generateLabel(parentObj, text="", tooltip="") {
+        let label = this.label(parentObj, text, tooltip);
+        return label;
+    }
 
     generateButton(parentObj, text, clickAction, tooltip="") {
         let button = {};
@@ -1903,7 +1930,7 @@ export class MEditor {
                 if (icon.title) iconElm.title = icon.title;
                 if (icon.class) iconElm.classList.add(icon.class);
             }
-            fileNameDiv.appendChild(iconElm);
+            fileNameDiv.prepend(iconElm);
             return true;
         }
         return false;
@@ -3065,6 +3092,342 @@ export class MEditor {
         dictMenu.options = opt;
 
         return dictMenu;
+    }
+
+    /**
+     * JSON形式のテキストエディタを作成（Ace Editor使用）
+     * @param {object} parentObj - 親オブジェクト
+     * @param {object} opt - オプション設定
+     * @returns {object} jsonEditorオブジェクト
+     */
+    jsonEditor(parentObj=null, opt={}) {
+        let jsonEditor = {};
+        jsonEditor.element = document.createElement("div");
+        jsonEditor.element.classList.add(this.CLASS_NAME_PREFIX + "json-editor");
+        
+        if(parentObj && parentObj.element) {
+            parentObj.element.appendChild(jsonEditor.element);
+            parentObj.jsonEditor = jsonEditor;
+        }
+        
+        jsonEditor.onChangeCallback = null;
+        jsonEditor.isValid = true;
+        jsonEditor.useAce = typeof ace !== 'undefined'; // Aceが利用可能かチェック
+        
+        // タイトル
+        let title = {};
+        title.element = document.createElement("div");
+        title.element.classList.add(this.CLASS_NAME_PREFIX + "json-editor-title");
+        title.element.innerHTML = "JSON";
+        jsonEditor.element.appendChild(title.element);
+        jsonEditor.title = title;
+        
+        // エディタコンテナ
+        let editorContainer = {};
+        editorContainer.element = document.createElement("div");
+        editorContainer.element.classList.add(this.CLASS_NAME_PREFIX + "json-editor-container");
+        jsonEditor.element.appendChild(editorContainer.element);
+        jsonEditor.editorContainer = editorContainer;
+        
+        // エラーメッセージ表示エリア
+        let errorMsg = {};
+        errorMsg.element = document.createElement("div");
+        errorMsg.element.classList.add(this.CLASS_NAME_PREFIX + "json-editor-error");
+        errorMsg.element.style.display = "none";
+        jsonEditor.element.appendChild(errorMsg.element);
+        jsonEditor.errorMsg = errorMsg;
+        
+        if (jsonEditor.useAce) {
+            // Ace Editorを使用（遅延初期化）
+            let aceEditorId = this.CLASS_NAME_PREFIX + "json-ace-" + Math.random().toString(36).substr(2, 9);
+            let aceEditorElement = document.createElement("div");
+            aceEditorElement.id = aceEditorId;
+            aceEditorElement.classList.add(this.CLASS_NAME_PREFIX + "json-editor-ace");
+            editorContainer.element.appendChild(aceEditorElement);
+            
+            // DOMに追加されているかチェックする関数
+            let isInDOM = () => {
+                return document.body.contains(aceEditorElement);
+            };
+            
+            // Ace Editorの初期化を遅延実行（DOMに追加された後）
+            let aceEditor = null;
+            let initAce = () => {
+                if (aceEditor) return aceEditor; // 既に初期化済み
+                
+                // DOMに追加されていない場合は初期化しない
+                if (!isInDOM()) {
+                    console.warn('JSON Editor: Ace initialization skipped - element not in DOM yet');
+                    return null;
+                }
+                
+                aceEditor = ace.edit(aceEditorId);
+                aceEditor.$blockScrolling = Infinity;
+                
+                // テーマ設定（親のテーマに合わせる）
+                const theme = this.THEME === 'dark' ? 'ace/theme/monokai' : 'ace/theme/chrome';
+                aceEditor.setTheme(theme);
+                
+                aceEditor.setFontSize(13);
+                aceEditor.setShowPrintMargin(false);
+                aceEditor.getSession().setMode("ace/mode/json");
+                aceEditor.getSession().setUseWrapMode(true);
+                aceEditor.getSession().setTabSize(2);
+                aceEditor.getSession().setUseSoftTabs(true);
+                aceEditor.renderer.setShowGutter(false);
+                
+                aceEditor.setOptions({
+                    fontFamily: "monospace",
+                    enableBasicAutocompletion: true,
+                    enableLiveAutocompletion: false,
+                    enableSnippets: false,
+                    scrollPastEnd: 0.2,
+                });
+                
+                // プレースホルダー的な初期値
+                aceEditor.setValue('{\n  "key": "value",\n  "nested": {\n    "key2": "value2"\n  },\n  "array": [1, 2, 3]\n}', -1);
+                aceEditor.clearSelection();
+                
+                // 変更イベント（デバウンス付き）
+                let validationTimeout = null;
+                aceEditor.getSession().on("change", (e) => {
+                    clearTimeout(validationTimeout);
+                    validationTimeout = setTimeout(() => {
+                        const isValid = jsonEditor.validate();
+                        
+                        if (isValid && jsonEditor.onChangeCallback) {
+                            try {
+                                const obj = jsonEditor.getValue();
+                                jsonEditor.onChangeCallback(obj);
+                            } catch (e) {
+                                console.error("JSON parse error:", e);
+                            }
+                        }
+                    }, 500);
+                });
+                
+                return aceEditor;
+            };
+            
+            jsonEditor.aceEditor = null;
+            jsonEditor.initAce = initAce;
+            
+            // バリデーション関数（Ace用）
+            jsonEditor.validate = () => {
+                const ace = jsonEditor.aceEditor || initAce();
+                if (!ace) return true; // DOMに追加されていない場合はスキップ
+                
+                const text = ace.getValue().trim();
+                
+                // 空の場合は有効
+                if (text === '') {
+                    jsonEditor.isValid = true;
+                    errorMsg.element.style.display = "none";
+                    // Aceのアノテーションをクリア
+                    ace.getSession().clearAnnotations();
+                    return true;
+                }
+                
+                try {
+                    JSON.parse(text);
+                    jsonEditor.isValid = true;
+                    errorMsg.element.style.display = "none";
+                    // Aceのアノテーションをクリア
+                    ace.getSession().clearAnnotations();
+                    return true;
+                } catch (e) {
+                    jsonEditor.isValid = false;
+                    errorMsg.element.textContent = "JSONエラー: " + e.message;
+                    errorMsg.element.style.display = "block";
+                    
+                    // エラー位置を特定してAceにアノテーション追加
+                    let row = 0;
+                    const match = e.message.match(/position\s+(\d+)/i);
+                    if (match) {
+                        const position = parseInt(match[1]);
+                        const lines = text.substring(0, position).split('\n');
+                        row = lines.length - 1;
+                    }
+                    
+                    ace.getSession().setAnnotations([{
+                        row: row,
+                        column: 0,
+                        text: e.message,
+                        type: "error"
+                    }]);
+                    
+                    return false;
+                }
+            };
+            
+            // 値を取得（オブジェクトとして）
+            jsonEditor.getValue = () => {
+                const ace = jsonEditor.aceEditor || initAce();
+                if (!ace) return {}; // DOMに追加されていない場合は空オブジェクト
+                
+                const text = ace.getValue().trim();
+                if (text === '') {
+                    return {};
+                }
+                return JSON.parse(text);
+            };
+            
+            // 値を設定（オブジェクトまたはJSON文字列）
+            jsonEditor.setValue = (value) => {
+                const ace = jsonEditor.aceEditor || initAce();
+                if (!ace) {
+                    console.warn('JSON Editor: setValue skipped - Ace not initialized yet');
+                    return;
+                }
+                
+                if (typeof value === 'string') {
+                    ace.setValue(value, -1);
+                } else if (typeof value === 'object') {
+                    ace.setValue(JSON.stringify(value, null, 2), -1);
+                }
+                ace.clearSelection();
+                jsonEditor.validate();
+            };
+            
+            // 有効/無効化
+            jsonEditor.setEnabled = (bool) => {
+                const ace = jsonEditor.aceEditor || initAce();
+                if (!ace) {
+                    console.warn('JSON Editor: setEnabled skipped - Ace not initialized yet');
+                    return;
+                }
+                
+                ace.setReadOnly(!bool);
+                if (!bool) {
+                    ace.setOptions({
+                        highlightActiveLine: false,
+                        highlightGutterLine: false
+                    });
+                } else {
+                    ace.setOptions({
+                        highlightActiveLine: true,
+                        highlightGutterLine: true
+                    });
+                }
+            };
+            
+            // テーマ変更メソッド
+            jsonEditor.setTheme = (theme) => {
+                const ace = jsonEditor.aceEditor || initAce();
+                if (!ace) {
+                    console.warn('JSON Editor: setTheme skipped - Ace not initialized yet');
+                    return;
+                }
+                
+                const aceTheme = theme === 'dark' ? 'ace/theme/monokai' : 'ace/theme/chrome';
+                ace.setTheme(aceTheme);
+            };
+            
+        } else {
+            // フォールバック: 通常のテキストエリア
+            let textarea = {};
+            textarea.element = document.createElement("textarea");
+            textarea.element.classList.add(this.CLASS_NAME_PREFIX + "json-editor-textarea");
+            textarea.element.placeholder = '{\n  "key": "value",\n  "nested": {\n    "key2": "value2"\n  },\n  "array": [1, 2, 3]\n}';
+            textarea.element.spellcheck = false;
+            editorContainer.element.appendChild(textarea.element);
+            jsonEditor.textarea = textarea;
+            
+            // バリデーション関数（テキストエリア用）
+            jsonEditor.validate = () => {
+                const text = textarea.element.value.trim();
+                
+                if (text === '') {
+                    jsonEditor.isValid = true;
+                    errorMsg.element.style.display = "none";
+                    textarea.element.classList.remove(this.CLASS_NAME_PREFIX + "json-editor-textarea-error");
+                    return true;
+                }
+                
+                try {
+                    JSON.parse(text);
+                    jsonEditor.isValid = true;
+                    errorMsg.element.style.display = "none";
+                    textarea.element.classList.remove(this.CLASS_NAME_PREFIX + "json-editor-textarea-error");
+                    return true;
+                } catch (e) {
+                    jsonEditor.isValid = false;
+                    errorMsg.element.textContent = "JSONエラー: " + e.message;
+                    errorMsg.element.style.display = "block";
+                    textarea.element.classList.add(this.CLASS_NAME_PREFIX + "json-editor-textarea-error");
+                    return false;
+                }
+            };
+            
+            // 入力イベント
+            let validationTimeout = null;
+            textarea.element.addEventListener("input", (e) => {
+                clearTimeout(validationTimeout);
+                validationTimeout = setTimeout(() => {
+                    jsonEditor.validate();
+                }, 500);
+            });
+            
+            textarea.element.addEventListener("change", (e) => {
+                clearTimeout(validationTimeout);
+                const isValid = jsonEditor.validate();
+                
+                if (isValid && jsonEditor.onChangeCallback) {
+                    try {
+                        const obj = jsonEditor.getValue();
+                        jsonEditor.onChangeCallback(obj);
+                    } catch (e) {
+                        console.error("JSON parse error:", e);
+                    }
+                }
+            });
+            
+            // 値を取得
+            jsonEditor.getValue = () => {
+                const text = textarea.element.value.trim();
+                if (text === '') {
+                    return {};
+                }
+                return JSON.parse(text);
+            };
+            
+            // 値を設定
+            jsonEditor.setValue = (value) => {
+                if (typeof value === 'string') {
+                    textarea.element.value = value;
+                } else if (typeof value === 'object') {
+                    textarea.element.value = JSON.stringify(value, null, 2);
+                }
+                jsonEditor.validate();
+            };
+            
+            // 有効/無効化
+            jsonEditor.setEnabled = (bool) => {
+                textarea.element.disabled = !bool;
+            };
+            
+            // テーマ変更メソッド（テキストエリアでは何もしない）
+            jsonEditor.setTheme = (theme) => {
+                // No-op for textarea
+            };
+        }
+        
+        // タイトル設定
+        jsonEditor.setTitle = (text) => {
+            title.element.innerHTML = text;
+        };
+        
+        // 変更時コールバック
+        jsonEditor.onChange = (callback) => {
+            jsonEditor.onChangeCallback = callback;
+        };
+        
+        return jsonEditor;
+    }
+
+    createJsonEditor(parentObj=null, opt={}) {
+        let jsonEditor = this.jsonEditor(parentObj, opt);
+        return jsonEditor;
     }
 
     /**

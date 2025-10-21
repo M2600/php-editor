@@ -68,6 +68,7 @@ export const explorerAutoReload = new ExplorerAutoReload({
 let mConsole;
 let dictMenu;
 let postDictMenu;
+let postJsonEditor;
 let postCheck;
 let jsonCheck;
 let chat;
@@ -99,11 +100,38 @@ async function executeCurrentFile() {
     
     console.log("Execute: " + APP_STATE.CURRENT_FILE.path);
     
-    // dictMenuからGETパラメータを取得
+    // GETパラメータを取得
     const getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
-    const postParams = postDictMenu ? postDictMenu.getItemsAsObject() : {};
+    
+    // POSTパラメータを取得（モードに応じて）
+    let postParams = {};
+    const isJsonMode = jsonCheck.getState();
+    if (isJsonMode) {
+        // JSONモード: バリデーションしてからJSONエディタから取得
+        if (!postJsonEditor.validate()) {
+            if (mConsole) {
+                mConsole.print('JSONの形式が正しくありません。修正してから実行してください。', 'error');
+            }
+            console.error('Invalid JSON format');
+            return;
+        }
+        
+        try {
+            postParams = postJsonEditor.getValue();
+        } catch (e) {
+            console.error('Failed to get JSON parameters:', e);
+            if (mConsole) {
+                mConsole.print('JSONパラメータの取得エラー: ' + e.message, 'error');
+            }
+            return;
+        }
+    } else {
+        // シンプルモード: DictMenuから取得
+        postParams = postDictMenu ? postDictMenu.getItemsAsObject() : {};
+    }
+    
     const method = postCheck.getState() ? "POST" : "GET";
-    const contentType = jsonCheck.getState() ? "application/json" : "application/x-www-form-urlencoded";
+    const contentType = isJsonMode ? "application/json" : "application/x-www-form-urlencoded";
     
     if (APP_STATE.RUN_MODE === 'WEB_MODE') {
         // Webページモード: プレビューiframeで実行
@@ -241,14 +269,20 @@ async function main(){
                 APP_STATE.CURRENT_FILE.aceObj.editor.setTheme("ace/theme/chrome");
             }
         }
+        
+        // JSONエディタのテーマも変更
+        if(postJsonEditor && typeof postJsonEditor.setTheme === 'function'){
+            postJsonEditor.setTheme(theme);
+        }
+        
         userConfig.set("theme", theme);
     });
 
     editor.page.header.header.menu.items.push(editor.generateButton(
         editor.page.header.header.menu,
-        "初期UIへ",
+        "旧UIへ",
         (e) => {window.location.href = "/1.php";},
-        "初期バージョンのUIに切り替えます"
+        "旧バージョンのUIに切り替えます"
     ))
 
     editor.page.header.header.menu.items.push(editor.generateButton(
@@ -320,6 +354,15 @@ async function main(){
     editor.registerPanelToggleButton('right', rightPanelToggle);
     editor.registerPanelToggleButton('bottom', bottomPanelToggle);
 
+
+    const editModeLabel = editor.generateLabel(
+        null,
+        "モード:",
+        "現在の開発モードが表示されます。エディタ上部のボタンで切り替え可能です。",
+    );
+    editModeLabel.setContent(APP_STATE.RUN_MODE === 'WEB_MODE' ? "開発モード: Webページ" : "開発モード: API開発");
+    editor.page.header.header.menu.items.push(editModeLabel);
+    editor.page.header.header.menu.element.prepend(editModeLabel.element);
     
 
     const editorEditor = editor.workPlace(editor.page.main.mid.container.main);
@@ -425,7 +468,7 @@ async function main(){
     };
 
     // Debug button
-    const t = APP_STATE.RUN_MODE === 'API_MODE' ? "Webページモード" : "API開発モード";
+    const t = APP_STATE.RUN_MODE === 'API_MODE' ? "Webページモードへ" : "API開発モードへ";
     editorEditor.menu.right.items.push(editor.generateButton(
         editorEditor.menu.right,
         t,
@@ -435,13 +478,15 @@ async function main(){
                 tabContainer.show();
                 tabContainer.hideTab(webPreviewTab.id);
                 APP_STATE.RUN_MODE = 'API_MODE';
-                e.target.innerHTML = "Webページモード";
+                e.target.innerHTML = "Webページモードへ";
+                editModeLabel.setContent("開発モード: API開発");
             }
             else if(APP_STATE.RUN_MODE === 'API_MODE'){
                 tabContainer.showTab(webPreviewTab.id);
                 tabContainer.hideTab(dictMenuTab.id);
                 APP_STATE.RUN_MODE = 'WEB_MODE';
-                e.target.innerHTML = "API開発モード";
+                e.target.innerHTML = "API開発モードへ";
+                editModeLabel.setContent("開発モード: Webページ");
             }
             // localStorageに状態を保存
             try {
@@ -484,8 +529,9 @@ async function main(){
 
 
     const explorer = editor.createExplorer(editor.page.main.left, {
-        title: "エクスプローラー",
+        title: "/",
     });
+    explorer.setMenuTitle("");
 
     // Explorer event handlers
     explorer.setFileClickAction(async function (file) {
@@ -666,8 +712,15 @@ async function main(){
         "POSTリクエスト",
         false,
         (checked) => {
-            postDictMenu.setEnabled(checked);
+            // 現在のモードに応じて有効/無効を切り替え
+            const isJsonMode = jsonCheck.getState();
+            if (isJsonMode) {
+                postJsonEditor.setEnabled(checked);
+            } else {
+                postDictMenu.setEnabled(checked);
+            }
             jsonCheck.setEnabled(checked);
+            
             // POSTチェックボックスの状態を保存
             try {
                 localStorage.setItem('postCheckState', checked.toString());
@@ -682,9 +735,54 @@ async function main(){
     // JSON checkbox
     jsonCheck = editor.generateCheckbox(
         null,
-        "JSON形式で送信",
+        "JSON形式で送信 (高度なモード)",
         false,
         (checked) => {
+            // モード切り替え
+            if (checked) {
+                // JSONモード: DictMenuの内容をJSONに変換してエディタに設定
+                postDictMenu.element.style.display = "none";
+                postJsonEditor.element.style.display = "flex";
+                
+                try {
+                    const dictData = postDictMenu.getItemsAsObject();
+                    if (Object.keys(dictData).length > 0) {
+                        postJsonEditor.setValue(dictData);
+                    }
+                } catch (e) {
+                    console.error('Failed to convert dict to JSON:', e);
+                }
+            } else {
+                // シンプルモード: JSONエディタの内容をDictMenuに変換
+                postJsonEditor.element.style.display = "none";
+                postDictMenu.element.style.display = "flex";
+                
+                try {
+                    const jsonData = postJsonEditor.getValue();
+                    // 既存のアイテムをクリア
+                    postDictMenu.items = [];
+                    postDictMenu.itemElements.forEach(el => el.remove());
+                    postDictMenu.itemElements = [];
+                    
+                    // フラットなオブジェクトの場合のみDictMenuに変換
+                    if (Object.keys(jsonData).length > 0) {
+                        const isFlat = Object.values(jsonData).every(v => 
+                            typeof v !== 'object' || v === null
+                        );
+                        
+                        if (isFlat) {
+                            postDictMenu.addItem(jsonData);
+                        } else {
+                            console.warn('Complex JSON structure cannot be converted to simple mode');
+                            mConsole && mConsole.print('複雑なJSON構造はシンプルモードに変換できません', 'warning');
+                        }
+                    }
+                    postDictMenu.addItem({'':''}); // 空行追加
+                } catch (e) {
+                    console.error('Failed to convert JSON to dict:', e);
+                }
+            }
+            
             // JSONチェックボックスの状態を保存
             try {
                 localStorage.setItem('jsonCheckState', checked.toString());
@@ -697,55 +795,82 @@ async function main(){
     dictMenuTab.addContent(jsonCheck);
     jsonCheck.setEnabled(false); // 初期状態では無効化
 
-    postDictMenu = editor.createDictMenu(dictMenuTab, {});
-    postDictMenu.setTitle("POSTパラメータ");
+    // POSTパラメータ用のコンテナ（DictMenuまたはJSONエディタを切り替える）
+    const postParamsContainer = document.createElement("div");
+    postParamsContainer.style.flex = "1";
+    postParamsContainer.style.display = "flex";
+    postParamsContainer.style.flexDirection = "column";
+    postParamsContainer.style.overflow = "auto";
+
+    // シンプルモード: DictMenu
+    postDictMenu = editor.createDictMenu(null, {});
+    postDictMenu.setTitle("POSTパラメータ (シンプルモード)");
     postDictMenu.addButton();
-    dictMenuTab.addContent(postDictMenu);
+    postParamsContainer.appendChild(postDictMenu.element);
+    
+    // 高度なモード: JSONエディタ
+    postJsonEditor = editor.createJsonEditor(null, {});
+    postJsonEditor.setTitle("POSTパラメータ (JSON形式)");
+    postJsonEditor.element.style.display = "none"; // 初期状態では非表示
+    postParamsContainer.appendChild(postJsonEditor.element);
+    
+    // JSONエディタの変更時にlocalStorageに保存
+    postJsonEditor.onChange((jsonData) => {
+        try {
+            localStorage.setItem('postParamsJson', JSON.stringify(jsonData));
+            console.log('POST JSON parameters saved:', jsonData);
+        } catch (err) {
+            console.error('Failed to save POST JSON parameters:', err);
+        }
+    });
     
     // localStorageからPOST設定を復元
     const savedPostCheckState = localStorage.getItem('postCheckState');
     const savedJsonCheckState = localStorage.getItem('jsonCheckState');
     const savedPostParams = localStorage.getItem('postParams');
+    const savedPostParamsJson = localStorage.getItem('postParamsJson');
     
-    // POSTチェックボックスの状態を復元
-    if (savedPostCheckState !== null) {
-        try {
-            const postCheckEnabled = savedPostCheckState === 'true';
-            postCheck.setState(postCheckEnabled);
-            postDictMenu.setEnabled(postCheckEnabled);
-            jsonCheck.setEnabled(postCheckEnabled);
-            console.log('Restored POST checkbox state:', postCheckEnabled);
-        } catch (e) {
-            console.error('Failed to restore POST checkbox state:', e);
-        }
-    }
-    
-    // JSONチェックボックスの状態を復元
+    // JSONチェックボックスの状態を先に復元（モード決定のため）
+    let isJsonMode = false;
     if (savedJsonCheckState !== null && savedPostCheckState === 'true') {
         try {
-            const jsonCheckEnabled = savedJsonCheckState === 'true';
-            jsonCheck.setState(jsonCheckEnabled);
-            console.log('Restored JSON checkbox state:', jsonCheckEnabled);
+            isJsonMode = savedJsonCheckState === 'true';
+            console.log('Restored JSON checkbox state:', isJsonMode);
         } catch (e) {
             console.error('Failed to restore JSON checkbox state:', e);
         }
     }
     
-    // POSTパラメータを復元
-    if (savedPostParams) {
-        try {
-            const postParams = JSON.parse(savedPostParams);
-            postDictMenu.addItem(postParams);
-            console.log('Restored POST parameters:', postParams);
-        } catch (e) {
-            console.error('Failed to load POST parameters:', e);
+    // POSTパラメータの復元は、DOMに追加された後に行う（後で実行）
+    // 先にモードに応じた表示/非表示だけ設定
+    
+    // POSTパラメータの復元は、DOMに追加された後に行う（後で実行）
+    // 先にモードに応じた表示/非表示だけ設定
+    if (isJsonMode) {
+        // JSONモード: JSONエディタを表示
+        postDictMenu.element.style.display = "none";
+        postJsonEditor.element.style.display = "flex";
+    } else {
+        // シンプルモード: DictMenuを表示
+        postJsonEditor.element.style.display = "none";
+        postDictMenu.element.style.display = "flex";
+        
+        // シンプルモードのデータはすぐに復元可能
+        if (savedPostParams) {
+            try {
+                const postParams = JSON.parse(savedPostParams);
+                postDictMenu.addItem(postParams);
+                console.log('Restored POST parameters:', postParams);
+            } catch (e) {
+                console.error('Failed to load POST parameters:', e);
+            }
         }
+        
+        // 末尾に空の行を追加しておく
+        postDictMenu.addItem({'':''});
     }
     
-    // 末尾に空の行を追加しておく
-    postDictMenu.addItem({'':''});
-    
-    // POSTパラメータが変更されたときにlocalStorageに保存
+    // POSTパラメータが変更されたときにlocalStorageに保存（シンプルモード）
     postDictMenu.onChange((params) => {
         try {
             localStorage.setItem('postParams', JSON.stringify(params));
@@ -755,9 +880,33 @@ async function main(){
         }
     });
     
-    // 初期状態では無効化（復元された状態に応じて有効化される）
-    if (savedPostCheckState !== 'true') {
+    // POSTチェックボックスの状態を復元
+    if (savedPostCheckState !== null) {
+        try {
+            const postCheckEnabled = savedPostCheckState === 'true';
+            postCheck.setState(postCheckEnabled);
+            
+            // モードに応じて有効/無効を切り替え
+            if (isJsonMode) {
+                postJsonEditor.setEnabled(postCheckEnabled);
+            } else {
+                postDictMenu.setEnabled(postCheckEnabled);
+            }
+            jsonCheck.setEnabled(postCheckEnabled);
+            
+            console.log('Restored POST checkbox state:', postCheckEnabled);
+        } catch (e) {
+            console.error('Failed to restore POST checkbox state:', e);
+        }
+    } else {
+        // 初期状態では無効化
         postDictMenu.setEnabled(false);
+        postJsonEditor.setEnabled(false);
+    }
+    
+    // JSONチェックボックスの状態を復元（UI上の表示）
+    if (isJsonMode) {
+        jsonCheck.setState(true);
     }
 
     const postDictContainer = document.createElement("div");
@@ -766,7 +915,7 @@ async function main(){
     postDictContainer.style.height = "100%";
     postDictContainer.appendChild(postCheck.element);
     postDictContainer.appendChild(jsonCheck.element);
-    postDictContainer.appendChild(postDictMenu.element);
+    postDictContainer.appendChild(postParamsContainer);
 
 
 
@@ -819,6 +968,20 @@ async function main(){
     // デバッグメニューをタブコンテナに追加
     // 初期状態は非表示
     dictMenuTab.setContent(vstack);
+    
+    // DOMに追加された後、JSONモードの場合はパラメータを復元
+    if (isJsonMode && savedPostParamsJson) {
+        // setTimeoutで次のイベントループまで待機してから復元
+        setTimeout(() => {
+            try {
+                const jsonData = JSON.parse(savedPostParamsJson);
+                postJsonEditor.setValue(jsonData);
+                console.log('Restored POST JSON parameters:', jsonData);
+            } catch (e) {
+                console.error('Failed to load POST JSON parameters:', e);
+            }
+        }, 0);
+    }
 
     
     const webPreviewer = editor.webPreviewer(webPreviewTab, "about:blank",{});
@@ -1037,6 +1200,11 @@ async function main(){
         theme = "light";
     }
     changeTheme(theme, APP_STATE.CURRENT_FILE, editor, userConfig, CONFIG.DEBUG);
+    
+    // JSONエディタのテーマも設定
+    if(postJsonEditor && typeof postJsonEditor.setTheme === 'function'){
+        postJsonEditor.setTheme(theme);
+    }
 
     // セッション生存確認を開始
     startSessionPulse({

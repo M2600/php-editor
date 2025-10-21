@@ -6,6 +6,70 @@ import { sessionError } from '../utils/helpers.js';
 import { Path } from '../utils/api.js';
 
 /**
+ * ファイルリストから指定されたパスのファイルが存在するか確認する
+ * ネストされた構造にも対応
+ * @param {Array} fileList - ファイルリスト
+ * @param {string} targetPath - 検索対象のファイルパス
+ * @returns {boolean} ファイルが存在する場合true
+ */
+export function fileExistsInList(fileList, targetPath) {
+    if (!fileList || !Array.isArray(fileList)) {
+        return false;
+    }
+    
+    for (let file of fileList) {
+        if (file.path === targetPath) {
+            return true;
+        }
+        // ディレクトリの場合は再帰的に検索
+        if (file.type === "dir" && file.files && Array.isArray(file.files)) {
+            if (fileExistsInList(file.files, targetPath)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * ファイル名に番号を付けて別の名前を生成する
+ * 例: "file.txt" → "file(1).txt", "file(2).txt" など
+ * @param {string} originalPath - 元のパス（例: "/dir/file.txt"）
+ * @param {Array} fileList - ファイルリスト
+ * @returns {string} 新しいパス
+ */
+export function generateUniqueFileName(originalPath, fileList) {
+    const lastSlashIndex = originalPath.lastIndexOf('/');
+    const dirPath = originalPath.substring(0, lastSlashIndex + 1);
+    const fileName = originalPath.substring(lastSlashIndex + 1);
+    
+    // ファイル名と拡張子に分割
+    const lastDotIndex = fileName.lastIndexOf('.');
+    let baseName, ext;
+    if (lastDotIndex > 0) {
+        baseName = fileName.substring(0, lastDotIndex);
+        ext = fileName.substring(lastDotIndex);
+    } else {
+        baseName = fileName;
+        ext = '';
+    }
+    
+    // 番号を付けたファイル名を試す
+    let counter = 1;
+    let newPath;
+    while (counter <= 1000) {
+        newPath = `${dirPath}${baseName}(${counter})${ext}`;
+        if (!fileExistsInList(fileList, newPath)) {
+            return newPath;
+        }
+        counter++;
+    }
+    
+    // 万が一1000回まで失敗した場合はタイムスタンプを使用
+    return `${dirPath}${baseName}(${Date.now()})${ext}`;
+}
+
+/**
  * エクスプローラーで開いているファイルのハイライトを復元する
  * ファイルが含まれるディレクトリを自動的に展開してからハイライト表示する
  * @param {Object} appState - アプリケーションの状態
@@ -283,7 +347,9 @@ export async function loadExplorer(path, api, appState, editor) {
         appState.FILE_LIST = data.files;
         editor.BASE_DIR = path;
         let dir = Path.join(appState.USER_ID, path);
-        editor.explorer.setMenuTitle(dir);
+        //editor.explorer.setMenuTitle(dir);
+        editor.explorer.setTitle(dir);
+        
         
         // サーバーから最新データを取得したのでクライアント側の更新時刻をクリア
         clearClientMtimes();
@@ -572,7 +638,7 @@ export async function deleteDir(path, api, mConsole) {
     return ret;
 }
 
-export async function uploadFiles(fileInput, dir, api, mConsole) {
+export async function uploadFiles(fileInput, dir, api, mConsole, filesToRename = []) {
     if (!dir){
         console.error("Directory is not specified");
         return false;
@@ -586,6 +652,12 @@ export async function uploadFiles(fileInput, dir, api, mConsole) {
     const fd = new FormData();
     fd.append("action", "upload");
     fd.append("path", dir);
+    
+    // ファイル名変更マップを追加
+    if (filesToRename && filesToRename.length > 0) {
+        fd.append("fileRenames", JSON.stringify(filesToRename));
+    }
+    
     for (let i = 0; i < files.length; i++) {
         fd.append("files[]", files[i]);
     }

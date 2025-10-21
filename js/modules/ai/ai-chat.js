@@ -551,6 +551,7 @@ export async function sendAIMessage({
     editor = null,
     mConsole = null,
     api = null,
+    appState = null,  // APP_STATEを追加
     enableTools = true  // ツール機能を有効にするかどうか
 }) {
     try {
@@ -740,7 +741,8 @@ export async function sendAIMessage({
                             mConsole: mConsole,
                             currentFile: currentFile,
                             api: api,
-                            baseDir: baseDir  // ベースディレクトリを追加
+                            baseDir: baseDir,  // ベースディレクトリを追加
+                            appState: appState  // APP_STATEを追加
                         };
                         
                         // チャットにツール実行通知を表示

@@ -6,6 +6,7 @@
  */
 
 import { api } from '../../utils/api.js';
+import { loadExplorer } from '../../core/file-manager.js';
 
 /**
  * 相対パスをベースディレクトリと結合して絶対パスにする
@@ -161,7 +162,7 @@ function showEditConfirmation(editor, file, newContent, startTime) {
  */
 export async function createFile(filename, content, options = {}) {
     const startTime = Date.now();
-    const { skipConfirmation = false, editor, mConsole, api: apiFunc, baseDir } = options;
+    const { skipConfirmation = false, editor, mConsole, api: apiFunc, baseDir, appState } = options;
     
     // デバッグ: 渡されたオプションを確認
     console.log('createFile options:', { skipConfirmation, hasEditor: !!editor, hasMConsole: !!mConsole, hasApi: !!apiFunc, baseDir });
@@ -221,6 +222,11 @@ export async function createFile(filename, content, options = {}) {
         console.log('createFile API response:', result);
         
         if (result.status === 'success') {
+            // エクスプローラーをリロード
+            if (editor && appState) {
+                await loadExplorer(editor.BASE_DIR, apiFunc, appState, editor);
+            }
+            
             await logToolExecution('createFile', { filename, content }, 'approved', result, approvalTime);
             if (mConsole) {
                 mConsole.print(`ファイル "${filename}" を作成しました`, 'success');

@@ -25,6 +25,10 @@ i {
     margin-right: .4em;
 }
 
+.meditor-label {
+    
+}
+
 .meditor-popup-menu {
     position: absolute;
     display: flex;

@@ -590,8 +590,9 @@ export async function sendAIMessage({
         historyManager.limitHistory(CONFIG.MAX_CHAT_HISTORY);
 
         // ファイル内容を送信するか判定
+        // toolsが有効時には送信しない
         let fileContext = null;
-        if (currentFile && currentFile.aceObj && typeof currentFile.aceObj.editor.getValue === 'function') {
+        if (currentFile && currentFile.aceObj && typeof currentFile.aceObj.editor.getValue === 'function' && !enableTools) {
             const fileContent = currentFile.aceObj.editor.getValue();
             if (fileContent && fileContent.length > 0) {
                 console.log("Sending file context:", currentFile.path);
@@ -614,8 +615,10 @@ export async function sendAIMessage({
         }
 
         // ディレクトリコンテキストを生成
-        const dirContext = generateDirectoryContext(fileList, baseDir);
-        if (dirContext) {
+        // toolsが有効時には送信しない
+        let dirContext = null;
+        if (baseDir && !enableTools) {
+            dirContext = generateDirectoryContext(fileList, baseDir);
             console.log("Sending directory context:", dirContext);
         }
 

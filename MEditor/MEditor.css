@@ -1223,11 +1223,13 @@ i {
 }
 .meditor-chat-content {
     flex: 1;
-    overflow-y: auto;
-    padding: .5em;
+    /*padding: .5em;*/
     background-color: var(--me-color-bg);
     overflow-x: hidden;
+    overflow-y: hidden;
     position: relative; /* 追加: 子要素の絶対位置の基準にする */
+    display: flex;
+    flex-direction: column;
 }
 .meditor-chat-background-message {
     position: absolute;
@@ -1280,6 +1282,14 @@ i {
 .meditor-chat-send-btn:hover {
     background-color: var(--me-color-bg-active);
 }
+.meditor-chat-messages-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 .5em;
+    scrollbar-gutter: stable;
+}
 .meditor-chat-message {
     margin-bottom: .5em;
     word-break: break-word;
@@ -1315,7 +1325,7 @@ i {
     gap: 0.7em;
     color: #888;
     font-size: 1em;
-    margin: 0.5em 0;
+    margin: 0 0;
 }
 .meditor-chat-loading .loader {
     width: 1.2em;
@@ -1329,6 +1339,38 @@ i {
 @keyframes meditor-spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* AI応答中のメッセージコンテナ */
+.meditor-chat-loading-container {
+    padding: 0 1em;
+    flex-shrink: 0;  /* 内容の増加によってスクロールさせない */
+    height: fit-content;
+    background-color: var(--me-color-bg);
+}
+
+/* --- AIチャット 生成停止ボタン --- */
+.meditor-chat-stop-btn {
+    background: var(--me-color-danger, #ff6b6b);
+    color: #fff;
+    border: 1px solid #cc5555;
+    border-radius: 0.3em;
+    padding: 0.3em 1.2em;
+    font-size: 0.95em;
+    cursor: pointer;
+    height: auto;
+    align-self: center;
+    transition: background 0.2s, border-color 0.2s;
+}
+.meditor-chat-stop-btn:hover:not(:disabled) {
+    background: #ff5252;
+    border-color: #bb4444;
+}
+.meditor-chat-stop-btn:disabled {
+    background: #ccc;
+    color: #999;
+    border-color: #aaa;
+    cursor: not-allowed;
 }
 /* --- AIチャット クリアボタン・モデルセレクター --- */
 .meditor-chat-clear-btn {

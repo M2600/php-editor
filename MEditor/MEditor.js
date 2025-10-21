@@ -3471,21 +3471,70 @@ export class MEditor {
         chat.loading.element = document.createElement("div");
         chat.loading.element.className = this.CLASS_NAME_PREFIX + "chat-loading";
         chat.loading.element.style.display = "none";
-        chat.loading.element.innerHTML = '<span class="loader"></span> AI応答中...';
+        
+        // ローディング内容を作成
+        const loadingContent = document.createElement("div");
+        loadingContent.style.display = "flex";
+        loadingContent.style.alignItems = "center";
+        loadingContent.style.gap = "1em";
+        loadingContent.innerHTML = '<span class="loader"></span> AI応答中...';
+        
+        // 生成停止ボタンを作成
+        const stopButton = document.createElement("button");
+        stopButton.textContent = "停止";
+        stopButton.className = this.CLASS_NAME_PREFIX + "chat-stop-btn";
+        stopButton.style.marginLeft = "0.5em";
+        stopButton.title = "AI生成を停止";
+        stopButton.addEventListener("click", function() {
+            // AbortControllerを使用して生成を中止
+            if (chat._abortController) {
+                console.log("AI生成を停止します");
+                chat._abortController.abort();
+                stopButton.disabled = true;
+            }
+        });
+        
+        loadingContent.appendChild(stopButton);
+        chat.loading.element.appendChild(loadingContent);
         // chat.contentが後で生成されるため、appendChildは後で行う
 
+        // AI応答中のメッセージコンテナ（ローディング要素を別に管理）
+        chat.loadingContainer = {};
+        chat.loadingContainer.element = document.createElement("div");
+        chat.loadingContainer.element.className = this.CLASS_NAME_PREFIX + "chat-loading-container";
+        
         // ローディング表示/非表示メソッド
         chat.showLoading = function() {
-            // 一度削除してから末尾に再追加
-            if (chat.loading.element.parentNode) {
-                chat.loading.element.parentNode.removeChild(chat.loading.element);
+            // ローディングコンテナを表示
+            if (!chat.loadingContainer.element.parentNode) {
+                chat.element.appendChild(chat.loadingContainer.element);
             }
-            chat.content.element.appendChild(chat.loading.element);
+            chat.loadingContainer.element.style.display = "block";
+            
+            // ローディング要素が loadingContainer に存在しなければ追加（初回のみ）
+            if (!chat.loading.element.parentNode) {
+                chat.loadingContainer.element.appendChild(chat.loading.element);
+            }
             chat.loading.element.style.display = "flex";
-            chat.content.element.scrollTop = chat.content.element.scrollHeight;
-        };
+            
+            // 停止ボタンを有効にする
+            const btn = chat.loading.element.querySelector('.' + this.CLASS_NAME_PREFIX + 'chat-stop-btn');
+            if (btn) btn.disabled = false;
+            
+            // 自動スクロール状態を有効にする（AI生成開始時は常に最下部へスクロール）
+            chat.autoScroll = true;
+            
+            // スクロールを最下部に（DOM レンダリングを待つため setTimeout を使用）
+            setTimeout(() => {
+                if (chat.messages && chat.messages.container) {
+                    chat.messages.container.scrollTop = chat.messages.container.scrollHeight;
+                }
+            }, 0);
+        }.bind(this);
+        
         chat.hideLoading = function() {
             chat.loading.element.style.display = "none";
+            chat.loadingContainer.element.style.display = "none";
         };
 
         // 上部メニュー
@@ -3506,9 +3555,19 @@ export class MEditor {
         chat.content.element.classList.add(this.CLASS_NAME_PREFIX + "chat-content");
         chat.element.appendChild(chat.content.element);
 
-        // ローディングアイコンを履歴エリアに追加
-        chat.content.element.appendChild(chat.loading.element);
+        // チャット履歴管理
+        chat.messages = [];
 
+        // メッセージスクロール領域を作成
+        chat.messages.container = document.createElement("div");
+        chat.messages.container.classList.add(this.CLASS_NAME_PREFIX + "chat-messages-container");
+        chat.content.element.appendChild(chat.messages.container);
+
+        // ローディングコンテナを作成（chat-contentの外に配置）
+        chat.loadingContainer = {};
+        chat.loadingContainer.element = document.createElement("div");
+        chat.loadingContainer.element.classList.add(this.CLASS_NAME_PREFIX + "chat-loading-container");
+        chat.element.appendChild(chat.loadingContainer.element);
 
         // 入力エリア
         chat.inputArea = {};
@@ -3567,10 +3626,16 @@ export class MEditor {
             // chat.messages（UI履歴）
             if (Array.isArray(chat.messages)) chat.messages.length = 0;
             // 画面上の履歴
-            if (chat.content && chat.content.element) {
+            if (chat.messages && chat.messages.container) {
+                let historyElements = chat.messages.container.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'chat-message');
+                historyElements.forEach(el => el.remove());
+            } else if (chat.content && chat.content.element) {
                 let historyElements = chat.content.element.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'chat-message');
                 historyElements.forEach(el => el.remove());
-                chat.content.element.scrollTop = chat.content.element.scrollHeight;
+            }
+            // 背景メッセージを表示
+            if (chat.backgroundMessage) {
+                chat.backgroundMessage.style.display = "";
             }
             // 外部変数の履歴もクリアしたい場合は外部で上書きすること
         };
@@ -3809,13 +3874,12 @@ export class MEditor {
         chat.inputArea.sendBtn.innerHTML = "送信";
         chat.inputArea.element.appendChild(chat.inputArea.sendBtn);
 
-        // チャット履歴管理
-        chat.messages = [];
-
         // --- スクロール制御 ---
         chat.autoScroll = true;
-        chat.content.element.addEventListener('scroll', function() {
-            const el = chat.content.element;
+        
+        // メッセージコンテナのスクロール判定（メッセージがコンテナ内に追加されるため）
+        chat.messages.container.addEventListener('scroll', function() {
+            const el = chat.messages.container;
             // 2px以内なら最下部とみなす
             if (el.scrollHeight - el.scrollTop - el.clientHeight < 2) {
                 chat.autoScroll = true;
@@ -3958,15 +4022,43 @@ export class MEditor {
                 chat.addApplyToCodeButtonsToChat(msg.element);
             }
 
-            chat.content.element.appendChild(msg.element);
-            chat.content.element.scrollTop = chat.content.element.scrollHeight;
+            // AI応答中の場合、ローディングコンテナに追加
+            if (from === "system" && chat.loadingContainer && chat.loadingContainer.element.parentNode) {
+                // AI応答中のシステムメッセージはローディングコンテナに追加
+                chat.loadingContainer.element.appendChild(msg.element);
+            } else {
+                // 通常のメッセージはメッセージコンテナに追加
+                if (chat.messages && chat.messages.container) {
+                    chat.messages.container.appendChild(msg.element);
+                } else {
+                    chat.content.element.appendChild(msg.element);
+                }
+            }
+            
+            // 背景メッセージを非表示にする（メッセージが1つ以上ある場合）
+            if (chat.backgroundMessage && chat.messages && chat.messages.length > 0) {
+                chat.backgroundMessage.style.display = "none";
+            }
+            
+            // スクロール位置を更新（ユーザがスクロール中の場合は更新しない）
+            if (chat.autoScroll && chat.messages && chat.messages.container) {
+                // DOM の再レンダリングを待つため setTimeout を使用
+                setTimeout(() => {
+                    chat.messages.container.scrollTop = chat.messages.container.scrollHeight;
+                }, 0);
+            }
             chat.messages.push({ text, from });
         };
 
         // ストリーム用: 直近のAIメッセージをリアルタイムで更新
         chat.updateLastAIMessage = (text, markdown = false) => {
             // 直近のAIメッセージ要素を取得
-            const aiMsgs = chat.content.element.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'chat-message-ai');
+            let aiMsgs;
+            if (chat.messages && chat.messages.container) {
+                aiMsgs = chat.messages.container.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'chat-message-ai');
+            } else {
+                aiMsgs = chat.content.element.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'chat-message-ai');
+            }
             if (aiMsgs.length === 0) return;
             const aiMsgDiv = aiMsgs[aiMsgs.length - 1];
             if (markdown) {
@@ -3983,19 +4075,23 @@ export class MEditor {
             } else {
                 aiMsgDiv.innerText = text;
             }
-            if (chat.loading.element.parentNode) {
-                chat.loading.element.parentNode.removeChild(chat.loading.element);
-            }
-            chat.content.element.appendChild(chat.loading.element);
+            
             // スクロール位置を更新（autoScrollがtrueのときのみ）
             if (chat.autoScroll) {
-                chat.content.element.scrollTop = chat.content.element.scrollHeight;
+                if (chat.messages && chat.messages.container) {
+                    chat.messages.container.scrollTop = chat.messages.container.scrollHeight;
+                }
             }
         };
 
         // 最後のAIメッセージのテキストを取得
         chat.getLastAIMessageText = () => {
-            const aiMsgs = chat.content.element.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'chat-message-ai');
+            let aiMsgs;
+            if (chat.messages && chat.messages.container) {
+                aiMsgs = chat.messages.container.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'chat-message-ai');
+            } else {
+                aiMsgs = chat.content.element.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'chat-message-ai');
+            }
             if (aiMsgs.length === 0) return '';
             const lastAiMsg = aiMsgs[aiMsgs.length - 1];
             return lastAiMsg.innerText || lastAiMsg.textContent || '';
@@ -4028,15 +4124,8 @@ export class MEditor {
         chat.backgroundMessage.innerHTML = "ここにチャット履歴が表示されます。";
         chat.content.element.appendChild(chat.backgroundMessage);
 
-        // メッセージがある場合は背景メッセージを非表示にする
-        const observer = new MutationObserver(() => {
-            if (chat.content.element.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'chat-message').length > 0) {
-                chat.backgroundMessage.style.display = "none";
-            } else {
-                chat.backgroundMessage.style.display = "";
-            }
-        });
-        observer.observe(chat.content.element, { childList: true });
+        // 注: 背景メッセージの表示/非表示は addMessage() と clearHistory() で直接制御されている
+        // そのため、MutationObserver は不要になりました
 
         // バックグラウンドメッセージ変更メソッド
         chat.setBackgroundMessage = (msg) => {
@@ -4063,14 +4152,13 @@ export class MEditor {
 
         // CSS: loaderアニメーション（必要なら）
 
-
         return chat;
     }
 
     createChat(parentObj, opt={}) {
         let chat = this.chat(parentObj);
         chat.options = opt;
-        chat.messages = [];
+        // chat.messages は既に chat() メソッドで配列として初期化されている
 
         return chat;
     }

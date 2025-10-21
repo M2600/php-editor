@@ -18,9 +18,13 @@ export class AITool {
      */
     async callTool(toolName, args, context = {}) {
         try {
+            // AIが skipConfirmation を設定できないようにする
+            // アプリケーション側の context.skipConfirmation のみを使用
+            const skipConfirmation = context.skipConfirmation ?? false;
+            
             if (toolName === 'createFile') {
                 return await createFile(args.filename, args.content, {
-                    skipConfirmation: args.skipConfirmation || false,
+                    skipConfirmation: skipConfirmation,
                     ...context
                 });
             } else if (toolName === 'readFile') {
@@ -32,7 +36,7 @@ export class AITool {
                     args.replaceText, 
                     args.options || {},
                     {
-                        skipConfirmation: args.skipConfirmation || false,
+                        skipConfirmation: skipConfirmation,
                         ...context
                     }
                 );
@@ -43,13 +47,13 @@ export class AITool {
                     args.lineEnd, 
                     args.newContent,
                     {
-                        skipConfirmation: args.skipConfirmation || false,
+                        skipConfirmation: skipConfirmation,
                         ...context
                     }
                 );
             } else if (toolName === 'deleteFile') {
                 return await deleteFile(args.filename, {
-                    skipConfirmation: args.skipConfirmation || false,
+                    skipConfirmation: skipConfirmation,
                     ...context
                 });
             } else {

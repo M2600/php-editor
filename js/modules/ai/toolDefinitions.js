@@ -24,11 +24,6 @@ export const FILE_EDITOR_TOOLS = [
                     content: {
                         type: "string",
                         description: "ファイルの内容"
-                    },
-                    skipConfirmation: {
-                        type: "boolean",
-                        description: "ユーザー確認をスキップするか（デフォルト: false）",
-                        default: false
                     }
                 },
                 required: ["filename", "content"]
@@ -92,11 +87,6 @@ export const FILE_EDITOR_TOOLS = [
                                 default: true
                             }
                         }
-                    },
-                    skipConfirmation: {
-                        type: "boolean",
-                        description: "ユーザー確認をスキップするか（デフォルト: false）",
-                        default: false
                     }
                 },
                 required: ["filename", "searchText", "replaceText"]
@@ -128,11 +118,6 @@ export const FILE_EDITOR_TOOLS = [
                     newContent: {
                         type: "string",
                         description: "置き換える新しい内容"
-                    },
-                    skipConfirmation: {
-                        type: "boolean",
-                        description: "ユーザー確認をスキップするか（デフォルト: false）",
-                        default: false
                     }
                 },
                 required: ["filename", "lineStart", "lineEnd", "newContent"]
@@ -150,11 +135,6 @@ export const FILE_EDITOR_TOOLS = [
                     filename: {
                         type: "string",
                         description: "削除するファイル名"
-                    },
-                    skipConfirmation: {
-                        type: "boolean",
-                        description: "ユーザー確認をスキップするか（デフォルト: false）",
-                        default: false
                     }
                 },
                 required: ["filename"]

@@ -108,43 +108,43 @@ async function logToolExecution(tool, parameters, status, result, approvalTime =
  * @param {Object} file - 編集対象のファイルオブジェクト
  * @param {string} newContent - 新しいファイル内容
  * @param {number} startTime - 確認開始時刻（承認時間計測用）
- * @returns {Promise<boolean>} - 承認されたらtrue、拒否されたらfalse
+ * @returns {Promise<Object>} - {approved: boolean, approvalTime: number|null}
  */
 function showEditConfirmation(editor, file, newContent, startTime) {
     return new Promise((resolve) => {
-        // fileオブジェクトが無効な場合は簡易確認
-        if (!file || !file.aceObj || !file.aceObj.element) {
-            console.warn('fileオブジェクトが無効なため、簡易確認を使用します');
+        // fileオブジェクトが有効で、エディタで開かれている場合
+        if (file && file.aceObj && file.aceObj.element) {
+            // Diff表示
+            const clearDiff = editor.showDiff(file, newContent);
+            
+            // 確認ダイアログを表示（エディタ右下）
+            const menuContainer = file.aceObj.element.parentElement || document.body;
+            
+            editor.diffApplyMenu(
+                menuContainer,
+                file,
+                newContent,
+                // 適用ボタン
+                (file, proposed) => {
+                    const approvalTime = (Date.now() - startTime) / 1000; // 秒単位
+                    file.aceObj.editor.setValue(proposed);
+                    file.changed = true;
+                    clearDiff();
+                    resolve({ approved: true, approvalTime });
+                },
+                // 拒否ボタン
+                (file) => {
+                    clearDiff();
+                    resolve({ approved: false, approvalTime: null });
+                }
+            );
+        } else {
+            // ファイルが開かれていない場合は簡易確認
+            console.warn('ファイルがエディタで開かれていないため、簡易確認を使用します');
             const approved = confirm('この変更を適用しますか？');
             const approvalTime = (Date.now() - startTime) / 1000;
             resolve({ approved, approvalTime: approved ? approvalTime : null });
-            return;
         }
-        
-        // Diff表示
-        const clearDiff = editor.showDiff(file, newContent);
-        
-        // 確認ダイアログを表示（エディタ右下）
-        const menuContainer = file.aceObj.element.parentElement || document.body;
-        
-        editor.diffApplyMenu(
-            menuContainer,
-            file,
-            newContent,
-            // 適用ボタン
-            (file, proposed) => {
-                const approvalTime = (Date.now() - startTime) / 1000; // 秒単位
-                file.aceObj.editor.setValue(proposed);
-                file.changed = true;
-                clearDiff();
-                resolve({ approved: true, approvalTime });
-            },
-            // 拒否ボタン
-            (file) => {
-                clearDiff();
-                resolve({ approved: false, approvalTime: null });
-            }
-        );
     });
 }
 
@@ -434,15 +434,25 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
         let approved = true;
         let approvalTime = null;
         
-        if (!skipConfirmation && editor && currentFile && currentFile.path === fullPath) {
-            // ユーザーに確認
-            const confirmation = await showEditConfirmation(editor, currentFile, newContent, startTime);
-            approved = confirmation.approved;
-            approvalTime = confirmation.approvalTime;
-        } else if (!skipConfirmation) {
-            // ファイルが開いていない場合は簡易確認
-            approved = confirm(`ファイル "${filename}" を編集しますか？`);
-            approvalTime = (Date.now() - startTime) / 1000;
+        // デフォルトはユーザー確認を表示
+        // skipConfirmation=true の場合のみ確認をスキップ（アプリケーション設定で制御可能）
+        if (!skipConfirmation) {
+            if (editor) {
+                // エディタが利用可能な場合
+                // ファイルが開かれているかどうかに関わらず、showEditConfirmation を呼び出し
+                // ファイルが開かれていない場合は簡易確認が表示される
+                const fileForConfirmation = currentFile && currentFile.path === fullPath 
+                    ? currentFile 
+                    : { path: fullPath, aceObj: null };  // ファイルが開かれていない場合
+                
+                const confirmation = await showEditConfirmation(editor, fileForConfirmation, newContent, startTime);
+                approved = confirmation.approved;
+                approvalTime = confirmation.approvalTime;
+            } else {
+                // エディタがない場合は自動承認（アプリケーション側の判断）
+                console.warn('エディタが利用不可、ユーザー確認をスキップします');
+                approved = true;
+            }
         }
         
         if (!approved) {
@@ -589,14 +599,25 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
         let approved = true;
         let approvalTime = null;
         
-        if (!skipConfirmation && editor && currentFile && currentFile.path === fullPath) {
-            // ユーザーに確認
-            const confirmation = await showEditConfirmation(editor, currentFile, updatedContent, startTime);
-            approved = confirmation.approved;
-            approvalTime = confirmation.approvalTime;
-        } else if (!skipConfirmation) {
-            approved = confirm(`ファイル "${filename}" の ${lineStart}-${lineEnd} 行目を編集しますか？`);
-            approvalTime = (Date.now() - startTime) / 1000;
+        // デフォルトはユーザー確認を表示
+        // skipConfirmation=true の場合のみ確認をスキップ（アプリケーション設定で制御可能）
+        if (!skipConfirmation) {
+            if (editor) {
+                // エディタが利用可能な場合
+                // ファイルが開かれているかどうかに関わらず、showEditConfirmation を呼び出し
+                // ファイルが開かれていない場合は簡易確認が表示される
+                const fileForConfirmation = currentFile && currentFile.path === fullPath 
+                    ? currentFile 
+                    : { path: fullPath, aceObj: null };  // ファイルが開かれていない場合
+                
+                const confirmation = await showEditConfirmation(editor, fileForConfirmation, updatedContent, startTime);
+                approved = confirmation.approved;
+                approvalTime = confirmation.approvalTime;
+            } else {
+                // エディタがない場合は自動承認（アプリケーション側の判断）
+                console.warn('エディタが利用不可、ユーザー確認をスキップします');
+                approved = true;
+            }
         }
         
         if (!approved) {
@@ -713,9 +734,17 @@ export async function deleteFile(filename, options = {}) {
         let approved = true;
         let approvalTime = null;
         
+        // デフォルトはユーザー確認を表示
+        // skipConfirmation=true の場合のみ確認をスキップ（アプリケーション設定で制御可能）
         if (!skipConfirmation) {
-            approved = confirm(`本当にファイル "${filename}" を削除しますか？この操作は取り消せません。`);
-            approvalTime = (Date.now() - startTime) / 1000;
+            if (editor) {
+                approved = confirm(`本当にファイル "${filename}" を削除しますか？この操作は取り消せません。`);
+                approvalTime = (Date.now() - startTime) / 1000;
+            } else {
+                // エディタがない場合は自動承認（アプリケーション側の判断）
+                console.warn('エディタが利用不可、ユーザー確認をスキップします');
+                approved = true;
+            }
         }
         
         if (!approved) {

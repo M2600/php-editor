@@ -1,7 +1,7 @@
 
 // ai-tool.js
 // ai用のツールモジュール
-import { createFile, editFileByReplace, editFileByLines, readFile, deleteFile } from './ai_tools/fileEditor.js';
+import { createFile, editFileByReplace, editFileByLines, readFile, deleteFile, ls } from './ai_tools/fileEditor.js';
 import { getAllTools, getToolByName } from './toolDefinitions.js';
 
 
@@ -56,6 +56,10 @@ export class AITool {
                     skipConfirmation: skipConfirmation,
                     ...context
                 });
+            } else if (toolName === 'ls'){
+                return await ls(args.directory, {
+                    ...context
+                })
             } else {
                 throw new Error('未対応のツール: ' + toolName);
             }

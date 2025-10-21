@@ -961,3 +961,111 @@ export async function deleteFile(filename, options = {}) {
         };
     }
 }
+
+/**
+ * ディレクトリ内のファイル一覧を取得
+ * 
+ * @param {string} directory - ディレクトリパス（省略時はベースディレクトリ）
+ * @param {Object} options - オプション
+ * @param {string} options.baseDir - ベースディレクトリ
+ * @param {Function} options.api - API関数
+ * @param {Object} options.mConsole - コンソールオブジェクト
+ * @returns {Promise<Object>} - {success: boolean, files: Array, directories: Array, message: string}
+ */
+export async function ls(directory = "", options = {}) {
+    const { api: apiFunc, mConsole, baseDir } = options;
+    
+    try {
+        // APIが渡されていない場合はエラー
+        if (!apiFunc) {
+            throw new Error('API関数が渡されていません');
+        }
+        
+        // ディレクトリパスを決定
+        let targetDir = directory;
+        if (!targetDir || targetDir === "" || targetDir === ".") {
+            targetDir = baseDir || "/";
+        }
+        
+        // ファイルパスをベースディレクトリと結合
+        const fullPath = resolveFilePath(targetDir, baseDir);
+        
+        // ファイルパスの検証
+        if (!validateFilePath(fullPath, baseDir)) {
+            const errorMsg = `アクセス拒否: ディレクトリ "${directory}" は現在のディレクトリ配下にありません`;
+            await logToolExecution('ls', { directory }, 'rejected', { error: 'path_validation_failed' });
+            if (mConsole) {
+                mConsole.print(errorMsg, 'error');
+            }
+            return {
+                success: false,
+                error: 'path_validation_failed',
+                message: errorMsg,
+                files: [],
+                directories: []
+            };
+        }
+        
+        // ディレクトリ内容を取得
+        const result = await apiFunc('/api/file_manager.php', {
+            action: 'list-object',
+            path: fullPath
+        });
+        
+        // デバッグ: APIレスポンスを確認
+        console.log('ls API response:', result);
+        
+        if (result.status === 'success') {
+            // ファイルとディレクトリを分類
+            const files = [];
+			const directories = [];
+
+			for (const item of result.files.files) {
+				if (item.type === 'dir') {
+					directories.push(item.name);
+				} else {
+					files.push(item.name);
+				}
+			}
+
+            await logToolExecution('ls', { directory }, 'success', {
+                fileCount: files.length,
+                dirCount: directories.length
+            });
+            
+            // ファイル一覧をコンソールに表示
+            if (mConsole && (files.length > 0 || directories.length > 0)) {
+                if (directories.length > 0) {
+                    mConsole.print(`[ディレクトリ]: ${directories.join(', ')}`, 'info');
+                }
+                if (files.length > 0) {
+                    mConsole.print(`[ファイル]: ${files.join(', ')}`, 'info');
+                }
+            }
+            
+            return {
+                success: true,
+                files: files,
+                directories: directories,
+                message: `ディレクトリ "${fullPath}" 内のファイル一覧を取得しました`,
+                path: fullPath
+            };
+        } else {
+            const errorMsg = result.message || result.error || 'ディレクトリリスト取得に失敗しました';
+            console.error('ls failed:', result);
+            
+            throw new Error(errorMsg);
+        }
+    } catch (error) {
+        await logToolExecution('ls', { directory }, 'error', { error: error.message });
+        if (mConsole) {
+            mConsole.print(`エラー: ${error.message}`, 'error');
+        }
+        return {
+            success: false,
+            message: error.message,
+            files: [],
+            directories: []
+        };
+    }
+}

@@ -140,6 +140,23 @@ export const FILE_EDITOR_TOOLS = [
                 required: ["filename"]
             }
         }
+    },
+    {
+        type: "function",
+        function: {
+            name: "ls",
+            description: "指定したディレクトリ内のファイルとサブディレクトリの一覧を取得します。",
+            parameters: {
+                type: "object",
+                properties: {
+                    directory: {
+                        type: "string",
+                        description: "一覧を取得するディレクトリのパス"
+                    }
+                },
+                required: ["directory"]
+            }
+        }
     }
 ];
 

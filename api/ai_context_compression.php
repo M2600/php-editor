@@ -92,6 +92,7 @@ function removeCodeFromMessages($messages) {
 
 /**
  * 会話履歴を圧縮
+ * トークン数制限内でできるだけ多くの履歴を保持する
  */
 function compressMessages($messages, $maxTokens = 3000) {
     // 現在のトークン数を概算
@@ -101,43 +102,72 @@ function compressMessages($messages, $maxTokens = 3000) {
         return $messages; // 圧縮不要
     }
     
-    // 重要なメッセージを保護（最新N件は必ず残す）
-    $protectedCount = 6; // 最新3往復分
-    $protectedMessages = array_slice($messages, -$protectedCount);
-    $oldMessages = array_slice($messages, 0, -$protectedCount);
+    // 最新のメッセージから必須メッセージ数を決定
+    // 最低でも最新3往復分（6件）は保護する
+    $minProtectedCount = 6;
+    $protectedMessages = array_slice($messages, -$minProtectedCount);
+    $protectedTokens = estimateTokenCount($protectedMessages);
     
-    // 古いメッセージを要約
-    if (count($oldMessages) > 0) {
-        $summaryContent = "これまでの会話要約:\n";
-        
-        // 主要なトピックを抽出
-        $topics = [];
-        foreach ($oldMessages as $msg) {
-            if ($msg['role'] === 'user') {
-                // ユーザーの質問から主要キーワードを抽出
-                $content = $msg['content'];
-                // contentが配列の場合はスキップ
-                if (!is_string($content)) {
-                    continue;
-                }
-                if (mb_strlen($content) > 100) {
-                    $content = mb_substr($content, 0, 100) . '...';
-                }
-                $topics[] = "- " . $content;
-            }
-        }
-        
-        $summaryContent .= implode("\n", array_slice($topics, -5)); // 最新5トピック
-        
-        $summaryMessage = [
-            'role' => 'system',
-            'content' => $summaryContent
-        ];
-        
-        return array_merge([$summaryMessage], $protectedMessages);
+    // 保護メッセージだけで既に上限を超えている場合は保護メッセージのみ返す
+    if ($protectedTokens >= $maxTokens) {
+        return $protectedMessages;
     }
     
-    return $protectedMessages;
+    // 利用可能なトークン数
+    $availableTokens = $maxTokens - $protectedTokens;
+    
+    // 古いメッセージから順に追加していく
+    $oldMessages = array_slice($messages, 0, -$minProtectedCount);
+    $selectedMessages = [];
+    $selectedTokens = 0;
+    
+    // 古いメッセージを逆順（新しい方から）で選別
+    for ($i = count($oldMessages) - 1; $i >= 0; $i--) {
+        $msg = $oldMessages[$i];
+        $msgTokens = estimateTokenCount([$msg]);
+        
+        // このメッセージを追加してもトークン数の制限内か確認
+        if ($selectedTokens + $msgTokens <= $availableTokens) {
+            array_unshift($selectedMessages, $msg);
+            $selectedTokens += $msgTokens;
+        } else {
+            // トークン数の制限に達した場合は古いメッセージを要約
+            if (count($oldMessages) - $i - 1 > 0) {
+                // 選別されなかったメッセージを要約
+                $unselectedMessages = array_slice($oldMessages, 0, count($oldMessages) - $i - 1);
+                $summaryContent = "これまでの会話要約:\n";
+                
+                $topics = [];
+                foreach ($unselectedMessages as $msg) {
+                    if ($msg['role'] === 'user') {
+                        $content = $msg['content'];
+                        if (!is_string($content)) {
+                            continue;
+                        }
+                        if (mb_strlen($content) > 100) {
+                            $content = mb_substr($content, 0, 100) . '...';
+                        }
+                        $topics[] = "- " . $content;
+                    }
+                }
+                
+                if (count($topics) > 0) {
+                    $summaryContent .= implode("\n", $topics);
+                    $summaryMessage = [
+                        'role' => 'system',
+                        'content' => $summaryContent
+                    ];
+                    $selectedMessages = array_merge([$summaryMessage], $selectedMessages);
+                }
+            }
+            break;
+        }
+    }
+    
+    // 最終的なメッセージを構築
+    $finalMessages = array_merge($selectedMessages, $protectedMessages);
+    
+    return $finalMessages;
 }
 
 /**

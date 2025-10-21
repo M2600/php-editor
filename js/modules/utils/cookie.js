@@ -59,7 +59,7 @@ export function deleteCookie(name) {
  * @param {string} apiUrl - カスタムAPIのURL
  * @param {string} apiKey - APIキー
  */
-export function saveAIConfig(apiUrl, apiKey, userCustomApi = false) {
+export function saveAIConfig(apiUrl, apiKey, userCustomApi = false, customPrompt = "", userCustomPrompt = false) {
     if (apiUrl) {
         setCookie('ai_custom_url', apiUrl, 365);
     } else {
@@ -76,6 +76,16 @@ export function saveAIConfig(apiUrl, apiKey, userCustomApi = false) {
     } else {
         deleteCookie('ai_use_custom_api');
     }
+    if (customPrompt) {
+        setCookie('ai_custom_prompt', customPrompt, 365);
+    } else {
+        deleteCookie('ai_custom_prompt');
+    }
+    if (userCustomPrompt) {
+        setCookie('ai_use_custom_prompt', 'true', 365);
+    } else {
+        deleteCookie('ai_use_custom_prompt');
+    }
 }
 
 /**
@@ -86,7 +96,9 @@ export function loadAIConfig() {
     return {
         apiUrl: getCookie('ai_custom_url'),
         apiKey: getCookie('ai_custom_key'),
-        useCustomApi: getCookie('ai_use_custom_api') === 'true'
+        useCustomApi: getCookie('ai_use_custom_api') === 'true',
+        customPrompt: getCookie('ai_custom_prompt'),
+        useCustomPrompt: getCookie('ai_use_custom_prompt') === 'true'
     };
 }
 
@@ -96,6 +108,9 @@ export function loadAIConfig() {
 export function clearAIConfig() {
     deleteCookie('ai_custom_url');
     deleteCookie('ai_custom_key');
+    deleteCookie('ai_use_custom_api');
+    deleteCookie('ai_custom_prompt');
+    deleteCookie('ai_use_custom_prompt');
 }
 
 /**

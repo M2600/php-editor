@@ -1083,12 +1083,14 @@ async function main(){
 
     // Chat config
     chat.setOnConfigSaved(async (config) => {
-        saveAIConfig(config.baseUrl, config.apiKey, config.useCustomApi);
+        saveAIConfig(config.baseUrl, config.apiKey, config.useCustomApi, config.customPrompt, config.useCustomPrompt);
         console.log("AI custom model: Config saved", config);
         APP_STATE.AI_CONFIG = config;
         chat.config.customApiUrl = config.baseUrl;
         chat.config.customApiKey = config.apiKey;
         chat.config.useCustomApi = config.useCustomApi;
+        chat.config.customPrompt = config.customPrompt;
+        chat.config.useCustomPrompt = config.useCustomPrompt;
         
         // 設定変更後にモデルリストを再読み込み
         let customApiConfig = null;
@@ -1113,18 +1115,22 @@ async function main(){
 
     // Cookieから保存されたAI設定を復元
     const savedAIConfig = loadAIConfig();
-    if (savedAIConfig.apiUrl || savedAIConfig.apiKey || savedAIConfig.useCustomApi) {
+    if (savedAIConfig.apiUrl || savedAIConfig.apiKey || savedAIConfig.useCustomApi || savedAIConfig.customPrompt || savedAIConfig.useCustomPrompt) {
         console.log("AI custom setting: Restoring config from cookie", savedAIConfig);
         // chatコンポーネントに設定を復元
         chat.config.customApiUrl = savedAIConfig.apiUrl || '';
         chat.config.customApiKey = savedAIConfig.apiKey || '';
         chat.config.useCustomApi = savedAIConfig.useCustomApi || false;
+        chat.config.customPrompt = savedAIConfig.customPrompt || '';
+        chat.config.useCustomPrompt = savedAIConfig.useCustomPrompt || false;
         
         // APP_STATEにも保存
         APP_STATE.AI_CONFIG = {
             baseUrl: savedAIConfig.apiUrl || '',
             apiKey: savedAIConfig.apiKey || '',
-            useCustomApi: savedAIConfig.useCustomApi || false
+            useCustomApi: savedAIConfig.useCustomApi || false,
+            customPrompt: savedAIConfig.customPrompt || '',
+            useCustomPrompt: savedAIConfig.useCustomPrompt || false
         };
     }
 
@@ -1134,7 +1140,9 @@ async function main(){
     if (APP_STATE.AI_CONFIG.useCustomApi && APP_STATE.AI_CONFIG.baseUrl && APP_STATE.AI_CONFIG.apiKey) {
         customApiConfig = {
             baseUrl: APP_STATE.AI_CONFIG.baseUrl,
-            apiKey: APP_STATE.AI_CONFIG.apiKey
+            apiKey: APP_STATE.AI_CONFIG.apiKey,
+            customPrompt: APP_STATE.AI_CONFIG.customPrompt,
+            useCustomPrompt: APP_STATE.AI_CONFIG.useCustomPrompt
         };
         console.log("Loading models from custom API");
     }

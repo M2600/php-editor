@@ -3447,6 +3447,7 @@ export class MEditor {
         chat.config.customApiUrl = null;
         chat.config.customApiKey = null;
         chat.config.useCustomApi = false;
+        chat.config.useCustomPrompt = false;
 
 
         // ファイルコンテキスト表示エリア
@@ -3660,6 +3661,54 @@ export class MEditor {
             let content = document.createElement("div");
             content.classList.add(this.CLASS_NAME_PREFIX + "chat-config-container");
 
+            // カスタムプロンプト
+            // チェックボックス
+            const promptCheckboxContainer = document.createElement("div");
+            promptCheckboxContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-prompt-checkbox-container");
+            promptCheckboxContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-section");
+            const promptLabel = document.createElement("label");
+            promptLabel.textContent = "カスタムベースプロンプトを使用する";
+            promptLabel.for = "customPromptCheckbox";
+            promptCheckboxContainer.appendChild(promptLabel);
+            const promptCheckbox = document.createElement("input");
+            promptCheckbox.type = "checkbox";          
+            promptCheckbox.checked = chat.config.useCustomPrompt || false;
+            promptCheckbox.id = "customPromptCheckbox";
+            promptLabel.prepend(promptCheckbox);
+            content.appendChild(promptCheckboxContainer);
+
+            // 入力欄
+            const promptInputContainer = document.createElement("div");
+            promptInputContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-prompt-input-container");
+            promptInputContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-section");
+
+            const promptInputLabel = document.createElement("label");
+            promptInputLabel.textContent = "プロンプト:";
+            promptInputLabel.for = "customPromptInput";
+            promptInputContainer.appendChild(promptInputLabel);
+            promptInputContainer.appendChild(document.createElement("br"));
+            const promptInput = document.createElement("textarea");
+            promptInput.id = "customPromptInput";
+            promptInput.value = chat.config.customPrompt || "";
+            promptInput.placeholder = "ここにカスタムプロンプトを入力してください...";
+            promptInput.style.width = "100%";
+            promptInput.style.height = "10em";
+            promptInput.style.maxHeight = "20em";
+            promptInput.style.overflowY = "auto";
+            promptInput.style.boxSizing = "border-box";
+            promptInput.style.resize = "vertical";
+            promptInputContainer.appendChild(promptInput);
+            content.appendChild(promptInputContainer);
+
+            // 説明
+            const promptDesc = document.createElement("div");
+            promptDesc.classList.add(this.CLASS_NAME_PREFIX + "chat-config-prompt-desc");
+            promptDesc.innerHTML = `
+                <p>カスタムプロンプトを有効にするとすべてのAIリクエストにこのプロンプトが追加されます。<br>
+                コーディング規則の指定や独自のルールを設定できます。</p>
+            `;
+            content.appendChild(promptDesc);
+
             // チェックボックス追加
             let checkboxContainer = document.createElement("div");
             checkboxContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-checkbox-container");
@@ -3810,7 +3859,9 @@ export class MEditor {
                 chat.onConfigSaved({
                     useCustomApi: checkbox.checked,
                     baseUrl: baseUrlInput.value,
-                    apiKey: apiKeyInput.value
+                    apiKey: apiKeyInput.value,
+                    useCustomPrompt: promptCheckbox.checked,
+                    customPrompt: promptInput.value,
                 });
                 console.log("AI custom model: Saved");
                 window.remove();
@@ -3839,6 +3890,17 @@ export class MEditor {
                 // (changeイベントは発火しないためここで設定)
                 baseUrlInput.disabled = true;
                 apiKeyInput.disabled = true;
+            }
+            promptCheckbox.addEventListener("change", (e) => {
+                if (e.target.checked) {
+                    promptInput.disabled = false;
+                } else {
+                    promptInput.disabled = true;
+                }
+            });
+            if (!chat.config.useCustomPrompt) {
+                // 初期状態でオフなら入力欄を無効化
+                promptInput.disabled = true;
             }
 
             window.setContent(content);

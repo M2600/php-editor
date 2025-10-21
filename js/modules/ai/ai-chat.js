@@ -287,7 +287,7 @@ Please provide the merged code only, without any additional text or explanations
                 hasValidStream = true;
             },
             onError: (errMsg) => {
-                console.error("AI応答エラー:", errMsg);
+                console.warn("AI応答エラー:", errMsg);
             }
         }).then(() => {
             if (hasValidStream) {
@@ -421,10 +421,21 @@ export function restoreChatHistoryToUI(chatHistory, chat) {
             chat.addMessage(`📋 ツール結果: ${msg.name}`, "system");
         }
     });
-    // スクロールを最下部に
-    if (chat.content.element.scrollHeight > chat.content.element.clientHeight) {
-        chat.content.element.scrollTop = chat.content.element.scrollHeight;
+    
+    // 自動スクロール状態を有効にリセット
+    if (chat) {
+        chat.autoScroll = true;
     }
+    
+    // スクロールを最下部に（DOM レンダリングを待つため setTimeout を使用）
+    setTimeout(() => {
+        if (chat.messages && chat.messages.container) {
+            chat.messages.container.scrollTop = chat.messages.container.scrollHeight;
+        } else if (chat.content && chat.content.element) {
+            chat.content.element.scrollTop = chat.content.element.scrollHeight;
+        }
+    }, 0);
+    
     // 復元後にリンク属性を調整
     ensureLinksOpenInNewTab(chat.content.element);
 }
@@ -620,7 +631,9 @@ export async function sendAIMessage({
         }
 
         // ストリーム受信（ai_api.js利用）
+        // AbortControllerをchatオブジェクトに保存してグローバルスコープで利用可能にする
         const controller = new AbortController();
+        chat._abortController = controller;  // 生成停止用に保存
         const selectedModel = modelSelect.getValue() || undefined;
         aiMsgBuffer = "";
         
@@ -682,10 +695,17 @@ export async function sendAIMessage({
                     }
                 },
                 onError: (errMsg) => {
-                    chat.updateLastAIMessage('<span style="color:red">AI応答エラー: '+errMsg+'</span>', true);
+                    // AbortError の場合はユーザーが停止したと判定（通常エラー扱いしない）
+                    if (errMsg === 'The operation was aborted.') {
+                        console.log("AI生成がユーザーによって停止されました");
+                        chat.updateLastAIMessage('<span style="color:#888">生成が停止されました</span>', true);
+                    } else {
+                        chat.updateLastAIMessage('<span style="color:red">AI応答エラー: '+errMsg+'</span>', true);
+                        console.warn("AI応答エラー:", errMsg);
+                    }
                     historyManager.setStreaming(false);
                     if (typeof chat.hideLoading === 'function') chat.hideLoading();
-                    console.error("AI応答エラー:", errMsg);
+
                 }
             }).then(async () => {
                 // ツール呼び出しを処理する関数（再帰的に呼び出し可能）
@@ -747,6 +767,10 @@ export async function sendAIMessage({
                         
                         // チャットにツール実行通知を表示
                         chat.addMessage(`🔧 ツール実行中: ${toolName}`, "system");
+                        // スクロール位置を更新
+                        if (chat.content && chat.content.element) {
+                            chat.content.element.scrollTop = chat.content.element.scrollHeight;
+                        }
                         
                         // ツールを実行
                         const result = await aiTool.callTool(toolName, args, toolContext);
@@ -769,6 +793,10 @@ export async function sendAIMessage({
                                     chat.addMessage(msg.text, "system");
                                 }
                             }
+                            // スクロール位置を更新
+                            if (chat.content && chat.content.element) {
+                                chat.content.element.scrollTop = chat.content.element.scrollHeight;
+                            }
                         }
                         
                         // 結果をチャットに表示（デフォルトメッセージ）
@@ -779,6 +807,10 @@ export async function sendAIMessage({
                             }
                         } else {
                             chat.addMessage(`❌ ツール実行失敗: ${toolName} - ${result.error || '不明なエラー'}`, "system");
+                        }
+                        // スクロール位置を更新
+                        if (chat.content && chat.content.element) {
+                            chat.content.element.scrollTop = chat.content.element.scrollHeight;
                         }
                         
                         // ツール実行結果を履歴に追加
@@ -864,10 +896,16 @@ export async function sendAIMessage({
                                 }
                             },
                             onError: (errMsg) => {
-                                chat.updateLastAIMessage('<span style="color:red">AI応答エラー: '+errMsg+'</span>', true);
+                                // AbortError の場合はユーザーが停止したと判定（通常エラー扱いしない）
+                                if (errMsg === 'The operation was aborted.') {
+                                    console.log("AI生成がユーザーによって停止されました");
+                                    chat.updateLastAIMessage('<span style="color:#888">生成が停止されました</span>', true);
+                                } else {
+                                    chat.updateLastAIMessage('<span style="color:red">AI応答エラー: '+errMsg+'</span>', true);
+                                    console.error("AI応答エラー:", errMsg);
+                                }
                                 historyManager.setStreaming(false);
                                 if (typeof chat.hideLoading === 'function') chat.hideLoading();
-                                console.error("AI応答エラー:", errMsg);
                             }
                         }).then(async () => {
                             // 2回目以降のツール呼び出しを処理

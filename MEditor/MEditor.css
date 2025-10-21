@@ -134,12 +134,13 @@ i {
     padding-right: 1em;
     border-radius: .3em .3em 0 0;
     text-align: left;
+    background-color: var(--me-color-bg-active);
 }
 .meditor-tab-button:hover {
-    background-color: var(--me-color-bg-active);
+    background-color: var(--me-color-bg);
 }
 .meditor-tab-button-active {
-    background-color: var(--me-color-bg-active);
+    background-color: var(--me-color-bg);
     border-width: 2px;
     
     border-bottom: none;

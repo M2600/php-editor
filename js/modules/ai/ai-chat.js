@@ -551,7 +551,8 @@ export async function sendAIMessage({
     mConsole = null,
     api = null,
     appState = null,  // APP_STATEを追加
-    enableTools = true  // ツール機能を有効にするかどうか
+    enableTools = true,  // ツール機能を有効にするかどうか
+    maxToolCallCount = 10 // ツール呼び出しの最大回数
 }) {
     try {
         if(historyManager.getStreaming()) return;
@@ -699,10 +700,9 @@ export async function sendAIMessage({
             }).then(async () => {
                 // ツール呼び出しを処理する関数（再帰的に呼び出し可能）
                 const processToolCalls = async (depth = 0) => {
-                    const MAX_TOOL_CALL_DEPTH = 5; // 無限ループ防止
-                    
-                    if (depth >= MAX_TOOL_CALL_DEPTH) {
-                        console.warn("Maximum tool call depth reached");
+
+                    if (depth >= maxToolCallCount) {
+                        console.warn("Maximum tool call count reached");
                         historyManager.setStreaming(false);
                         if (typeof chat.hideLoading === 'function') chat.hideLoading();
                         // AbortControllerをクリーンアップ

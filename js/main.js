@@ -1165,6 +1165,11 @@ async function main(){
             customApiKey = APP_STATE.AI_CONFIG.apiKey;
             console.log("Using custom API for chat request");
         }
+        let customPrompt = null;
+        if (APP_STATE.AI_CONFIG.useCustomPrompt && APP_STATE.AI_CONFIG.customPrompt) {
+            customPrompt = APP_STATE.AI_CONFIG.customPrompt;
+            console.log("Using custom prompt for chat request");
+        }
         
         sendAIMessage({
             chat,
@@ -1176,6 +1181,7 @@ async function main(){
             baseDir: editor.BASE_DIR,
             customUrl: customUrl,
             customApiKey: customApiKey,
+            customPrompt: customPrompt,
             editor: editor,
             mConsole: mConsole,
             api: api,

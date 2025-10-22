@@ -65,7 +65,7 @@ class SmoothTextStreamer {
     }
 }
 
-export async function fetchAIChat({messages, model, fileContext, dirContext, tools, onDelta, onError, signal, smoothOutput = true, customUrl = null, customApiKey = null}) {
+export async function fetchAIChat({messages, model, fileContext, dirContext, tools, onDelta, onError, signal, smoothOutput = true, customUrl = null, customApiKey = null, customPrompt = null}) {
     try {
         // リクエストボディを作成
         const requestBody = {
@@ -82,6 +82,9 @@ export async function fetchAIChat({messages, model, fileContext, dirContext, too
         }
         if (customApiKey) {
             requestBody.customApiKey = customApiKey;
+        }
+        if (customPrompt) {
+            requestBody.userCustomPrompt = customPrompt;
         }
         
         const res = await fetch("/api/ai.php", {

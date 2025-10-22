@@ -547,6 +547,7 @@ export async function sendAIMessage({
     requestAIMergeAndPreview,
     customUrl = null,
     customApiKey = null,
+    customPrompt = null,
     editor = null,
     mConsole = null,
     api = null,
@@ -646,6 +647,7 @@ export async function sendAIMessage({
                 smoothOutput: true, // スムーズ出力を有効化
                 customUrl: customUrl,
                 customApiKey: customApiKey,
+                customPrompt: customPrompt,
                 onDelta: async (delta, chunk, isSmooth, tool_calls) => {
                     // ツール呼び出しの処理
                     if (tool_calls && aiTool) {

@@ -338,6 +338,16 @@ if (isset($input['dirContext']) && !empty($input['dirContext']['structure'])) {
     array_unshift($messages, $dirMsg);
 }
 
+// ユーザカスタムベースプロンプト
+$userCustomPrompt = isset($input['userCustomPrompt']) ? trim($input['userCustomPrompt']) : '';
+if (!empty($userCustomPrompt)) {
+    $customPromptMsg = [
+        'role' => 'system',
+        'content' => '[ユーザーカスタムプロンプト]: ' . $userCustomPrompt
+    ];
+    array_unshift($messages, $customPromptMsg);
+}
+
 $payload = [
     'model' => isset($input['model']) ? $input['model'] : 'default',
     'messages' => array_merge($basePrompt, $messages),

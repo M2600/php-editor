@@ -762,6 +762,14 @@ export async function sendAIMessage({
                         } else {
                             chat.addMessage(`❌ ツール実行失敗: ${toolName} - ${result.error || '不明なエラー'}`, "system");
                         }
+                        if (result.message) {
+                            chat.addMessage(`📋 ツール結果: ${result.message}`, "system");
+                        }
+                        if (result.messages && Array.isArray(result.messages)) {
+                            result.messages.forEach(msg => {
+                                chat.addMessage(msg, "system");
+                            });
+                        }
                         
                         // ツール実行結果を履歴に追加
                         toolResults.push({

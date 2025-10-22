@@ -495,7 +495,8 @@ export async function readFile(filename, options = {}) {
             return {
                 success: true,
                 content: result.content,
-                path: filename
+                path: filename,
+                message: `ファイル "${filename}" を読み込みました`
             };
         } else {
             const errorMsg = result.message || result.error || 'ファイル読み込みに失敗しました';

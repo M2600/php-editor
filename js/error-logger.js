@@ -16,7 +16,8 @@ class ErrorLogger {
     init() {
         // グローバルエラーハンドラー（JavaScript実行エラー）
         window.addEventListener('error', (event) => {
-            this.handleError({
+            // エラー情報を収集
+            const errorData = {
                 type: 'javascript_error',
                 message: event.message || 'Unknown error',
                 filename: event.filename || 'unknown',
@@ -24,17 +25,29 @@ class ErrorLogger {
                 column: event.colno || 0,
                 stack: event.error ? event.error.stack : null,
                 url: window.location.href
-            });
+            };
+            
+            // コンソールに発生箇所を追加表示（元のエラー表示は保たれる）
+            this.logLocationToConsole(errorData);
+            
+            // サーバに送信
+            this.handleError(errorData);
         });
         
         // 未処理のPromise拒否
         window.addEventListener('unhandledrejection', (event) => {
-            this.handleError({
+            const errorData = {
                 type: 'uncaught_exception',
                 message: 'Unhandled Promise Rejection: ' + (event.reason || 'Unknown reason'),
                 stack: event.reason && event.reason.stack ? event.reason.stack : null,
                 url: window.location.href
-            });
+            };
+            
+            // コンソールに追加情報を表示
+            this.logLocationToConsole(errorData);
+            
+            // サーバに送信
+            this.handleError(errorData);
         });
         
         // コンソールエラーのインターセプト（オプション）
@@ -43,21 +56,82 @@ class ErrorLogger {
         }
     }
     
+    // コンソールに発生箇所を追加表示（元のエラー出力とは別に）
+    logLocationToConsole(errorData) {
+        const parts = [];
+        
+        if (errorData.filename && errorData.filename !== 'unknown') {
+            const filename = errorData.filename.split('/').pop() || errorData.filename;
+            parts.push('📄 ' + filename);
+        }
+        
+        if (errorData.line) {
+            parts.push('行 ' + errorData.line);
+        }
+        
+        if (errorData.column) {
+            parts.push('列 ' + errorData.column);
+        }
+        
+        if (parts.length > 0) {
+            console.log(
+                '%c📍 エラー発生箇所: %c' + parts.join(' / '),
+                'color: #ff6b6b; font-weight: bold;',
+                'color: #4ecdc4; font-weight: normal;'
+            );
+        }
+    }
+    
     // コンソールエラーをインターセプト
     interceptConsoleError() {
         const originalError = console.error;
-        console.error = (...args) => {
-            // 元のconsole.errorを実行
+        const self = this;
+        
+        console.error = function(...args) {
+            // 元のconsole.errorを実行（teeのように元の出力を保つ）
             originalError.apply(console, args);
             
-            // サーバにも送信
-            this.handleError({
-                type: 'warning',
+            // スタックトレースから呼び出し元情報を抽出
+            const stack = new Error().stack;
+            let filename = 'unknown';
+            let line = 0;
+            let column = 0;
+            
+            if (stack) {
+                const lines = stack.split('\n');
+                // console.error呼び出し元を探す（この関数自体は除外）
+                const callerLine = lines.find(l => 
+                    !l.includes('console.error') && 
+                    !l.includes('interceptConsoleError')
+                );
+                
+                if (callerLine) {
+                    const locationMatch = callerLine.match(/\((.+):(\d+):(\d+)\)|at (.+):(\d+):(\d+)/);
+                    if (locationMatch) {
+                        filename = locationMatch[1] || locationMatch[4];
+                        line = parseInt(locationMatch[2] || locationMatch[5]);
+                        column = parseInt(locationMatch[3] || locationMatch[6]);
+                    }
+                }
+            }
+            
+            // エラーデータを作成
+            const errorData = {
+                type: 'console_error',
                 message: 'Console Error: ' + args.map(arg => 
                     typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
                 ).join(' '),
+                filename: filename,
+                line: line,
+                column: column,
                 url: window.location.href
-            });
+            };
+            
+            // 発生箇所をコンソールに追加表示
+            self.logLocationToConsole(errorData);
+            
+            // サーバに送信
+            self.handleError(errorData);
         };
     }
     

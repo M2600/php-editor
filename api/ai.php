@@ -87,7 +87,7 @@ function sendAIRequest($apiUrl, $apiKey, $payload, $timeout = 600) {
         if ($result === false) {
             curl_close($ch);
             http_response_code(500);
-            echo json_encode(['error' => 'AIサーバーとの通信に失敗しました: ' . $curlError]);
+            echo json_encode(['error' => 'AI server communication failed: ' . $curlError]);
             exit;
         }
         
@@ -95,7 +95,7 @@ function sendAIRequest($apiUrl, $apiKey, $payload, $timeout = 600) {
         if (!$responseStarted) {
             curl_close($ch);
             http_response_code(500);
-            echo json_encode(['error' => 'AIサーバーから応答がありません。サーバーがダウンしている可能性があります。']);
+            echo json_encode(['error' => 'AI server did not respond. The server may be down.']);
             exit;
         }
         
@@ -103,14 +103,14 @@ function sendAIRequest($apiUrl, $apiKey, $payload, $timeout = 600) {
         if ($httpCode >= 400) {
             curl_close($ch);
             http_response_code(500);
-            echo json_encode(['error' => "AIサーバーエラー (HTTP $httpCode)"]);
+            echo json_encode(['error' => "AI server error (HTTP $httpCode)"]);
             exit;
         }
         
         curl_close($ch);
     } catch (Throwable $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'サーバーエラー: ' . $e->getMessage()]);
+        echo json_encode(['error' => 'Server error: ' . $e->getMessage()]);
         exit;
     }
 }

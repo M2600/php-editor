@@ -410,12 +410,10 @@ export async function createFile(filename, content, options = {}) {
             }
             return {
                 success: true,
-                message: `${filename} を作成しました`,
+                message: `${filename}を作成しました`,
                 path: filename,
                 // チャットに表示するカスタムメッセージ（オプション）
-                messages: [
-                    { text: `ファイル "${filename}" を作成しました`, type: 'success' }
-                ]
+                
             };
         } else {
             // エラーメッセージを詳細に記録
@@ -496,7 +494,7 @@ export async function readFile(filename, options = {}) {
                 success: true,
                 content: result.content,
                 path: filename,
-                message: `ファイル "${filename}" を読み込みました`
+                message: `${filename}を読み込みました`
             };
         } else {
             const errorMsg = result.message || result.error || 'ファイル読み込みに失敗しました';
@@ -680,19 +678,19 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
             
             // チャットに表示するメッセージを準備
             const messages = [
-                { text: `ファイル "${filename}" を更新しました`, type: 'success' }
+                { text: `"${filename}"`, type: 'success' }
             ];
             
             // エディタに反映された場合は追加メッセージ
             if (currentFile && currentFile.path === fullPath) {
-                messages.push({ text: `エディタの内容も更新されました`, type: 'info' });
+                //messages.push({ text: `エディタの内容も更新されました`, type: 'info' });
             }
             
             return {
                 success: true,
                 message: `${filename} を更新しました`,
                 path: filename,
-                messages: messages
+                //messages: messages
             };
         } else {
             throw new Error(saveResult.message || 'ファイル保存に失敗しました');
@@ -845,19 +843,19 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
             
             // チャットに表示するメッセージを準備
             const messages = [
-                { text: `ファイル "${filename}" の ${lineStart}-${lineEnd} 行目を更新しました`, type: 'success' }
+                { text: `"${filename}": ${lineStart}-${lineEnd}`, type: 'success' }
             ];
             
             // エディタに反映された場合は追加メッセージ
             if (currentFile && currentFile.path === fullPath) {
-                messages.push({ text: `エディタの内容も更新されました`, type: 'info' });
+                //messages.push({ text: `エディタの内容も更新されました`, type: 'info' });
             }
             
             return {
                 success: true,
                 message: `${filename} を更新しました`,
                 path: filename,
-                messages: messages
+                //messages: messages
             };
         } else {
             throw new Error(saveResult.message || 'ファイル保存に失敗しました');
@@ -1048,7 +1046,7 @@ export async function ls(directory = "", options = {}) {
                 success: true,
                 files: files,
                 directories: directories,
-                message: `ディレクトリ "${fullPath}" 内のファイル一覧を取得しました`,
+                message: `${fullPath}`,
                 path: fullPath
             };
         } else {

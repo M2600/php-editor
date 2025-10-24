@@ -44,9 +44,9 @@ function validateFileName(fileName) {
     }
     
     // 特殊文字のチェック（ファイルシステムで使用禁止の文字）
-    const invalidChars = /[<>:"|?*\\/\s]/;
+    const invalidChars = /[<>:"|?*\\\s]/;
     if (invalidChars.test(fileName)) {
-        return { valid: false, message: "使用できない文字が含まれています: < > : \" | ? * \\ / スペース" };
+        return { valid: false, message: "使用できない文字が含まれています: < > : \" | ? * \\ スペース" };
     }
     
     // ドットのみの場合（.や..）

@@ -3063,6 +3063,17 @@ export class MEditor {
             });
         }
 
+        dictMenu.setItems = (items) => {
+            // 既存の項目をクリア
+            dictMenu.items = [];
+            dictMenu.content.element.innerHTML = "";
+            dictMenu.itemElements = [];
+            // 新しい項目を追加
+            items.forEach((item) => {
+                dictMenu.addItem(item);
+            });
+        }
+
         dictMenu.getItems = () => {
             return dictMenu.items;
         }
@@ -3077,6 +3088,11 @@ export class MEditor {
             })
             return obj;
         }
+        dictMenu.clearItems = () => {
+            dictMenu.items = [];
+            dictMenu.content.element.innerHTML = "";
+            dictMenu.itemElements = [];
+        }
 
         dictMenu.setEnabled = (bool) => {
             dictMenu.element.querySelectorAll("input, button").forEach((el) => {
@@ -3086,6 +3102,14 @@ export class MEditor {
 
         dictMenu.onChange = (callback) => {
             dictMenu.onChangeCallback = callback;
+        }
+
+        dictMenu.hide = () => {
+            dictMenu.element.style.display = "none";
+        }
+        
+        dictMenu.show = () => {
+            dictMenu.element.style.display = "flex";
         }
 
         return dictMenu;
@@ -3315,6 +3339,7 @@ export class MEditor {
                     });
                 }
             };
+
             
             // テーマ変更メソッド
             jsonEditor.setTheme = (theme) => {
@@ -3426,6 +3451,13 @@ export class MEditor {
         jsonEditor.onChange = (callback) => {
             jsonEditor.onChangeCallback = callback;
         };
+
+        jsonEditor.hide = () => {
+            jsonEditor.element.style.display = "none";
+        };
+        jsonEditor.show = () => {
+            jsonEditor.element.style.display = "flex";
+        }
         
         return jsonEditor;
     }

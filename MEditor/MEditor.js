@@ -1425,9 +1425,11 @@ export class MEditor {
                 // toggle icon
                 if(dirName.classList.contains(this.CLASS_NAME_PREFIX + "dir-name-expanded")){
                     dirIcon.innerHTML = "▼";
+                    dirIcon.title = "フォルダを折りたたむ";
                 }
                 else{
                     dirIcon.innerHTML = "▶";
+                    dirIcon.title = "フォルダを展開する";
                 }
                 //console.log(dirName, dirContent);
                 // save to localStorage
@@ -1947,6 +1949,7 @@ export class MEditor {
         let dirMenu = {};
         dirMenu = this.generateButton(dirControl, "⋮");
         dirMenu.element.classList.add(this.CLASS_NAME_PREFIX + "dir-menu-button");
+        dirMenu.element.title = "フォルダの操作";
         dirMenu.addTrigger("click", (e) => {
             e.stopPropagation();
             //console.log("dir menu clicked:", dirInfo);
@@ -2046,6 +2049,7 @@ export class MEditor {
         dirIcon.element = document.createElement("div");
         dirIcon.element.classList.add(this.CLASS_NAME_PREFIX + "dir-icon");
         dirIcon.element.innerHTML = "▶";
+        dirIcon.element.title = "フォルダを展開"
         dirIcon.element.addEventListener("click", (e) => {
             e.stopPropagation();
             this.explorer.toggleExpand(dir.path);
@@ -2075,6 +2079,7 @@ export class MEditor {
                 dirName.element.classList.add(this.CLASS_NAME_PREFIX + "dir-name-expanded");
                 dirContent.element.classList.add(this.CLASS_NAME_PREFIX + "dir-content-show");
                 dirIcon.element.innerHTML = "▼";
+                dirIcon.element.title = "フォルダを折りたたむ";
             }
         }
 

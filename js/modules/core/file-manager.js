@@ -673,20 +673,23 @@ export async function uploadFiles(fileInput, dir, api, mConsole, filesToRename =
         const batchRenames = [];
         const hasRelativePath = batchFiles[0] && batchFiles[0].webkitRelativePath;
         
+        console.log('filesToRename type:', Array.isArray(filesToRename) ? 'array' : typeof filesToRename, 'value:', filesToRename);
+        
         if (filesToRename) {
             if (hasRelativePath && !Array.isArray(filesToRename)) {
-                // フォルダアップロード: topLevelFolderRename オブジェクトが渡される
+                // フォルダアップロード: 単一オブジェクトが渡される
                 // すべてのファイルの相対パスの最上位フォルダ名を置換
-                console.log('Folder rename:', JSON.stringify(filesToRename));
+                console.log('Folder rename (single object):', JSON.stringify(filesToRename));
                 batchRenames.push(filesToRename);
             } else if (Array.isArray(filesToRename) && filesToRename.length > 0) {
                 // 個別ファイルアップロード: 配列が渡される
+                console.log('File rename (array):', JSON.stringify(filesToRename));
                 for (let i = batchStart; i < batchEnd; i++) {
                     const file = files[i];
                     const fileName = file.name;
                     const rename = filesToRename.find(r => r.original === fileName);
                     if (rename) {
-                        console.log(`File to rename: ${rename.original} -> ${rename.renamed}`);
+                        console.log(`File to rename in batch: ${rename.original} -> ${rename.renamed}`);
                         batchRenames.push(rename);
                     }
                 }
@@ -694,7 +697,7 @@ export async function uploadFiles(fileInput, dir, api, mConsole, filesToRename =
         }
         
         if (batchRenames.length > 0) {
-            console.log('Batch renames:', JSON.stringify(batchRenames));
+            console.log('Batch renames to send:', JSON.stringify(batchRenames));
             fd.append("fileRenames", JSON.stringify(batchRenames));
         }
         

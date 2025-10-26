@@ -62,6 +62,7 @@ if($action == "upload"){
                     // ファイル名とパスを取得
                     $fileName = $files['files']['name'][$i];
                     $tmpName = $files['files']['tmp_name'][$i];
+                    $originalFileName = $fileName; // 元のファイル名を保存
                     
                     // 相対パスがある場合（フォルダアップロード）は、それを使用
                     if(!empty($relativePaths) && isset($relativePaths[$i])){
@@ -73,25 +74,29 @@ if($action == "upload"){
                         
                         // フォルダアップロードで最上位フォルダのリネームが必要な場合
                         if(!empty($fileRenames) && count($fileRenames) > 0){
-                            $rename = $fileRenames[0]; // 最上位フォルダのリネーム情報
-                            if(isset($rename['original']) && isset($rename['renamed'])){
-                                // 相対パスの最上位フォルダ名を置換
-                                // 例: "samples/sub/file.txt" で original="samples", renamed="samples(1)"
-                                //     → "samples(1)/sub/file.txt"
-                                $pathParts = explode('/', $relativePath);
-                                if($pathParts[0] === $rename['original']){
-                                    $pathParts[0] = $rename['renamed'];
-                                    $fileName = implode('/', $pathParts);
-                                    error_log("Renamed top-level folder: {$relativePath} -> {$fileName}");
+                            // 相対パスの最上位フォルダ名を取得
+                            $pathParts = explode('/', $relativePath);
+                            $topLevelFolder = $pathParts[0];
+                            
+                            // リネーム情報から該当するフォルダを探す
+                            foreach($fileRenames as $rename){
+                                if(isset($rename['original']) && isset($rename['renamed'])){
+                                    if($rename['original'] === $topLevelFolder){
+                                        // 最上位フォルダ名を置換
+                                        $pathParts[0] = $rename['renamed'];
+                                        $fileName = implode('/', $pathParts);
+                                        error_log("Renamed top-level folder: {$relativePath} -> {$fileName}");
+                                        break;
+                                    }
                                 }
                             }
                         }
                     }
-                    
                     // 個別ファイルアップロードの場合のリネーム処理
-                    if(empty($relativePaths)){
-                        $originalFileName = $fileName;
+                    else if(!empty($fileRenames)){
+                        error_log("Processing individual file rename for: {$fileName}");
                         foreach($fileRenames as $rename){
+                            error_log("Checking rename: {$rename['original']} === {$fileName}");
                             if($rename['original'] === $fileName){
                                 $fileName = $rename['renamed'];
                                 error_log("Renaming file: {$rename['original']} -> {$fileName}");

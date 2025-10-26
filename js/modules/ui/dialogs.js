@@ -650,44 +650,80 @@ export function fileUploadDialog(dir, editor, api, mConsole, DEBUG) {
             return;
         }
         
-        // フォルダアップロードの場合、最上位フォルダのみをチェック
-        const hasRelativePath = files[0] && files[0].webkitRelativePath;
-        let topLevelFolderRename = null;
+        // ファイルとフォルダを分類
+        const filesWithPath = []; // フォルダ内のファイル（webkitRelativePathに/を含む）
+        const standaloneFiles = []; // 単体ファイル（webkitRelativePathなしまたは/を含まない）
+        const topLevelFolders = new Set(); // 最上位フォルダ名の集合
         
-        if (hasRelativePath) {
-            // 最上位フォルダ名を取得（例: "samples/sub/file.txt" → "samples"）
-            const firstRelativePath = files[0].webkitRelativePath;
-            const topLevelFolder = firstRelativePath.split('/')[0];
-            const targetPath = path + topLevelFolder;
-            
-            // 最上位フォルダが既存のディレクトリと被る場合のみリネーム
-            if (fileExistsInList(APP_STATE.FILE_LIST.files, targetPath + '/')) {
-                const newFolderPath = generateUniqueFileName(targetPath, APP_STATE.FILE_LIST.files);
-                const newFolderName = newFolderPath.substring(newFolderPath.lastIndexOf('/') + 1);
-                
-                topLevelFolderRename = {
-                    original: topLevelFolder,
-                    renamed: newFolderName
-                };
-                
-                mConsole.print(`Folder "${topLevelFolder}" will be renamed to "${newFolderName}" as same name already exists`, "info");
+        for (const file of files) {
+            if (file.webkitRelativePath && file.webkitRelativePath.includes('/')) {
+                // フォルダ内のファイル
+                filesWithPath.push(file);
+                const topLevelFolder = file.webkitRelativePath.split('/')[0];
+                topLevelFolders.add(topLevelFolder);
+            } else {
+                // 単体ファイル
+                standaloneFiles.push(file);
             }
-        } else {
-            // 個別ファイルアップロードの場合は従来通り個別チェック
+        }
+        
+        let renameInfo = null;
+        
+        // フォルダがある場合、最上位フォルダのリネームをチェック
+        if (topLevelFolders.size > 0) {
+            const folderRenames = [];
+            for (const topLevelFolder of topLevelFolders) {
+                const targetPath = path + topLevelFolder;
+                if (fileExistsInList(APP_STATE.FILE_LIST.files, targetPath + '/')) {
+                    const newFolderPath = generateUniqueFileName(targetPath, APP_STATE.FILE_LIST.files);
+                    const newFolderName = newFolderPath.substring(newFolderPath.lastIndexOf('/') + 1);
+                    
+                    folderRenames.push({
+                        original: topLevelFolder,
+                        renamed: newFolderName
+                    });
+                    
+                    mConsole.print(`Folder "${topLevelFolder}" will be renamed to "${newFolderName}" as same name already exists`, "info");
+                }
+            }
+            
+            // フォルダのリネームがある場合
+            if (folderRenames.length > 0) {
+                // 複数のフォルダがある場合は配列、単一の場合はオブジェクト
+                renameInfo = folderRenames.length === 1 ? folderRenames[0] : folderRenames;
+            }
+        }
+        
+        // 単体ファイルがある場合、個別チェック
+        if (standaloneFiles.length > 0) {
             const filesToRename = [];
-            for (let file of files) {
+            for (const file of standaloneFiles) {
                 const targetPath = path + file.name;
                 
                 if (fileExistsInList(APP_STATE.FILE_LIST.files, targetPath)) {
-                    const newName = generateUniqueFileName(targetPath, APP_STATE.FILE_LIST.files);
+                    const newPath = generateUniqueFileName(targetPath, APP_STATE.FILE_LIST.files);
+                    const newName = newPath.substring(newPath.lastIndexOf('/') + 1);
                     filesToRename.push({
                         original: file.name,
-                        renamed: newName.substring(newName.lastIndexOf('/') + 1)
+                        renamed: newName
                     });
-                    mConsole.print(`File "${file.name}" will be renamed to "${filesToRename[filesToRename.length - 1].renamed}" as same name already exists`, "info");
+                    mConsole.print(`File "${file.name}" will be renamed to "${newName}" as same name already exists`, "info");
                 }
             }
-            topLevelFolderRename = filesToRename.length > 0 ? filesToRename : null;
+            
+            // ファイルのリネームがある場合
+            if (filesToRename.length > 0) {
+                if (renameInfo) {
+                    // フォルダとファイル両方のリネームがある場合は配列にまとめる
+                    if (Array.isArray(renameInfo)) {
+                        renameInfo = [...renameInfo, ...filesToRename];
+                    } else {
+                        renameInfo = [renameInfo, ...filesToRename];
+                    }
+                } else {
+                    renameInfo = filesToRename;
+                }
+            }
         }
         
         popupWindow.remove();
@@ -697,7 +733,7 @@ export function fileUploadDialog(dir, editor, api, mConsole, DEBUG) {
         files.forEach(file => dataTransfer.items.add(file));
         
         const mockInput = { files: dataTransfer.files };
-        await uploadFiles(mockInput, path, api, mConsole, topLevelFolderRename);
+        await uploadFiles(mockInput, path, api, mConsole, renameInfo);
         await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
     });
     controls.appendChild(uploadButton);

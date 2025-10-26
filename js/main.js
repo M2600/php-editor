@@ -737,6 +737,7 @@ async function main(){
             postJsonEditor.setEnabled(false);
             postJsonEditor.hide();
             dictMenu.show();
+            dictMenu.setTitle("POSTパラメータ");
             loadPOSTParams(dictMenu);
             
         }
@@ -895,6 +896,7 @@ async function main(){
     dictMenu.addButton();
     paramsContainer.appendChild(dictMenu.element);
     
+
     // 高度なモード: JSONエディタ
     postJsonEditor = editor.createJsonEditor(null, {});
     postJsonEditor.setTitle("POSTパラメータ (JSON形式)");

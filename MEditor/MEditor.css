@@ -1172,13 +1172,39 @@ i {
     overflow: hidden;
 }
 
-.meditor-json-editor-title {
-    font-size: 0.9em;
-    font-weight: bold;
-    padding: 0.5em;
+.meditor-json-editor-title-bar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0.5em;
     background-color: var(--me-color-bg);
     color: var(--me-color-text);
     border-bottom: 1px solid var(--me-color-border);
+}
+
+.meditor-json-editor-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.9em;
+    font-weight: bold;
+    padding: 0.5em 0;
+    background-color: var(--me-color-bg);
+    color: var(--me-color-text);
+    flex: 1;
+}
+
+.meditor-json-editor-title-buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    margin-left: auto;
+    width: fit-content;
+}
+
+.meditor-json-editor-syntax-check {
+    font-size: 0.9em;
 }
 
 .meditor-json-editor-container {

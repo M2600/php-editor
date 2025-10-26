@@ -3226,9 +3226,14 @@ export class MEditor {
      * @returns {object} jsonEditorオブジェクト
      */
     jsonEditor(parentObj=null, opt={}) {
+        
         let jsonEditor = {};
         jsonEditor.element = document.createElement("div");
         jsonEditor.element.classList.add(this.CLASS_NAME_PREFIX + "json-editor");
+        
+        
+        //options
+        jsonEditor.enabledSyntaxCheck = opt.enabledSyntaxCheck !== undefined ? opt.enabledSyntaxCheck : true;
         
         if(parentObj && parentObj.element) {
             parentObj.element.appendChild(jsonEditor.element);
@@ -3239,13 +3244,48 @@ export class MEditor {
         jsonEditor.isValid = true;
         jsonEditor.useAce = typeof ace !== 'undefined'; // Aceが利用可能かチェック
         
+        let titleBar = {};
+        titleBar.element = document.createElement("div");
+        titleBar.element.classList.add(this.CLASS_NAME_PREFIX + "json-editor-title-bar");
+        jsonEditor.element.appendChild(titleBar.element);
+        jsonEditor.titleBar = titleBar;
+
         // タイトル
         let title = {};
         title.element = document.createElement("div");
         title.element.classList.add(this.CLASS_NAME_PREFIX + "json-editor-title");
         title.element.innerHTML = "JSON";
-        jsonEditor.element.appendChild(title.element);
+        titleBar.element.appendChild(title.element);
         jsonEditor.title = title;
+
+        let titleButtons = {};
+        titleButtons.element = document.createElement("div");
+        titleButtons.element.classList.add(this.CLASS_NAME_PREFIX + "json-editor-title-buttons");
+        titleBar.element.appendChild(titleButtons.element);
+        jsonEditor.titleButtons = titleButtons;
+
+        
+        let syntaxCheck = this.checkbox(
+            null, 
+            "JSON構文チェックを有効化", 
+            jsonEditor.enabledSyntaxCheck,
+            (checked) => {
+                jsonEditor.enabledSyntaxCheck = checked;
+                console.log("JSON Editor: Syntax check " + (checked ? "enabled" : "disabled"));
+                // 構文チェックが有効な場合は即座にバリデーションを実行
+                if (jsonEditor.enabledSyntaxCheck) {
+                    jsonEditor.validate();
+                } else {
+                    // エラーメッセージをクリア
+                    jsonEditor.isValid = true;
+                    jsonEditor.errorMsg.element.style.display = "none";
+                }
+            },
+            "JSONエディタの内容が有効なJSON形式かどうかをリアルタイムでチェックします。"
+        );
+        syntaxCheck.element.classList.add(this.CLASS_NAME_PREFIX + "json-editor-syntax-check");
+        //titleButtons.element.appendChild(syntaxCheck.element);
+        //jsonEditor.syntaxCheck = syntaxCheck;
         
         // エディタコンテナ
         let editorContainer = {};
@@ -3318,7 +3358,8 @@ export class MEditor {
                 aceEditor.getSession().on("change", (e) => {
                     clearTimeout(validationTimeout);
                     validationTimeout = setTimeout(() => {
-                        const isValid = jsonEditor.validate();
+                        // 構文チェックが有効な場合はバリデーションを実行
+                        const isValid = jsonEditor.enabledSyntaxCheck ? jsonEditor.validate() : true;
                         
                         if (isValid && jsonEditor.onChangeCallback) {
                             try {

@@ -16,67 +16,142 @@ if(!str_ends_with($path, "/")){
 }
 $files = $_FILES;
 
+// PHP設定を確認
+$maxFileUploads = ini_get('max_file_uploads');
+error_log("PHP max_file_uploads: $maxFileUploads");
+
 //error_log(print_r($_POST, true));
 //error_log(print_r($_FILES, true));
 
 
 if($action == "upload"){
     $filePaths = array();
+    $uploadedCount = 0;
+    $errorFiles = array();
+    
     try{
         // ファイル名変更マップを取得
         $fileRenames = [];
         if(isset($_POST["fileRenames"])){
             $fileRenames = json_decode($_POST["fileRenames"], true);
+            error_log("File renames received: " . print_r($fileRenames, true));
+        }
+        
+        // 相対パスマップを取得（フォルダアップロード用）
+        $relativePaths = [];
+        if(isset($_POST["relativePaths"])){
+            $relativePaths = json_decode($_POST["relativePaths"], true);
+            error_log("Relative paths received: " . print_r($relativePaths, true));
         }
         
         // 複数ファイルアップロードの正しい処理
         if(isset($files['files'])){
             $fileCount = count($files['files']['name']);
+            error_log("Processing $fileCount files for upload to: $path");
             
             for($i = 0; $i < $fileCount; $i++){
-                // エラーチェック
-                if($files['files']['error'][$i] !== UPLOAD_ERR_OK){
-                    throw new Exception("ファイルアップロードエラー: " . $files['files']['name'][$i]);
-                }
-                
-                // ファイル名とパスを取得
-                $fileName = $files['files']['name'][$i];
-                $tmpName = $files['files']['tmp_name'][$i];
-                
-                // ファイル名が変更対象の場合は変更後の名前を使用
-                foreach($fileRenames as $rename){
-                    if($rename['original'] === $fileName){
-                        $fileName = $rename['renamed'];
-                        break;
+                try {
+                    // エラーチェック
+                    if($files['files']['error'][$i] !== UPLOAD_ERR_OK){
+                        $errorMsg = "Upload error code: " . $files['files']['error'][$i];
+                        error_log("File upload error for {$files['files']['name'][$i]}: $errorMsg");
+                        $errorFiles[] = $files['files']['name'][$i] . " ($errorMsg)";
+                        continue; // 次のファイルへ
                     }
-                }
-                
-                // convertUserPath() は内部でパストラバーサルチェックを行う
-                // 不正なパスの場合は例外がスローされる
-                $serverPath = convertUserPath($path . $fileName);
-                
-                // ディレクトリが存在しない場合は作成
-                $directory = dirname($serverPath);
-                if (!is_dir($directory)) {
-                    mkdir($directory, 0755, true);
-                }
-                
-                // ファイルを移動
-                if(move_uploaded_file($tmpName, $serverPath)){
-                    $filePaths[] = str_replace(getUserRoot(), "", $serverPath);
-                    logInfo("File uploaded successfully", [
-                        'file_name' => $fileName,
-                        'path' => $path . $fileName,
-                        'user_id' => $_SESSION["id"] ?? 'unknown'
-                    ]);
-                } else {
-                    throw new Exception("ファイルの移動に失敗しました: " . $fileName);
+                    
+                    // ファイル名とパスを取得
+                    $fileName = $files['files']['name'][$i];
+                    $tmpName = $files['files']['tmp_name'][$i];
+                    
+                    // 相対パスがある場合（フォルダアップロード）は、それを使用
+                    if(!empty($relativePaths) && isset($relativePaths[$i])){
+                        $relativePath = $relativePaths[$i];
+                        error_log("Processing file $i: $relativePath");
+                        
+                        // 相対パスをそのまま使用（フォルダ構造を保持）
+                        $fileName = $relativePath;
+                        
+                        // フォルダアップロードで最上位フォルダのリネームが必要な場合
+                        if(!empty($fileRenames) && count($fileRenames) > 0){
+                            $rename = $fileRenames[0]; // 最上位フォルダのリネーム情報
+                            if(isset($rename['original']) && isset($rename['renamed'])){
+                                // 相対パスの最上位フォルダ名を置換
+                                // 例: "samples/sub/file.txt" で original="samples", renamed="samples(1)"
+                                //     → "samples(1)/sub/file.txt"
+                                $pathParts = explode('/', $relativePath);
+                                if($pathParts[0] === $rename['original']){
+                                    $pathParts[0] = $rename['renamed'];
+                                    $fileName = implode('/', $pathParts);
+                                    error_log("Renamed top-level folder: {$relativePath} -> {$fileName}");
+                                }
+                            }
+                        }
+                    }
+                    
+                    // 個別ファイルアップロードの場合のリネーム処理
+                    if(empty($relativePaths)){
+                        $originalFileName = $fileName;
+                        foreach($fileRenames as $rename){
+                            if($rename['original'] === $fileName){
+                                $fileName = $rename['renamed'];
+                                error_log("Renaming file: {$rename['original']} -> {$fileName}");
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // convertUserPath() は内部でパストラバーサルチェックを行う
+                    // 不正なパスの場合は例外がスローされる
+                    $serverPath = convertUserPath($path . $fileName);
+                    error_log("Target server path: $serverPath (original: $originalFileName)");
+                    
+                    // ディレクトリが存在しない場合は作成
+                    $directory = dirname($serverPath);
+                    if (!is_dir($directory)) {
+                        if(!mkdir($directory, 0755, true)){
+                            error_log("Failed to create directory: $directory");
+                            $errorFiles[] = $fileName . " (failed to create directory)";
+                            continue;
+                        }
+                    }
+                    
+                    // ファイルを移動
+                    if(move_uploaded_file($tmpName, $serverPath)){
+                        $filePaths[] = str_replace(getUserRoot(), "", $serverPath);
+                        $uploadedCount++;
+                        logInfo("File uploaded successfully", [
+                            'file_name' => $fileName,
+                            'path' => $path . $fileName,
+                            'user_id' => $_SESSION["id"] ?? 'unknown'
+                        ]);
+                    } else {
+                        error_log("move_uploaded_file failed for: $fileName");
+                        $errorFiles[] = $fileName . " (move failed)";
+                    }
+                } catch (Exception $fileError) {
+                    error_log("Error processing file $i: " . $fileError->getMessage());
+                    $errorFiles[] = ($fileName ?? "unknown") . " (" . $fileError->getMessage() . ")";
                 }
             }
         } else {
             throw new Exception("アップロードファイルが見つかりません");
         }
-        echo(json_encode(array("status" => "success", "paths" => $filePaths)));
+        
+        // 結果を返す
+        $result = array(
+            "status" => "success",
+            "paths" => $filePaths,
+            "uploaded" => $uploadedCount,
+            "total" => $fileCount ?? 0
+        );
+        
+        if(!empty($errorFiles)){
+            $result["errors"] = $errorFiles;
+            $result["message"] = "$uploadedCount files uploaded, " . count($errorFiles) . " failed";
+        }
+        
+        error_log("Upload completed: $uploadedCount/{$fileCount} files uploaded");
+        echo(json_encode($result));
     }
     catch(Exception $e){
         // セキュリティ関連のエラーをログに記録

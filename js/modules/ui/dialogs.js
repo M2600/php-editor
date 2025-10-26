@@ -616,46 +616,99 @@ export function fileUploadDialog(dir, editor, api, mConsole, DEBUG) {
     }
 
     let contents = document.createElement("div");
-    let fileInput = document.createElement("input");
-    fileInput.type = "file";
-    fileInput.multiple = true;
-    fileInput.id = "file-input";
-    contents.appendChild(fileInput);
+    contents.style.padding = "1em";
+    
+    // MEditorのファイルアップロードコンポーネントを使用
+    const uploadArea = editor.createFileUploadArea(null, {
+        multiple: true,
+        showFileList: true,
+        onFilesSelected: (files) => {
+            // ファイルが選択されたらアップロードボタンを有効化
+            uploadButton.disabled = files.length === 0;
+        }
+    });
+    
+    contents.appendChild(uploadArea.element);
     
     let controls = document.createElement("div");
     controls.style.display = "flex";
     controls.style.flexDirection = "row-reverse";
-    controls.style.marginTop = ".3rem";
+    controls.style.marginTop = "1rem";
+    controls.style.gap = "0.5rem";
     contents.appendChild(controls);
     
     let uploadButton = document.createElement("button");
     uploadButton.innerHTML = "Upload";
     uploadButton.classList.add("meditor-button");
+    uploadButton.disabled = true; // 初期状態は無効
     uploadButton.addEventListener("click", async () => {
         DEBUG && console.log("popup window: ", popupWindow);
         
-        // アップロードするファイルのパスをチェック
-        const files = fileInput.files;
-        const filesToRename = [];
+        const files = uploadArea.getFiles();
+        if (files.length === 0) {
+            mConsole.print("No files selected", "warning");
+            return;
+        }
         
-        for (let file of files) {
-            const targetPath = path + file.name;
-            if (fileExistsInList(APP_STATE.FILE_LIST.files, targetPath)) {
-                // 同名ファイルが存在する場合は、ユニークなファイル名に変更
-                const newName = generateUniqueFileName(targetPath, APP_STATE.FILE_LIST.files);
-                filesToRename.push({
-                    original: file.name,
-                    renamed: newName.substring(newName.lastIndexOf('/') + 1)
-                });
-                mConsole.print(`File "${file.name}" will be renamed to "${filesToRename[filesToRename.length - 1].renamed}" as same name already exists`, "info");
+        // フォルダアップロードの場合、最上位フォルダのみをチェック
+        const hasRelativePath = files[0] && files[0].webkitRelativePath;
+        let topLevelFolderRename = null;
+        
+        if (hasRelativePath) {
+            // 最上位フォルダ名を取得（例: "samples/sub/file.txt" → "samples"）
+            const firstRelativePath = files[0].webkitRelativePath;
+            const topLevelFolder = firstRelativePath.split('/')[0];
+            const targetPath = path + topLevelFolder;
+            
+            // 最上位フォルダが既存のディレクトリと被る場合のみリネーム
+            if (fileExistsInList(APP_STATE.FILE_LIST.files, targetPath + '/')) {
+                const newFolderPath = generateUniqueFileName(targetPath, APP_STATE.FILE_LIST.files);
+                const newFolderName = newFolderPath.substring(newFolderPath.lastIndexOf('/') + 1);
+                
+                topLevelFolderRename = {
+                    original: topLevelFolder,
+                    renamed: newFolderName
+                };
+                
+                mConsole.print(`Folder "${topLevelFolder}" will be renamed to "${newFolderName}" as same name already exists`, "info");
             }
+        } else {
+            // 個別ファイルアップロードの場合は従来通り個別チェック
+            const filesToRename = [];
+            for (let file of files) {
+                const targetPath = path + file.name;
+                
+                if (fileExistsInList(APP_STATE.FILE_LIST.files, targetPath)) {
+                    const newName = generateUniqueFileName(targetPath, APP_STATE.FILE_LIST.files);
+                    filesToRename.push({
+                        original: file.name,
+                        renamed: newName.substring(newName.lastIndexOf('/') + 1)
+                    });
+                    mConsole.print(`File "${file.name}" will be renamed to "${filesToRename[filesToRename.length - 1].renamed}" as same name already exists`, "info");
+                }
+            }
+            topLevelFolderRename = filesToRename.length > 0 ? filesToRename : null;
         }
         
         popupWindow.remove();
-        await uploadFiles(fileInput, path, api, mConsole, filesToRename);
+        
+        // uploadFiles用にFileListを作成
+        const dataTransfer = new DataTransfer();
+        files.forEach(file => dataTransfer.items.add(file));
+        
+        const mockInput = { files: dataTransfer.files };
+        await uploadFiles(mockInput, path, api, mConsole, topLevelFolderRename);
         await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
     });
     controls.appendChild(uploadButton);
+    
+    let cancelButton = document.createElement("button");
+    cancelButton.innerHTML = "Cancel";
+    cancelButton.classList.add("meditor-button");
+    cancelButton.addEventListener("click", () => {
+        popupWindow.remove();
+    });
+    controls.appendChild(cancelButton);
     
     let popupWindow = editor.popupWindow(windowName, contents);
 }

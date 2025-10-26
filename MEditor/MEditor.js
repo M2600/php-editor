@@ -3605,6 +3605,324 @@ export class MEditor {
     }
 
     /**
+     * ファイルアップロードエリア（ドラッグ&ドロップ対応）
+     * @param {object} parentObj - 親オブジェクト
+     * @param {object} opt - オプション設定
+     * @returns {object} fileUploadAreaオブジェクト
+     */
+    fileUploadArea(parentObj=null, opt={}) {
+        let uploadArea = {};
+        uploadArea.element = document.createElement("div");
+        uploadArea.element.classList.add(this.CLASS_NAME_PREFIX + "file-upload-area");
+        
+        if(parentObj && parentObj.element) {
+            parentObj.element.appendChild(uploadArea.element);
+            parentObj.fileUploadArea = uploadArea;
+        }
+        
+        // オプション
+        uploadArea.options = {
+            accept: opt.accept || "*/*",
+            multiple: opt.multiple !== undefined ? opt.multiple : true,
+            maxSize: opt.maxSize || null, // bytes
+            onFilesSelected: opt.onFilesSelected || null,
+            showFileList: opt.showFileList !== undefined ? opt.showFileList : true,
+        };
+        
+        uploadArea.files = []; // 選択されたファイルのリスト
+        uploadArea.isDragging = false;
+        
+        // ドロップゾーン
+        let dropZone = {};
+        dropZone.element = document.createElement("div");
+        dropZone.element.classList.add(this.CLASS_NAME_PREFIX + "file-upload-dropzone");
+        uploadArea.element.appendChild(dropZone.element);
+        uploadArea.dropZone = dropZone;
+        
+        // ドロップゾーンのアイコンとテキスト
+        let dropIcon = document.createElement("div");
+        dropIcon.classList.add(this.CLASS_NAME_PREFIX + "file-upload-icon");
+        dropIcon.innerHTML = "📁";
+        dropZone.element.appendChild(dropIcon);
+        
+        let dropText = document.createElement("div");
+        dropText.classList.add(this.CLASS_NAME_PREFIX + "file-upload-text");
+        dropText.innerHTML = "ファイルやフォルダをドラッグ&ドロップ<br>または";
+        dropZone.element.appendChild(dropText);
+        
+        // ファイル選択ボタン
+        let selectButton = document.createElement("button");
+        selectButton.classList.add(this.CLASS_NAME_PREFIX + "file-upload-select-btn");
+        selectButton.textContent = "ファイルを選択";
+        dropZone.element.appendChild(selectButton);
+        uploadArea.selectButton = selectButton;
+        
+        // 隠しファイル入力
+        let fileInput = document.createElement("input");
+        fileInput.type = "file";
+        fileInput.multiple = uploadArea.options.multiple;
+        fileInput.style.display = "none";
+        if (uploadArea.options.accept !== "*/*") {
+            fileInput.accept = uploadArea.options.accept;
+        }
+        uploadArea.element.appendChild(fileInput);
+        uploadArea.fileInput = fileInput;
+        
+        // ファイルリスト表示エリア
+        let fileList = {};
+        fileList.element = document.createElement("div");
+        fileList.element.classList.add(this.CLASS_NAME_PREFIX + "file-upload-list");
+        if (!uploadArea.options.showFileList) {
+            fileList.element.style.display = "none";
+        }
+        uploadArea.element.appendChild(fileList.element);
+        uploadArea.fileList = fileList;
+        
+        // ファイルリスト更新
+        uploadArea.updateFileList = () => {
+            fileList.element.innerHTML = "";
+            
+            if (uploadArea.files.length === 0) {
+                fileList.element.style.display = "none";
+                return;
+            }
+            
+            fileList.element.style.display = "block";
+            
+            uploadArea.files.forEach((file, index) => {
+                let fileItem = document.createElement("div");
+                fileItem.classList.add(this.CLASS_NAME_PREFIX + "file-upload-item");
+                
+                let fileName = document.createElement("span");
+                fileName.classList.add(this.CLASS_NAME_PREFIX + "file-upload-item-name");
+                fileName.textContent = file.webkitRelativePath || file.name;
+                fileItem.appendChild(fileName);
+                
+                let fileSize = document.createElement("span");
+                fileSize.classList.add(this.CLASS_NAME_PREFIX + "file-upload-item-size");
+                fileSize.textContent = this.formatFileSize(file.size);
+                fileItem.appendChild(fileSize);
+                
+                let removeBtn = document.createElement("button");
+                removeBtn.classList.add(this.CLASS_NAME_PREFIX + "file-upload-item-remove");
+                removeBtn.textContent = "×";
+                removeBtn.title = "削除";
+                removeBtn.addEventListener("click", () => {
+                    uploadArea.removeFile(index);
+                });
+                fileItem.appendChild(removeBtn);
+                
+                fileList.element.appendChild(fileItem);
+            });
+        };
+        
+        // ファイル追加処理（重複チェック付き）
+        uploadArea.addFiles = (newFiles) => {
+            const fileArray = Array.from(newFiles);
+            
+            // 重複チェック
+            fileArray.forEach(file => {
+                const isDuplicate = uploadArea.files.some(existingFile => {
+                    const existingPath = existingFile.webkitRelativePath || existingFile.name;
+                    const newPath = file.webkitRelativePath || file.name;
+                    return existingPath === newPath;
+                });
+                
+                if (!isDuplicate) {
+                    // サイズチェック
+                    if (uploadArea.options.maxSize && file.size > uploadArea.options.maxSize) {
+                        console.warn(`File too large: ${file.name} (${file.size} bytes)`);
+                        return;
+                    }
+                    uploadArea.files.push(file);
+                }
+            });
+            
+            uploadArea.updateFileList();
+            
+            // コールバック実行
+            if (uploadArea.options.onFilesSelected) {
+                uploadArea.options.onFilesSelected(uploadArea.files);
+            }
+        };
+        
+        // ファイル削除
+        uploadArea.removeFile = (index) => {
+            uploadArea.files.splice(index, 1);
+            uploadArea.updateFileList();
+            
+            if (uploadArea.options.onFilesSelected) {
+                uploadArea.options.onFilesSelected(uploadArea.files);
+            }
+        };
+        
+        // 全ファイルクリア
+        uploadArea.clearFiles = () => {
+            uploadArea.files = [];
+            uploadArea.updateFileList();
+            fileInput.value = '';
+        };
+        
+        // ドラッグ&ドロップイベント（再帰的なフォルダ読み込み対応）
+        const handleDrop = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            dropZone.element.classList.remove(this.CLASS_NAME_PREFIX + "file-upload-dragging");
+            uploadArea.isDragging = false;
+            
+            const items = e.dataTransfer.items;
+            const files = [];
+            
+            // DataTransferItemを再帰的に処理
+            const processEntry = async (entry, path = '') => {
+                if (entry.isFile) {
+                    return new Promise((resolve, reject) => {
+                        entry.file((file) => {
+                            // webkitRelativePathを設定
+                            const relativePath = path + file.name;
+                            Object.defineProperty(file, 'webkitRelativePath', {
+                                value: relativePath,
+                                writable: false,
+                                configurable: true
+                            });
+                            files.push(file);
+                            resolve();
+                        }, (error) => {
+                            console.error('Error reading file:', error);
+                            resolve(); // エラーでも続行
+                        });
+                    });
+                } else if (entry.isDirectory) {
+                    const reader = entry.createReader();
+                    
+                    // readEntriesを繰り返し呼び出して全エントリを取得
+                    const readAllEntries = async () => {
+                        const allEntries = [];
+                        let entries;
+                        
+                        do {
+                            entries = await new Promise((resolve, reject) => {
+                                reader.readEntries(resolve, reject);
+                            });
+                            allEntries.push(...entries);
+                        } while (entries.length > 0);
+                        
+                        return allEntries;
+                    };
+                    
+                    try {
+                        const entries = await readAllEntries();
+                        for (const childEntry of entries) {
+                            await processEntry(childEntry, path + entry.name + '/');
+                        }
+                    } catch (error) {
+                        console.error('Error reading directory:', entry.name, error);
+                    }
+                }
+            };
+            
+            if (items && items.length > 0) {
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    if (item.kind === 'file') {
+                        const entry = item.webkitGetAsEntry();
+                        if (entry) {
+                            try {
+                                await processEntry(entry);
+                            } catch (error) {
+                                console.error('Error processing entry:', error);
+                            }
+                        }
+                    }
+                }
+                uploadArea.addFiles(files);
+            } else {
+                // フォールバック: 通常のファイルドロップ
+                uploadArea.addFiles(e.dataTransfer.files);
+            }
+        };
+        
+        dropZone.element.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!uploadArea.isDragging) {
+                dropZone.element.classList.add(this.CLASS_NAME_PREFIX + "file-upload-dragging");
+                uploadArea.isDragging = true;
+            }
+        });
+        
+        dropZone.element.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // 子要素からの dragleave を無視
+            if (e.target === dropZone.element) {
+                dropZone.element.classList.remove(this.CLASS_NAME_PREFIX + "file-upload-dragging");
+                uploadArea.isDragging = false;
+            }
+        });
+        
+        dropZone.element.addEventListener('drop', handleDrop);
+        
+        // ファイル選択ボタン
+        selectButton.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // ファイル入力変更イベント
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                uploadArea.addFiles(e.target.files);
+            }
+        });
+        
+        // 公開メソッド
+        uploadArea.getFiles = () => {
+            return uploadArea.files;
+        };
+        
+        uploadArea.setOptions = (newOpt) => {
+            Object.assign(uploadArea.options, newOpt);
+            if (newOpt.multiple !== undefined) {
+                fileInput.multiple = newOpt.multiple;
+            }
+            if (newOpt.accept !== undefined) {
+                fileInput.accept = newOpt.accept;
+            }
+            if (newOpt.showFileList !== undefined) {
+                fileList.element.style.display = newOpt.showFileList ? 'block' : 'none';
+            }
+        };
+        
+        uploadArea.setEnabled = (bool) => {
+            selectButton.disabled = !bool;
+            fileInput.disabled = !bool;
+            if (!bool) {
+                dropZone.element.style.opacity = '0.5';
+                dropZone.element.style.pointerEvents = 'none';
+            } else {
+                dropZone.element.style.opacity = '1';
+                dropZone.element.style.pointerEvents = 'auto';
+            }
+        };
+        
+        return uploadArea;
+    }
+
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    createFileUploadArea(parentObj=null, opt={}) {
+        let uploadArea = this.fileUploadArea(parentObj, opt);
+        return uploadArea;
+    }
+
+    /**
      * 
      * 
      * @param {*} parentObj 

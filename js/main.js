@@ -67,7 +67,6 @@ export const explorerAutoReload = new ExplorerAutoReload({
 // Global variables
 let mConsole;
 let dictMenu;
-let postDictMenu;
 let postJsonEditor;
 let postCheck;
 let jsonCheck;
@@ -100,38 +99,49 @@ async function executeCurrentFile() {
     
     console.log("Execute: " + APP_STATE.CURRENT_FILE.path);
     
+    // 実行メソッドとコンテンツタイプを取得
+    const method = postCheck.getActiveValue();
+    const isJsonMode = jsonCheck.getState();
+    const contentType = isJsonMode ? "application/json" : "application/x-www-form-urlencoded";
+
+
     // GETパラメータを取得
-    const getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
+    let getParams = {};
+    if (method === "GET") {
+        getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
+    } else {
+        getParams = {};
+    }
     
     // POSTパラメータを取得（モードに応じて）
     let postParams = {};
-    const isJsonMode = jsonCheck.getState();
-    if (isJsonMode) {
-        // JSONモード: バリデーションしてからJSONエディタから取得
-        if (!postJsonEditor.validate()) {
-            if (mConsole) {
-                mConsole.print('JSONの形式が正しくありません。修正してから実行してください。', 'error');
-            }
-            console.error('Invalid JSON format');
-            return;
-        }
-        
-        try {
-            postParams = postJsonEditor.getValue();
-        } catch (e) {
-            console.error('Failed to get JSON parameters:', e);
-            if (mConsole) {
-                mConsole.print('JSONパラメータの取得エラー: ' + e.message, 'error');
-            }
-            return;
-        }
-    } else {
-        // シンプルモード: DictMenuから取得
-        postParams = postDictMenu ? postDictMenu.getItemsAsObject() : {};
-    }
     
-    const method = postCheck.getState() ? "POST" : "GET";
-    const contentType = isJsonMode ? "application/json" : "application/x-www-form-urlencoded";
+
+    if (method === "POST") {
+        if (isJsonMode) {
+            // JSONモード: バリデーションしてからJSONエディタから取得
+            if (!postJsonEditor.validate()) {
+                if (mConsole) {
+                    mConsole.print('POSTパラメータのJSONの形式が正しくありません。修正してから実行してください。', 'error');
+                }
+                console.error('Invalid JSON format');
+                return;
+            }
+            
+            try {
+                postParams = postJsonEditor.getValue();
+            } catch (e) {
+                console.error('Failed to get JSON parameters:', e);
+                if (mConsole) {
+                    mConsole.print('JSONパラメータの取得エラー: ' + e.message, 'error');
+                }
+                return;
+            }
+        } else {
+            // シンプルモード: DictMenuから取得
+            postParams = dictMenu ? dictMenu.getItemsAsObject() : {};
+        }
+    }
     
     if (APP_STATE.RUN_MODE === 'WEB_MODE') {
         // Webページモード: プレビューiframeで実行
@@ -239,6 +249,7 @@ async function executeCurrentFile() {
         );
     }
 }
+
 
 async function main(){
     // localStorageから実行モードを復元
@@ -670,6 +681,174 @@ async function main(){
         console.log(`Explorer auto-reload started (interval: ${CONFIG.EXPLORER_AUTO_RELOAD_INTERVAL}ms)`);
     }
 
+
+
+
+    const changeMethodMode = (method) => {
+        if (method === "GET") {
+            dictMenu.setEnabled(true);
+            postJsonEditor.setEnabled(false);
+            jsonCheck.setEnabled(false);
+            postJsonEditor.hide();
+            jsonCheck.hide();
+            dictMenu.show();
+            dictMenu.setTitle("GETパラメータ");
+            // localStorageからGETパラメータを復元
+            loadGETParams(dictMenu);
+            // POSTモードを保存
+            try {
+                localStorage.setItem('postCheckState', 'false');
+                console.log('POST checkbox state saved: false');
+            } catch (e) {
+                console.error('Failed to save POST checkbox state:', e);
+            }
+        }
+        else if (method === "POST") {
+            const isJsonMode = jsonCheck.getState();
+            if (isJsonMode) {
+                postJsonEditor.show();
+                dictMenu.hide();
+
+            } else {
+                dictMenu.show();
+                postJsonEditor.hide();
+                dictMenu.setTitle("POSTパラメータ");
+                // localStorageからPOSTパラメータを復元
+                loadPOSTParams(dictMenu);
+            }
+            jsonCheck.show();
+            jsonCheck.setEnabled(true);
+            // POSTモードを保存
+            try {
+                localStorage.setItem('postCheckState', 'true');
+                console.log('POST checkbox state saved:', isJsonMode);
+            } catch (e) {
+                console.error('Failed to save POST checkbox state:', e);
+            }
+        }
+        else {
+            console.error("Unknown method: ", method);
+            return;
+        }
+    }
+
+    const changeJsonMode = (isJson) => {
+        if (isJson) {
+            postJsonEditor.setEnabled(true);
+            dictMenu.setEnabled(false);
+            postJsonEditor.show();
+            dictMenu.hide();
+        } else {
+            dictMenu.setEnabled(true);
+            postJsonEditor.setEnabled(false);
+            postJsonEditor.hide();
+            dictMenu.show();
+            dictMenu.setTitle("POSTパラメータ");
+            loadPOSTParams(dictMenu);
+            
+        }
+        // JSONモードを保存
+        try {
+            localStorage.setItem('jsonCheckState', isJson ? 'true' : 'false');
+            console.log('JSON checkbox state saved:', isJson);
+        } catch (e) {
+            console.error('Failed to save JSON checkbox state:', e);
+        }
+    }
+
+    const saveGETParams = (dictMenu) => {
+        if (dictMenu) {
+            try {
+                const params = dictMenu.getItemsAsObject();
+                localStorage.setItem('getParams', JSON.stringify(params));
+                console.log('GET parameters saved:', params);
+            } catch (err) {
+                console.error('Failed to save GET parameters:', err);
+            }
+        }
+    }
+    const loadGETParams = (dictMenu) => {
+        if (dictMenu) {
+            try {
+                const params = JSON.parse(localStorage.getItem('getParams'));
+                if (params) {
+                    dictMenu.clearItems();
+                    dictMenu.addItem(params);
+                    if (dictMenu.getItemCount() === 0) {
+                        dictMenu.addItem({'':''}); // 少なくとも1行は表示
+                    }
+                }
+                else {
+                    // 空の状態にする
+                    dictMenu.clearItems();
+                    dictMenu.addItem({'':''}); // 空行追加
+                }
+                console.log('GET parameters loaded:', params);
+            } catch (err) {
+                console.error('Failed to load GET parameters:', err);
+            }
+        }
+    }
+    const savePOSTParams = (dictMenu) => {
+        if (dictMenu) {
+            try {
+                const params = dictMenu.getItemsAsObject();
+                localStorage.setItem('postParams', JSON.stringify(params));
+                console.log('POST parameters saved:', params);
+            } catch (err) {
+                console.error('Failed to save POST parameters:', err);
+            }
+        }
+    }
+    const loadPOSTParams = (dictMenu) => {
+        if (dictMenu) {
+            try {
+                const params = JSON.parse(localStorage.getItem('postParams'));
+                if (params) {
+                    dictMenu.clearItems();
+                    dictMenu.addItem(params);
+                    if (dictMenu.getItemCount() === 0) {
+                        dictMenu.addItem({'':''}); // 少なくとも1行は表示
+                    }
+                }
+                else {
+                    dictMenu.clearItems();
+                    dictMenu.addItem({'':''}); // 空行追加
+                }
+                console.log('POST parameters loaded:', params);
+            } catch (err) {
+                console.error('Failed to load POST parameters:', err);
+            }
+        }
+    }
+    const savePOSTParamsJson = (jsonEditor) => {
+        if (jsonEditor) {
+            try {
+                const params = jsonEditor.getValue();
+                localStorage.setItem('postParamsJson', JSON.stringify(params));
+                console.log('POST JSON parameters saved:', params);
+            } catch (err) {
+                console.error('Failed to save POST JSON parameters:', err);
+            }
+        }
+    }
+    const loadPOSTParamsJson = (jsonEditor) => {
+        if (jsonEditor) {
+            try {
+                const params = JSON.parse(localStorage.getItem('postParamsJson'));
+                if (params) {
+                    jsonEditor.setValue(params);
+                } else {
+                    // 空のオブジェクトを設定
+                    jsonEditor.setValue({});
+                }
+                console.log('POST JSON parameters loaded:', params);
+            } catch (err) {
+                console.error('Failed to load POST JSON parameters:', err);
+            }
+        }
+    }
+
     // Right panel components
     let tabContainer = editor.tab(editor.page.main.right);
 
@@ -679,155 +858,60 @@ async function main(){
     // 初期表示タブをGET Parametersタブに設定
     tabContainer.activateTab(dictMenuTab.id);
 
-    // GET Parameters setup
-    dictMenu = editor.createDictMenu(dictMenuTab, {});
-    dictMenu.setTitle("GETパラメータ");
-    dictMenu.addButton();
-    dictMenuTab.setContent(dictMenu);
     
-    // localStorageからGETパラメータを復元
-    const savedParams = localStorage.getItem('getParams');
-    if (savedParams) {
-        try {
-            const params = JSON.parse(savedParams);
-            dictMenu.addItem(params);
-        } catch (e) {
-            console.error('Failed to load GET parameters:', e);
-        }
-    }
-    // 末尾に空の行を追加しておく
-    dictMenu.addItem({'':''});
 
-    // GETパラメータが変更されたときにlocalStorageに保存
-    dictMenu.onChange((params) => {
-        try {
-            localStorage.setItem('getParams', JSON.stringify(params));
-            console.log('GET parameters saved:', params);
-        } catch (err) {
-            console.error('Failed to save GET parameters:', err);
-        }
-    });
-
-    let hr = document.createElement("hr");
-    dictMenuTab.addContent(hr);
 
     // POST parameters setup
     // POST checkbox
-    postCheck = editor.generateCheckbox(
+    postCheck = editor.generateSegmentedButton(
         null,
-        "POSTリクエスト",
-        false,
-        (checked) => {
-            // 現在のモードに応じて有効/無効を切り替え
-            const isJsonMode = jsonCheck.getState();
-            if (isJsonMode) {
-                postJsonEditor.setEnabled(checked);
-            } else {
-                postDictMenu.setEnabled(checked);
-            }
-            jsonCheck.setEnabled(checked);
-            
-            // POSTチェックボックスの状態を保存
-            try {
-                localStorage.setItem('postCheckState', checked.toString());
-                console.log('POST checkbox state saved:', checked);
-            } catch (err) {
-                console.error('Failed to save POST checkbox state:', err);
-            }
-        }
+        [
+            { label: "GET", value: "GET", tooltip: "GETメソッドで送信"},
+            { label: "POST", value: "POST", tooltip: "POSTメソッドで送信" }
+        ],
+        0,
+        (value) => {
+            //console.log('Selected method: ' + value);
+            changeMethodMode(value);
+        },
+
     );
     dictMenuTab.addContent(postCheck);
 
     // JSON checkbox
     jsonCheck = editor.generateCheckbox(
         null,
-        "JSON形式で送信 (高度なモード)",
+        "JSON形式で送信 (複雑なデータ構造に対応)",
         false,
         (checked) => {
-            // モード切り替え
-            if (checked) {
-                // JSONモード: DictMenuの内容をJSONに変換してエディタに設定
-                postDictMenu.element.style.display = "none";
-                postJsonEditor.element.style.display = "flex";
-                
-                try {
-                    const dictData = postDictMenu.getItemsAsObject();
-                    if (Object.keys(dictData).length > 0) {
-                        postJsonEditor.setValue(dictData);
-                    }
-                } catch (e) {
-                    console.error('Failed to convert dict to JSON:', e);
-                }
-            } else {
-                // シンプルモード: JSONエディタの内容をDictMenuに変換
-                postJsonEditor.element.style.display = "none";
-                postDictMenu.element.style.display = "flex";
-                
-                try {
-                    const jsonData = postJsonEditor.getValue();
-                    // 既存のアイテムをクリア
-                    postDictMenu.items = [];
-                    postDictMenu.itemElements.forEach(el => el.remove());
-                    postDictMenu.itemElements = [];
-                    
-                    // フラットなオブジェクトの場合のみDictMenuに変換
-                    if (Object.keys(jsonData).length > 0) {
-                        const isFlat = Object.values(jsonData).every(v => 
-                            typeof v !== 'object' || v === null
-                        );
-                        
-                        if (isFlat) {
-                            postDictMenu.addItem(jsonData);
-                        } else {
-                            console.warn('Complex JSON structure cannot be converted to simple mode');
-                            mConsole && mConsole.print('複雑なJSON構造はシンプルモードに変換できません', 'warning');
-                        }
-                    }
-                    postDictMenu.addItem({'':''}); // 空行追加
-                } catch (e) {
-                    console.error('Failed to convert JSON to dict:', e);
-                }
-            }
-            
-            // JSONチェックボックスの状態を保存
-            try {
-                localStorage.setItem('jsonCheckState', checked.toString());
-                console.log('JSON checkbox state saved:', checked);
-            } catch (err) {
-                console.error('Failed to save JSON checkbox state:', err);
-            }
+            changeJsonMode(checked);
+            loadPOSTParamsJson(postJsonEditor);
         }
     );
     dictMenuTab.addContent(jsonCheck);
-    jsonCheck.setEnabled(false); // 初期状態では無効化
 
     // POSTパラメータ用のコンテナ（DictMenuまたはJSONエディタを切り替える）
-    const postParamsContainer = document.createElement("div");
-    postParamsContainer.style.flex = "1";
-    postParamsContainer.style.display = "flex";
-    postParamsContainer.style.flexDirection = "column";
-    postParamsContainer.style.overflow = "auto";
+    const paramsContainer = document.createElement("div");
+    paramsContainer.style.flex = "1";
+    paramsContainer.style.display = "flex";
+    paramsContainer.style.flexDirection = "column";
+    paramsContainer.style.overflow = "auto";
 
     // シンプルモード: DictMenu
-    postDictMenu = editor.createDictMenu(null, {});
-    postDictMenu.setTitle("POSTパラメータ (シンプルモード)");
-    postDictMenu.addButton();
-    postParamsContainer.appendChild(postDictMenu.element);
+    dictMenu = editor.createDictMenu(null, {});
+    dictMenu.addButton();
+    paramsContainer.appendChild(dictMenu.element);
     
+
     // 高度なモード: JSONエディタ
     postJsonEditor = editor.createJsonEditor(null, {});
     postJsonEditor.setTitle("POSTパラメータ (JSON形式)");
     postJsonEditor.element.style.display = "none"; // 初期状態では非表示
-    postParamsContainer.appendChild(postJsonEditor.element);
+    paramsContainer.appendChild(postJsonEditor.element);
     
     // JSONエディタの変更時にlocalStorageに保存
     postJsonEditor.onChange((jsonData) => {
-        try {
-            localStorage.setItem('postParamsJson', JSON.stringify(jsonData));
-            console.log('POST JSON parameters saved:', jsonData);
-        } catch (err) {
-            console.error('Failed to save POST JSON parameters:', err);
-        }
+        savePOSTParamsJson(postJsonEditor);
     });
     
     // localStorageからPOST設定を復元
@@ -846,74 +930,49 @@ async function main(){
             console.error('Failed to restore JSON checkbox state:', e);
         }
     }
+    jsonCheck.setState(isJsonMode);
     
-    // POSTパラメータの復元は、DOMに追加された後に行う（後で実行）
-    // 先にモードに応じた表示/非表示だけ設定
-    
-    // POSTパラメータの復元は、DOMに追加された後に行う（後で実行）
-    // 先にモードに応じた表示/非表示だけ設定
-    if (isJsonMode) {
-        // JSONモード: JSONエディタを表示
-        postDictMenu.element.style.display = "none";
-        postJsonEditor.element.style.display = "flex";
-    } else {
-        // シンプルモード: DictMenuを表示
-        postJsonEditor.element.style.display = "none";
-        postDictMenu.element.style.display = "flex";
-        
-        // シンプルモードのデータはすぐに復元可能
-        if (savedPostParams) {
-            try {
-                const postParams = JSON.parse(savedPostParams);
-                postDictMenu.addItem(postParams);
-                console.log('Restored POST parameters:', postParams);
-            } catch (e) {
-                console.error('Failed to load POST parameters:', e);
-            }
-        }
-        
-        // 末尾に空の行を追加しておく
-        postDictMenu.addItem({'':''});
-    }
     
     // POSTパラメータが変更されたときにlocalStorageに保存（シンプルモード）
-    postDictMenu.onChange((params) => {
-        try {
-            localStorage.setItem('postParams', JSON.stringify(params));
-            console.log('POST parameters saved:', params);
-        } catch (err) {
-            console.error('Failed to save POST parameters:', err);
+    dictMenu.onChange((params) => {
+        // GETモード
+        if (postCheck.getActiveValue() === "GET") {
+            saveGETParams(dictMenu);
+        }
+        // POSTモード・シンプルモード
+        else if (postCheck.getActiveValue() === "POST" && !isJsonMode) {
+            savePOSTParams(dictMenu);
         }
     });
     
-    // POSTチェックボックスの状態を復元
+    // 各種モードを復元
     if (savedPostCheckState !== null) {
-        try {
-            const postCheckEnabled = savedPostCheckState === 'true';
-            postCheck.setState(postCheckEnabled);
-            
-            // モードに応じて有効/無効を切り替え
+        if (savedPostCheckState === 'true') {
+            postCheck.setActiveValue("POST");
+            jsonCheck.setEnabled(true);
+            //changeMethodMode("POST");
             if (isJsonMode) {
-                postJsonEditor.setEnabled(postCheckEnabled);
+                changeJsonMode(true);
             } else {
-                postDictMenu.setEnabled(postCheckEnabled);
+                changeJsonMode(false);
+                changeMethodMode("POST");
             }
-            jsonCheck.setEnabled(postCheckEnabled);
-            
-            console.log('Restored POST checkbox state:', postCheckEnabled);
-        } catch (e) {
-            console.error('Failed to restore POST checkbox state:', e);
+            console.log('Restored POST checkbox state: true');
+        } else {
+            postCheck.setActiveValue("GET");
+            jsonCheck.setEnabled(false);
+            changeMethodMode("GET");
+            console.log('Restored POST checkbox state: false');
         }
     } else {
         // 初期状態では無効化
-        postDictMenu.setEnabled(false);
+        postCheck.setActiveValue("GET");
+        jsonCheck.setEnabled(false);
+        changeMethodMode("GET");
         postJsonEditor.setEnabled(false);
+        console.log('No saved POST checkbox state found; defaulting to GET mode');
     }
     
-    // JSONチェックボックスの状態を復元（UI上の表示）
-    if (isJsonMode) {
-        jsonCheck.setState(true);
-    }
 
     const postDictContainer = document.createElement("div");
     postDictContainer.style.display = "flex";
@@ -921,9 +980,13 @@ async function main(){
     postDictContainer.style.height = "100%";
     postDictContainer.appendChild(postCheck.element);
     postDictContainer.appendChild(jsonCheck.element);
-    postDictContainer.appendChild(postParamsContainer);
+    postDictContainer.appendChild(paramsContainer);
 
 
+
+
+
+    
 
     // Console setup
     mConsole = editor.console();
@@ -957,9 +1020,9 @@ async function main(){
 
 
     const vstack = editor.createVStack(null, {
-        count: 3,
+        count: 2,
         unit: 'percent',
-        sizes: [20, 30, 50],
+        sizes: [50, 50],
         minWidth: 120,
         sashSize: 10,
         saveKey: 'debugMenuPanelVStack',
@@ -968,9 +1031,8 @@ async function main(){
         }
     });
     
-    vstack.getPane(0).element.appendChild(dictMenu.element);
-    vstack.getPane(1).element.appendChild(postDictContainer);
-    vstack.getPane(2).element.appendChild(mConsole.element);
+    vstack.getPane(0).element.appendChild(postDictContainer);
+    vstack.getPane(1).element.appendChild(mConsole.element);
     // デバッグメニューをタブコンテナに追加
     // 初期状態は非表示
     dictMenuTab.setContent(vstack);

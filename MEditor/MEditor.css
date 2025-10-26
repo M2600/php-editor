@@ -205,6 +205,35 @@ i {
     cursor: default;
 }
 
+.meditor-segmented-button-container {
+    display: flex;
+    border: solid 1px #666;
+    border-radius: .3em;
+    overflow: hidden;
+    width: fit-content;
+}
+.meditor-segmented-button {
+    background-color: var(--me-color-bg-active);
+    color: var(--me-color-text);
+    padding: .5em 1em;
+    margin: 0;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+}
+.meditor-segmented-button:hover {
+    background-color: var(--me-color-bg);
+    opacity: 0.9;
+}
+.meditor-segmented-button-active {
+    background-color: var(--me-color-bg);
+    font-weight: bold;
+    border-bottom: 2px solid var(--me-color-accept);
+    opacity: 1;
+}
+
+
+
 
 .meditor-sash-v {
     position: absolute;
@@ -490,7 +519,15 @@ i {
     background-color: var(--me-color-bg-active-active);
 }
 
-
+.meditor-dir-icon {
+    font-size: .9em;
+    padding-right: .2em;
+    padding-left: .2em;
+    border-radius: .2em;
+}
+.meditor-dir-icon:hover {
+    background-color: var(--me-color-bg-active-active);
+}
 
 /* .meditor-dir-name::before {
     font-size: 1em;
@@ -1147,13 +1184,39 @@ i {
     overflow: hidden;
 }
 
-.meditor-json-editor-title {
-    font-size: 0.9em;
-    font-weight: bold;
-    padding: 0.5em;
+.meditor-json-editor-title-bar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0.5em;
     background-color: var(--me-color-bg);
     color: var(--me-color-text);
     border-bottom: 1px solid var(--me-color-border);
+}
+
+.meditor-json-editor-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.9em;
+    font-weight: bold;
+    padding: 0.5em 0;
+    background-color: var(--me-color-bg);
+    color: var(--me-color-text);
+    flex: 1;
+}
+
+.meditor-json-editor-title-buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    margin-left: auto;
+    width: fit-content;
+}
+
+.meditor-json-editor-syntax-check {
+    font-size: 0.9em;
 }
 
 .meditor-json-editor-container {

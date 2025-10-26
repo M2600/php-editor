@@ -1233,6 +1233,91 @@ export class MEditor {
         return button;
     }
 
+    segmentedButton(parentObj, segments=[{label: "Segment1", value: "Segment1", tooltip: "Tooltip1"}], initialIndex=0, changeAction=undefined) {
+        let segmentedButton = {};
+        segmentedButton.element = document.createElement("div");
+        segmentedButton.element.classList.add(this.CLASS_NAME_PREFIX + "segmented-button-container");
+
+        segmentedButton.segments = [];
+        segments.forEach((segment, index) => {
+            let button = document.createElement("button");
+            button.classList.add(this.CLASS_NAME_PREFIX + "segmented-button");
+            button.innerHTML = segment.label;
+            button.value = segment.value;
+            if(segment.tooltip) button.title = segment.tooltip;
+            if(index === initialIndex){
+                button.classList.add(this.CLASS_NAME_PREFIX + "segmented-button-active");
+            }
+            button.addEventListener("click", (e) => {
+                segmentedButton.setActiveIndex(index);
+                if(changeAction){
+                    changeAction(e.target.value);
+                }
+            });
+            segmentedButton.element.appendChild(button);
+            segmentedButton.segments.push(button);
+        });
+
+        segmentedButton.activeIndex = initialIndex;
+
+        segmentedButton.setActiveIndex = (index) => {
+            segmentedButton.segments.forEach((button, i) => {
+                if(i === index){
+                    button.classList.add(this.CLASS_NAME_PREFIX + "segmented-button-active");
+                }
+                else{
+                    button.classList.remove(this.CLASS_NAME_PREFIX + "segmented-button-active");
+                }
+            });
+            segmentedButton.activeIndex = index;
+        }
+
+        segmentedButton.setActiveValue = (value) => {
+            segmentedButton.segments.forEach((button, i) => {
+                if(button.value === value){
+                    button.classList.add(this.CLASS_NAME_PREFIX + "segmented-button-active");
+                    segmentedButton.activeIndex = i;
+                }
+                else{
+                    button.classList.remove(this.CLASS_NAME_PREFIX + "segmented-button-active");
+                }
+            });
+        }
+
+        segmentedButton.getActiveIndex = () => {
+            return segmentedButton.activeIndex;
+        }
+
+        segmentedButton.getActiveValue = () => {
+            return segmentedButton.segments[segmentedButton.activeIndex].value;
+        }
+
+        if (parentObj && typeof parentObj.element === "object"){
+            parentObj.element.appendChild(segmentedButton.element);
+        }else{
+            console.warn("parentObj has no element property");
+        }
+
+        segmentedButton.setChangeAction = (func) => {
+            changeAction = func;
+        }
+
+        segmentedButton.hide = () => {
+            segmentedButton.element.style.display = "none";
+        }
+
+        segmentedButton.show = () => {
+            segmentedButton.element.style.display = "flex";
+        }
+
+        return segmentedButton;
+    }
+    generateSegmentedButton(parentObj, segments=[{label: "Segment1", tooltip: "Tooltip1"}], initialIndex=0, changeAction=undefined) {
+        let segmentedButton = this.segmentedButton(parentObj, segments, initialIndex, changeAction);
+        return segmentedButton;
+    }
+
+
     checkbox(parentObj, labelText="", initialState=false, changeAction, tooltip="") {        
         let checkbox = {};
 
@@ -1290,6 +1375,13 @@ export class MEditor {
 
         checkbox.setEnabled = (enabled) => {
             checkbox.input.element.disabled = !enabled;
+        }
+
+        checkbox.hide = () => {
+            checkbox.element.style.display = "none";
+        }
+        checkbox.show = () => {
+            checkbox.element.style.display = "flex";
         }
 
         return checkbox;
@@ -1425,9 +1517,11 @@ export class MEditor {
                 // toggle icon
                 if(dirName.classList.contains(this.CLASS_NAME_PREFIX + "dir-name-expanded")){
                     dirIcon.innerHTML = "▼";
+                    dirIcon.title = "フォルダを折りたたむ";
                 }
                 else{
                     dirIcon.innerHTML = "▶";
+                    dirIcon.title = "フォルダを展開する";
                 }
                 //console.log(dirName, dirContent);
                 // save to localStorage
@@ -1947,6 +2041,7 @@ export class MEditor {
         let dirMenu = {};
         dirMenu = this.generateButton(dirControl, "⋮");
         dirMenu.element.classList.add(this.CLASS_NAME_PREFIX + "dir-menu-button");
+        dirMenu.element.title = "フォルダの操作";
         dirMenu.addTrigger("click", (e) => {
             e.stopPropagation();
             //console.log("dir menu clicked:", dirInfo);
@@ -2046,6 +2141,7 @@ export class MEditor {
         dirIcon.element = document.createElement("div");
         dirIcon.element.classList.add(this.CLASS_NAME_PREFIX + "dir-icon");
         dirIcon.element.innerHTML = "▶";
+        dirIcon.element.title = "フォルダを展開"
         dirIcon.element.addEventListener("click", (e) => {
             e.stopPropagation();
             this.explorer.toggleExpand(dir.path);
@@ -2075,6 +2171,7 @@ export class MEditor {
                 dirName.element.classList.add(this.CLASS_NAME_PREFIX + "dir-name-expanded");
                 dirContent.element.classList.add(this.CLASS_NAME_PREFIX + "dir-content-show");
                 dirIcon.element.innerHTML = "▼";
+                dirIcon.element.title = "フォルダを折りたたむ";
             }
         }
 
@@ -3058,8 +3155,23 @@ export class MEditor {
             });
         }
 
+        dictMenu.setItems = (items) => {
+            // 既存の項目をクリア
+            dictMenu.items = [];
+            dictMenu.content.element.innerHTML = "";
+            dictMenu.itemElements = [];
+            // 新しい項目を追加
+            items.forEach((item) => {
+                dictMenu.addItem(item);
+            });
+        }
+
         dictMenu.getItems = () => {
             return dictMenu.items;
+        }
+
+        dictMenu.getItemCount = () => {
+            return dictMenu.items.length;
         }
 
         dictMenu.getItemsAsObject = () => {
@@ -3072,6 +3184,11 @@ export class MEditor {
             })
             return obj;
         }
+        dictMenu.clearItems = () => {
+            dictMenu.items = [];
+            dictMenu.content.element.innerHTML = "";
+            dictMenu.itemElements = [];
+        }
 
         dictMenu.setEnabled = (bool) => {
             dictMenu.element.querySelectorAll("input, button").forEach((el) => {
@@ -3081,6 +3198,14 @@ export class MEditor {
 
         dictMenu.onChange = (callback) => {
             dictMenu.onChangeCallback = callback;
+        }
+
+        dictMenu.hide = () => {
+            dictMenu.element.style.display = "none";
+        }
+        
+        dictMenu.show = () => {
+            dictMenu.element.style.display = "flex";
         }
 
         return dictMenu;
@@ -3101,9 +3226,14 @@ export class MEditor {
      * @returns {object} jsonEditorオブジェクト
      */
     jsonEditor(parentObj=null, opt={}) {
+        
         let jsonEditor = {};
         jsonEditor.element = document.createElement("div");
         jsonEditor.element.classList.add(this.CLASS_NAME_PREFIX + "json-editor");
+        
+        
+        //options
+        jsonEditor.enabledSyntaxCheck = opt.enabledSyntaxCheck !== undefined ? opt.enabledSyntaxCheck : true;
         
         if(parentObj && parentObj.element) {
             parentObj.element.appendChild(jsonEditor.element);
@@ -3114,13 +3244,48 @@ export class MEditor {
         jsonEditor.isValid = true;
         jsonEditor.useAce = typeof ace !== 'undefined'; // Aceが利用可能かチェック
         
+        let titleBar = {};
+        titleBar.element = document.createElement("div");
+        titleBar.element.classList.add(this.CLASS_NAME_PREFIX + "json-editor-title-bar");
+        jsonEditor.element.appendChild(titleBar.element);
+        jsonEditor.titleBar = titleBar;
+
         // タイトル
         let title = {};
         title.element = document.createElement("div");
         title.element.classList.add(this.CLASS_NAME_PREFIX + "json-editor-title");
         title.element.innerHTML = "JSON";
-        jsonEditor.element.appendChild(title.element);
+        titleBar.element.appendChild(title.element);
         jsonEditor.title = title;
+
+        let titleButtons = {};
+        titleButtons.element = document.createElement("div");
+        titleButtons.element.classList.add(this.CLASS_NAME_PREFIX + "json-editor-title-buttons");
+        titleBar.element.appendChild(titleButtons.element);
+        jsonEditor.titleButtons = titleButtons;
+
+        
+        let syntaxCheck = this.checkbox(
+            null, 
+            "JSON構文チェックを有効化", 
+            jsonEditor.enabledSyntaxCheck,
+            (checked) => {
+                jsonEditor.enabledSyntaxCheck = checked;
+                console.log("JSON Editor: Syntax check " + (checked ? "enabled" : "disabled"));
+                // 構文チェックが有効な場合は即座にバリデーションを実行
+                if (jsonEditor.enabledSyntaxCheck) {
+                    jsonEditor.validate();
+                } else {
+                    // エラーメッセージをクリア
+                    jsonEditor.isValid = true;
+                    jsonEditor.errorMsg.element.style.display = "none";
+                }
+            },
+            "JSONエディタの内容が有効なJSON形式かどうかをリアルタイムでチェックします。"
+        );
+        syntaxCheck.element.classList.add(this.CLASS_NAME_PREFIX + "json-editor-syntax-check");
+        //titleButtons.element.appendChild(syntaxCheck.element);
+        //jsonEditor.syntaxCheck = syntaxCheck;
         
         // エディタコンテナ
         let editorContainer = {};
@@ -3193,7 +3358,8 @@ export class MEditor {
                 aceEditor.getSession().on("change", (e) => {
                     clearTimeout(validationTimeout);
                     validationTimeout = setTimeout(() => {
-                        const isValid = jsonEditor.validate();
+                        // 構文チェックが有効な場合はバリデーションを実行
+                        const isValid = jsonEditor.enabledSyntaxCheck ? jsonEditor.validate() : true;
                         
                         if (isValid && jsonEditor.onChangeCallback) {
                             try {
@@ -3310,6 +3476,7 @@ export class MEditor {
                     });
                 }
             };
+
             
             // テーマ変更メソッド
             jsonEditor.setTheme = (theme) => {
@@ -3421,6 +3588,13 @@ export class MEditor {
         jsonEditor.onChange = (callback) => {
             jsonEditor.onChangeCallback = callback;
         };
+
+        jsonEditor.hide = () => {
+            jsonEditor.element.style.display = "none";
+        };
+        jsonEditor.show = () => {
+            jsonEditor.element.style.display = "flex";
+        }
         
         return jsonEditor;
     }

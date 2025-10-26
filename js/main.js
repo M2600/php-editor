@@ -767,9 +767,12 @@ async function main(){
                 if (params) {
                     dictMenu.clearItems();
                     dictMenu.addItem(params);
+                    //dictMenu.addItem({'':''}); // 空行追加
                 }
                 else {
-                    //dictMenu.addItem({'':''}); // 空行追加
+                    // 空の状態にする
+                    dictMenu.clearItems();
+                    dictMenu.addItem({'':''}); // 空行追加
                 }
                 console.log('GET parameters loaded:', params);
             } catch (err) {
@@ -795,9 +798,11 @@ async function main(){
                 if (params) {
                     dictMenu.clearItems();
                     dictMenu.addItem(params);
+                    //dictMenu.addItem({'':''}); // 空行追加
                 }
                 else {
-                    //dictMenu.addItem({'':''}); // 空行追加
+                    dictMenu.clearItems();
+                    dictMenu.addItem({'':''}); // 空行追加
                 }
                 console.log('POST parameters loaded:', params);
             } catch (err) {
@@ -822,6 +827,9 @@ async function main(){
                 const params = JSON.parse(localStorage.getItem('postParamsJson'));
                 if (params) {
                     jsonEditor.setValue(params);
+                } else {
+                    // 空のオブジェクトを設定
+                    jsonEditor.setValue({});
                 }
                 console.log('POST JSON parameters loaded:', params);
             } catch (err) {
@@ -946,6 +954,9 @@ async function main(){
         }
     } else {
         // 初期状態では無効化
+        postCheck.setActiveValue("GET");
+        jsonCheck.setEnabled(false);
+        changeMethodMode("GET");
         postJsonEditor.setEnabled(false);
         console.log('No saved POST checkbox state found; defaulting to GET mode');
     }

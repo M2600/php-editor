@@ -1233,6 +1233,91 @@ export class MEditor {
         return button;
     }
 
+    segmentedButton(parentObj, segments=[{label: "Segment1", value: "Segment1", tooltip: "Tooltip1"}], initialIndex=0, changeAction=undefined) {
+        let segmentedButton = {};
+        segmentedButton.element = document.createElement("div");
+        segmentedButton.element.classList.add(this.CLASS_NAME_PREFIX + "segmented-button-container");
+
+        segmentedButton.segments = [];
+        segments.forEach((segment, index) => {
+            let button = document.createElement("button");
+            button.classList.add(this.CLASS_NAME_PREFIX + "segmented-button");
+            button.innerHTML = segment.label;
+            button.value = segment.value;
+            if(segment.tooltip) button.title = segment.tooltip;
+            if(index === initialIndex){
+                button.classList.add(this.CLASS_NAME_PREFIX + "segmented-button-active");
+            }
+            button.addEventListener("click", (e) => {
+                segmentedButton.setActiveIndex(index);
+                if(changeAction){
+                    changeAction(e.target.value);
+                }
+            });
+            segmentedButton.element.appendChild(button);
+            segmentedButton.segments.push(button);
+        });
+
+        segmentedButton.activeIndex = initialIndex;
+
+        segmentedButton.setActiveIndex = (index) => {
+            segmentedButton.segments.forEach((button, i) => {
+                if(i === index){
+                    button.classList.add(this.CLASS_NAME_PREFIX + "segmented-button-active");
+                }
+                else{
+                    button.classList.remove(this.CLASS_NAME_PREFIX + "segmented-button-active");
+                }
+            });
+            segmentedButton.activeIndex = index;
+        }
+
+        segmentedButton.setActiveValue = (value) => {
+            segmentedButton.segments.forEach((button, i) => {
+                if(button.value === value){
+                    button.classList.add(this.CLASS_NAME_PREFIX + "segmented-button-active");
+                    segmentedButton.activeIndex = i;
+                }
+                else{
+                    button.classList.remove(this.CLASS_NAME_PREFIX + "segmented-button-active");
+                }
+            });
+        }
+
+        segmentedButton.getActiveIndex = () => {
+            return segmentedButton.activeIndex;
+        }
+
+        segmentedButton.getActiveValue = () => {
+            return segmentedButton.segments[segmentedButton.activeIndex].value;
+        }
+
+        if (parentObj && typeof parentObj.element === "object"){
+            parentObj.element.appendChild(segmentedButton.element);
+        }else{
+            console.warn("parentObj has no element property");
+        }
+
+        segmentedButton.setChangeAction = (func) => {
+            changeAction = func;
+        }
+
+        segmentedButton.hide = () => {
+            segmentedButton.element.style.display = "none";
+        }
+
+        segmentedButton.show = () => {
+            segmentedButton.element.style.display = "flex";
+        }
+
+        return segmentedButton;
+    }
+    generateSegmentedButton(parentObj, segments=[{label: "Segment1", tooltip: "Tooltip1"}], initialIndex=0, changeAction=undefined) {
+        let segmentedButton = this.segmentedButton(parentObj, segments, initialIndex, changeAction);
+        return segmentedButton;
+    }
+
+
     checkbox(parentObj, labelText="", initialState=false, changeAction, tooltip="") {        
         let checkbox = {};
 
@@ -1290,6 +1375,13 @@ export class MEditor {
 
         checkbox.setEnabled = (enabled) => {
             checkbox.input.element.disabled = !enabled;
+        }
+
+        checkbox.hide = () => {
+            checkbox.element.style.display = "none";
+        }
+        checkbox.show = () => {
+            checkbox.element.style.display = "flex";
         }
 
         return checkbox;

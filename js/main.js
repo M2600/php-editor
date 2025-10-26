@@ -684,6 +684,7 @@ async function main(){
             postJsonEditor.setEnabled(false);
             jsonCheck.setEnabled(false);
             postJsonEditor.hide();
+            jsonCheck.hide();
             dictMenu.show();
             dictMenu.setTitle("GETパラメータ");
             // localStorageからGETパラメータを復元
@@ -709,6 +710,7 @@ async function main(){
                 // localStorageからPOSTパラメータを復元
                 loadPOSTParams(dictMenu);
             }
+            jsonCheck.show();
             jsonCheck.setEnabled(true);
             // POSTモードを保存
             try {
@@ -842,20 +844,25 @@ async function main(){
 
     // POST parameters setup
     // POST checkbox
-    postCheck = editor.generateCheckbox(
+    postCheck = editor.generateSegmentedButton(
         null,
-        "POSTリクエスト",
-        false,
-        (checked) => {
-            changeMethodMode(checked ? "POST" : "GET");
-        }
+        [
+            { label: "GET", value: "GET", tooltip: "GETメソッドで送信"},
+            { label: "POST", value: "POST", tooltip: "POSTメソッドで送信" }
+        ],
+        0,
+        (value) => {
+            //console.log('Selected method: ' + value);
+            changeMethodMode(value);
+        },
+
     );
     dictMenuTab.addContent(postCheck);
 
     // JSON checkbox
     jsonCheck = editor.generateCheckbox(
         null,
-        "JSON形式で送信 (高度なモード)",
+        "JSON形式で送信 (複雑なデータ構造に対応)",
         false,
         (checked) => {
             changeJsonMode(checked);
@@ -909,11 +916,11 @@ async function main(){
     // POSTパラメータが変更されたときにlocalStorageに保存（シンプルモード）
     dictMenu.onChange((params) => {
         // GETモード
-        if (!postCheck.getState()) {
+        if (postCheck.getActiveValue() === "GET") {
             saveGETParams(dictMenu);
         }
         // POSTモード・シンプルモード
-        else if (postCheck.getState()) {
+        else if (postCheck.getActiveValue() === "POST" && !isJsonMode) {
             savePOSTParams(dictMenu);
         }
     });
@@ -921,7 +928,7 @@ async function main(){
     // 各種モードを復元
     if (savedPostCheckState !== null) {
         if (savedPostCheckState === 'true') {
-            postCheck.setState(true);
+            postCheck.setActiveValue("POST");
             jsonCheck.setEnabled(true);
             //changeMethodMode("POST");
             if (isJsonMode) {
@@ -932,7 +939,7 @@ async function main(){
             }
             console.log('Restored POST checkbox state: true');
         } else {
-            postCheck.setState(false);
+            postCheck.setActiveValue("GET");
             jsonCheck.setEnabled(false);
             changeMethodMode("GET");
             console.log('Restored POST checkbox state: false');

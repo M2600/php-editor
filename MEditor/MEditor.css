@@ -193,6 +193,35 @@ i {
     cursor: default;
 }
 
+.meditor-segmented-button-container {
+    display: flex;
+    border: solid 1px #666;
+    border-radius: .3em;
+    overflow: hidden;
+    width: fit-content;
+}
+.meditor-segmented-button {
+    background-color: var(--me-color-bg-active);
+    color: var(--me-color-text);
+    padding: .5em 1em;
+    margin: 0;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+}
+.meditor-segmented-button:hover {
+    background-color: var(--me-color-bg);
+    opacity: 0.9;
+}
+.meditor-segmented-button-active {
+    background-color: var(--me-color-bg);
+    font-weight: bold;
+    border-bottom: 2px solid var(--me-color-accept);
+    opacity: 1;
+}
+
+
+
 
 .meditor-sash-v {
     position: absolute;

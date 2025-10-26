@@ -649,39 +649,125 @@ export async function uploadFiles(fileInput, dir, api, mConsole, filesToRename =
         return false;
     }
     let files = fileInput.files;
-    const fd = new FormData();
-    fd.append("action", "upload");
-    fd.append("path", dir);
     
-    // ファイル名変更マップを追加
-    if (filesToRename && filesToRename.length > 0) {
-        fd.append("fileRenames", JSON.stringify(filesToRename));
+    console.log(`Uploading ${files.length} files to ${dir}`);
+    
+    // PHPの max_file_uploads 制限に対応するため、バッチ処理
+    const BATCH_SIZE = 20; // 安全のため20ファイルずつ
+    const totalFiles = files.length;
+    let uploadedCount = 0;
+    let allErrors = [];
+    
+    // ファイルをバッチに分割
+    for (let batchStart = 0; batchStart < totalFiles; batchStart += BATCH_SIZE) {
+        const batchEnd = Math.min(batchStart + BATCH_SIZE, totalFiles);
+        const batchFiles = Array.from(files).slice(batchStart, batchEnd);
+        
+        console.log(`Uploading batch ${Math.floor(batchStart / BATCH_SIZE) + 1}: files ${batchStart + 1}-${batchEnd} of ${totalFiles}`);
+        
+        const fd = new FormData();
+        fd.append("action", "upload");
+        fd.append("path", dir);
+        
+        // このバッチに該当するファイル名変更マップを作成
+        const batchRenames = [];
+        const hasRelativePath = batchFiles[0] && batchFiles[0].webkitRelativePath;
+        
+        if (filesToRename) {
+            if (hasRelativePath && !Array.isArray(filesToRename)) {
+                // フォルダアップロード: topLevelFolderRename オブジェクトが渡される
+                // すべてのファイルの相対パスの最上位フォルダ名を置換
+                console.log('Folder rename:', JSON.stringify(filesToRename));
+                batchRenames.push(filesToRename);
+            } else if (Array.isArray(filesToRename) && filesToRename.length > 0) {
+                // 個別ファイルアップロード: 配列が渡される
+                for (let i = batchStart; i < batchEnd; i++) {
+                    const file = files[i];
+                    const fileName = file.name;
+                    const rename = filesToRename.find(r => r.original === fileName);
+                    if (rename) {
+                        console.log(`File to rename: ${rename.original} -> ${rename.renamed}`);
+                        batchRenames.push(rename);
+                    }
+                }
+            }
+        }
+        
+        if (batchRenames.length > 0) {
+            console.log('Batch renames:', JSON.stringify(batchRenames));
+            fd.append("fileRenames", JSON.stringify(batchRenames));
+        }
+        
+        // フォルダアップロードの場合、このバッチの相対パスマップを作成
+        if (hasRelativePath) {
+            const relativePathMap = [];
+            batchFiles.forEach((file, idx) => {
+                const relativePath = file.webkitRelativePath || file.name;
+                relativePathMap.push(relativePath);
+                console.log(`Batch file ${batchStart + idx}: ${relativePath} (${file.size} bytes)`);
+            });
+            fd.append("relativePaths", JSON.stringify(relativePathMap));
+        } else {
+            batchFiles.forEach((file, idx) => {
+                console.log(`Batch file ${batchStart + idx}: ${file.name} (${file.size} bytes)`);
+            });
+        }
+        
+        batchFiles.forEach(file => {
+            fd.append("files[]", file);
+        });
+        
+        try {
+            const response = await fetch("/api/file_upload.php", {
+                method: "POST",
+                body: fd,
+            });
+            
+            const data = await response.json();
+            
+            if (data.status === "error") {
+                console.error("Batch upload error:", data.error);
+                mConsole.print(`Batch upload error: ${data.error}`, "error");
+                allErrors.push(`Batch ${Math.floor(batchStart / BATCH_SIZE) + 1}: ${data.error}`);
+                continue; // 次のバッチへ
+            }
+            
+            if (data.status === "session_error") {
+                sessionError();
+                return false;
+            }
+            
+            console.log(`Batch uploaded successfully: ${data.uploaded} files`);
+            uploadedCount += data.uploaded || 0;
+            
+            // バッチ内のエラーを記録
+            if (data.errors && data.errors.length > 0) {
+                console.warn("Batch errors:", data.errors);
+                allErrors.push(...data.errors);
+            }
+            
+        } catch (error) {
+            console.error("Batch upload fetch error:", error);
+            allErrors.push(`Batch ${Math.floor(batchStart / BATCH_SIZE) + 1}: Network error`);
+        }
+        
+        // 進捗表示
+        if (totalFiles > BATCH_SIZE) {
+            mConsole.print(`Progress: ${uploadedCount}/${totalFiles} files uploaded...`, "info");
+        }
     }
     
-    for (let i = 0; i < files.length; i++) {
-        fd.append("files[]", files[i]);
-    }
-    await fetch("/api/file_upload.php", {
-        method: "POST",
-        body: fd,
-    }).then(response => response.json()).then(data => {
-        if (data.status === "error") {
-            console.error(data.error);
-            mConsole.print("File upload error", "error");
-            ret = false;
-            return;
-        }
-        if (data.status === "session_error") {
-            sessionError();
-            ret = false;
-            return;
-        }
-        mConsole.print("Files uploaded successfully", "success");
+    // 最終結果を表示
+    if (allErrors.length > 0) {
+        mConsole.print(`${uploadedCount}/${totalFiles} files uploaded successfully`, "warning");
+        mConsole.print(`${allErrors.length} errors occurred`, "error");
+        console.warn("Upload errors:", allErrors);
+        ret = uploadedCount > 0; // 一部成功していれば true
+    } else {
+        mConsole.print(`${uploadedCount} files uploaded successfully`, "success");
         ret = true;
-    }).then(() => {
-        // ファイルリストを再読み込み
-        //loadExplorer(editor.BASE_DIR);
-    });
+    }
+    
     return ret;
 }
 

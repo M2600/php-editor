@@ -1265,6 +1265,127 @@ i {
 }
 
 
+/* ========== ファイルアップロードエリア ========== */
+.meditor-file-upload-area {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 1em;
+}
+
+.meditor-file-upload-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2em;
+    border: 2px dashed var(--me-color-border);
+    border-radius: 0.5em;
+    background-color: var(--me-color-bg-secondary, var(--me-color-bg));
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-height: 150px;
+}
+
+.meditor-file-upload-dropzone:hover {
+    border-color: var(--me-color-primary);
+    background-color: var(--me-color-bg-hover, rgba(0, 123, 255, 0.05));
+}
+
+.meditor-file-upload-dragging {
+    border-color: var(--me-color-primary) !important;
+    background-color: var(--me-color-bg-hover, rgba(0, 123, 255, 0.1)) !important;
+    border-style: solid;
+}
+
+.meditor-file-upload-icon {
+    font-size: 3em;
+    margin-bottom: 0.5em;
+    opacity: 0.7;
+}
+
+.meditor-file-upload-text {
+    text-align: center;
+    margin-bottom: 1em;
+    color: var(--me-color-text-secondary, var(--me-color-text));
+    opacity: 0.8;
+    line-height: 1.5;
+}
+
+.meditor-file-upload-select-btn {
+    padding: 0.6em 1.5em;
+    background-color: var(--me-color-primary);
+    color: white;
+    border: none;
+    border-radius: 0.3em;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+}
+
+.meditor-file-upload-select-btn:hover {
+    background-color: var(--me-color-primary-hover, #0056b3);
+}
+
+.meditor-file-upload-select-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.meditor-file-upload-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.meditor-file-upload-item {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+    padding: 0.5em;
+    background-color: var(--me-color-bg);
+    border: 1px solid var(--me-color-border);
+    border-radius: 0.3em;
+}
+
+.meditor-file-upload-item-name {
+    flex: 1;
+    font-size: 0.9em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.meditor-file-upload-item-size {
+    font-size: 0.85em;
+    color: var(--me-color-text-secondary, var(--me-color-text));
+    opacity: 0.7;
+    white-space: nowrap;
+}
+
+.meditor-file-upload-item-remove {
+    width: 1.5em;
+    height: 1.5em;
+    padding: 0;
+    background-color: transparent;
+    border: none;
+    color: var(--me-color-error, #ff4444);
+    font-size: 1.2em;
+    cursor: pointer;
+    border-radius: 0.2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+}
+
+.meditor-file-upload-item-remove:hover {
+    background-color: rgba(255, 68, 68, 0.1);
+}
+
+
 /* ========== チャットUI ========== */
 .meditor-chat {
     display: flex;

@@ -19,7 +19,7 @@ require_once __DIR__ . '/ai_context_compression.php';
 /**
  * AIサーバーにリクエストを送信してストリーミングレスポンスを処理する
  */
-function sendAIRequest($apiUrl, $apiKey, $payload) {
+function sendAIRequest($apiUrl, $apiKey, $payload, $timeout = 600) {
     try {
         $chat_url = $apiUrl . '/chat/completions';
         $ch = curl_init($chat_url);

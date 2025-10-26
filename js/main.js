@@ -100,7 +100,7 @@ async function executeCurrentFile() {
     console.log("Execute: " + APP_STATE.CURRENT_FILE.path);
     
     // 実行メソッドとコンテンツタイプを取得
-    const method = postCheck.getState() ? "POST" : "GET";
+    const method = postCheck.getActiveValue();
     const isJsonMode = jsonCheck.getState();
     const contentType = isJsonMode ? "application/json" : "application/x-www-form-urlencoded";
 

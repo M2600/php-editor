@@ -3871,6 +3871,8 @@ export class MEditor {
             promptInput.style.overflowY = "auto";
             promptInput.style.boxSizing = "border-box";
             promptInput.style.resize = "vertical";
+            promptInput.style.backgroundColor = "var(--me-color-editor-bg)";
+            promptInput.style.color = "var(--me-color-text)";
             promptInputContainer.appendChild(promptInput);
             content.appendChild(promptInputContainer);
 

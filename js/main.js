@@ -1178,7 +1178,7 @@ async function main(){
     // Cookieから保存されたAI設定を復元
     const savedAIConfig = loadAIConfig();
     if (savedAIConfig.apiUrl || savedAIConfig.apiKey || savedAIConfig.useCustomApi || savedAIConfig.customPrompt || savedAIConfig.useCustomPrompt) {
-        console.log("AI custom setting: Restoring config from cookie", savedAIConfig);
+        //console.log("AI custom setting: Restoring config from cookie", savedAIConfig);
         // chatコンポーネントに設定を復元
         chat.config.customApiUrl = savedAIConfig.apiUrl || '';
         chat.config.customApiKey = savedAIConfig.apiKey || '';

@@ -3170,6 +3170,10 @@ export class MEditor {
             return dictMenu.items;
         }
 
+        dictMenu.getItemCount = () => {
+            return dictMenu.items.length;
+        }
+
         dictMenu.getItemsAsObject = () => {
             let obj = {};
             dictMenu.items.forEach((item) => {

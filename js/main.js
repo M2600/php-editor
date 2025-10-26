@@ -767,7 +767,9 @@ async function main(){
                 if (params) {
                     dictMenu.clearItems();
                     dictMenu.addItem(params);
-                    //dictMenu.addItem({'':''}); // 空行追加
+                    if (dictMenu.getItemCount() === 0) {
+                        dictMenu.addItem({'':''}); // 少なくとも1行は表示
+                    }
                 }
                 else {
                     // 空の状態にする
@@ -798,7 +800,9 @@ async function main(){
                 if (params) {
                     dictMenu.clearItems();
                     dictMenu.addItem(params);
-                    //dictMenu.addItem({'':''}); // 空行追加
+                    if (dictMenu.getItemCount() === 0) {
+                        dictMenu.addItem({'':''}); // 少なくとも1行は表示
+                    }
                 }
                 else {
                     dictMenu.clearItems();

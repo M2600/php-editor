@@ -124,23 +124,23 @@ export const FILE_EDITOR_TOOLS = [
             }
         }
     },
-    {
-        type: "function",
-        function: {
-            name: "deleteFile",
-            description: "ファイルを削除します。この操作は取り消せません。",
-            parameters: {
-                type: "object",
-                properties: {
-                    filename: {
-                        type: "string",
-                        description: "削除するファイル名"
-                    }
-                },
-                required: ["filename"]
-            }
-        }
-    },
+    // {
+    //     type: "function",
+    //     function: {
+    //         name: "deleteFile",
+    //         description: "ファイルを削除します。この操作は取り消せません。",
+    //         parameters: {
+    //             type: "object",
+    //             properties: {
+    //                 filename: {
+    //                     type: "string",
+    //                     description: "削除するファイル名"
+    //                 }
+    //             },
+    //             required: ["filename"]
+    //         }
+    //     }
+    // },
     {
         type: "function",
         function: {

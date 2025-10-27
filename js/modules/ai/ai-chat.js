@@ -860,7 +860,13 @@ export async function sendAIMessage({
                                 }
                             },
                             onError: (errMsg) => {
-                                chat.updateLastAIMessage('<span style="color:red">AI応答エラー: '+errMsg+'</span>', true);
+                                if (typeof errMsg === 'string') {
+                                    chat.updateLastAIMessage('<span style="color:red">AI応答エラー: '+errMsg+'</span>', true);
+                                } else if (errMsg && errMsg.message) {
+                                    chat.updateLastAIMessage('<span style="color:red">AI応答エラー: '+errMsg.message+'</span>', true);
+                                } else {
+                                    chat.updateLastAIMessage('<span style="color:red">AI応答エラーが発生しました</span>', true);
+                                }
                                 historyManager.setStreaming(false);
                                 if (typeof chat.hideLoading === 'function') chat.hideLoading();
                                 console.error("AI応答エラー:", errMsg);

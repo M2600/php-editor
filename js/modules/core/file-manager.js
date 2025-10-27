@@ -452,6 +452,9 @@ export async function saveFile(path, content, api, currentFile, mConsole, DEBUG,
             // mtimeソート時はエクスプローラーを再ソート
             if (appState) {
                 refreshExplorerSort(appState, editor);
+                // 保存したファイルのハイライトを復元
+                // （別のファイルを開く場合は、openFile側でハイライトが更新される）
+                restoreFileHighlight(appState, editor);
             }
         }
         ret = 1;
@@ -1086,7 +1089,7 @@ export function refreshExplorerSort(appState, editor) {
         // エクスプローラーを再描画
         editor.explorer.loadExplorer(appState.FILE_LIST);
         
-        // 再描画後、現在開いているファイルのハイライトを復元
-        restoreFileHighlight(appState, editor);
+        // 注意: ハイライト復元は呼び出し元で明示的に行う
+        // ファイル保存後に別のファイルを開く場合、ここで古いファイルをハイライトしてしまう問題を避けるため
     }
 }

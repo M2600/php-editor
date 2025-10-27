@@ -578,6 +578,11 @@ async function main(){
             api
         );
         
+        // ファイルを開いた後、正しいファイルをハイライト
+        if (APP_STATE.CURRENT_FILE && editor.explorer && typeof editor.explorer.highlightFile === 'function') {
+            editor.explorer.highlightFile(APP_STATE.CURRENT_FILE.path);
+        }
+        
         // ファイルが開かれたらボタンを有効化
         if (APP_STATE.FILE_ACTION_BUTTONS) {
             APP_STATE.FILE_ACTION_BUTTONS.update();

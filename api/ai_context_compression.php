@@ -110,6 +110,10 @@ function compressMessages($messages, $maxTokens = 3000) {
     
     // 保護メッセージだけで既に上限を超えている場合は保護メッセージのみ返す
     if ($protectedTokens >= $maxTokens) {
+        // AIの制約により、会話履歴は必ず'role': 'user'から始める必要がある
+        while (count($protectedMessages) > 0 && $protectedMessages[0]['role'] !== 'user') {
+            array_shift($protectedMessages);
+        }
         return $protectedMessages;
     }
     
@@ -166,6 +170,12 @@ function compressMessages($messages, $maxTokens = 3000) {
     
     // 最終的なメッセージを構築
     $finalMessages = array_merge($selectedMessages, $protectedMessages);
+    
+    // AIの制約により、会話履歴は必ず'role': 'user'から始める必要がある
+    // 先頭がuserでない場合は、userになるまでメッセージをカット
+    while (count($finalMessages) > 0 && $finalMessages[0]['role'] !== 'user') {
+        array_shift($finalMessages);
+    }
     
     return $finalMessages;
 }
@@ -274,7 +284,15 @@ function compressMessagesWithAI($messages, $apiUrl, $apiKey) {
                 'content' => "これまでの会話要約:\n" . $summary
             ];
             
-            return array_merge([$summaryMessage], $protectedMessages);
+            $result = array_merge([$summaryMessage], $protectedMessages);
+            
+            // AIの制約により、会話履歴は必ず'role': 'user'から始める必要がある
+            // 先頭がuserでない場合は、userになるまでメッセージをカット
+            while (count($result) > 0 && $result[0]['role'] !== 'user') {
+                array_shift($result);
+            }
+            
+            return $result;
         }
     } catch (Exception $e) {
         // AI要約に失敗した場合は従来の方法にフォールバック
@@ -352,6 +370,13 @@ function compressContext($messages, $maxTokens = 2500, $apiUrl = null, $apiKey =
             // }
             $messages = compressMessages($messages, $maxTokens * 0.8);
         }
+    }
+    
+    // 最終確認: AIの制約により、会話履歴は必ず'role': 'user'から始める必要がある
+    // 先頭がuserでない場合は、userになるまでメッセージをカット
+    while (count($messages) > 0 && isset($messages[0]['role']) && $messages[0]['role'] !== 'user') {
+        error_log("コンテキスト圧縮: 先頭が'user'でないため削除 - role: " . $messages[0]['role']);
+        array_shift($messages);
     }
     
     return $messages;

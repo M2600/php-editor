@@ -4203,6 +4203,32 @@ export class MEditor {
             `;
             content.appendChild(promptDesc);
 
+            // ツール使用チェックボックス
+            const toolCheckboxContainer = document.createElement("div");
+            toolCheckboxContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-tool-checkbox-container");
+            toolCheckboxContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-section");
+
+            const toolCheckboxLabel = document.createElement("label");
+            toolCheckboxLabel.textContent = "ツールを使用する";
+            toolCheckboxLabel.for = "useToolCheckbox";
+            toolCheckboxContainer.appendChild(toolCheckboxLabel);
+
+            const toolCheckbox = document.createElement("input");
+            toolCheckbox.type = "checkbox";
+            toolCheckbox.checked = chat.config.useTools || false;
+            toolCheckbox.id = "useToolCheckbox";
+            toolCheckboxLabel.prepend(toolCheckbox);
+
+            const toolDesc = document.createElement("div");
+            toolDesc.classList.add(this.CLASS_NAME_PREFIX + "chat-config-tool-desc");
+            toolDesc.innerHTML = `
+                <p>ツールの使用を有効にするとAIがファイルの作成や編集を行えるようになります。<br>
+                ツールに対応していないモデルの場合は使用できません。</p>
+            `;
+            toolCheckboxContainer.appendChild(toolDesc);
+
+            content.appendChild(toolCheckboxContainer);
+
             // チェックボックス追加
             let checkboxContainer = document.createElement("div");
             checkboxContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-checkbox-container");
@@ -4356,6 +4382,7 @@ export class MEditor {
                     apiKey: apiKeyInput.value,
                     useCustomPrompt: promptCheckbox.checked,
                     customPrompt: promptInput.value,
+                    useTools: toolCheckbox.checked
                 });
                 console.log("AI custom model: Saved");
                 window.remove();

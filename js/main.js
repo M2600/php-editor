@@ -1150,7 +1150,14 @@ async function main(){
 
     // Chat config
     chat.setOnConfigSaved(async (config) => {
-        saveAIConfig(config.baseUrl, config.apiKey, config.useCustomApi, config.customPrompt, config.useCustomPrompt);
+        saveAIConfig(
+            config.baseUrl, 
+            config.apiKey, 
+            config.useCustomApi, 
+            config.customPrompt, 
+            config.useCustomPrompt,
+            config.useTools
+        );
         console.log("AI custom model: Config saved", config);
         APP_STATE.AI_CONFIG = config;
         chat.config.customApiUrl = config.baseUrl;
@@ -1158,7 +1165,10 @@ async function main(){
         chat.config.useCustomApi = config.useCustomApi;
         chat.config.customPrompt = config.customPrompt;
         chat.config.useCustomPrompt = config.useCustomPrompt;
-        
+    // store both for backward compatibility: UI may call it useTools, internal logic uses useTools
+    chat.config.useTools = config.useTools;
+    chat.config.useTools = config.useTools;
+
         // 設定変更後にモデルリストを再読み込み
         let customApiConfig = null;
         if (config.useCustomApi && config.baseUrl && config.apiKey) {
@@ -1182,22 +1192,25 @@ async function main(){
 
     // Cookieから保存されたAI設定を復元
     const savedAIConfig = loadAIConfig();
-    if (savedAIConfig.apiUrl || savedAIConfig.apiKey || savedAIConfig.useCustomApi || savedAIConfig.customPrompt || savedAIConfig.useCustomPrompt) {
+    if (savedAIConfig.apiUrl || savedAIConfig.apiKey || savedAIConfig.useCustomApi || savedAIConfig.customPrompt || savedAIConfig.useCustomPrompt || savedAIConfig.useTools) {
         //console.log("AI custom setting: Restoring config from cookie", savedAIConfig);
         // chatコンポーネントに設定を復元
-        chat.config.customApiUrl = savedAIConfig.apiUrl || '';
-        chat.config.customApiKey = savedAIConfig.apiKey || '';
-        chat.config.useCustomApi = savedAIConfig.useCustomApi || false;
-        chat.config.customPrompt = savedAIConfig.customPrompt || '';
-        chat.config.useCustomPrompt = savedAIConfig.useCustomPrompt || false;
-        
+    chat.config.customApiUrl = savedAIConfig.apiUrl || '';
+    chat.config.customApiKey = savedAIConfig.apiKey || '';
+    chat.config.useCustomApi = savedAIConfig.useCustomApi || false;
+    chat.config.customPrompt = savedAIConfig.customPrompt || '';
+    chat.config.useCustomPrompt = savedAIConfig.useCustomPrompt || false;
+    // cookie stores useTools; keep both fields in chat.config for compatibility
+    chat.config.useTools = savedAIConfig.useTools || false;
+
         // APP_STATEにも保存
         APP_STATE.AI_CONFIG = {
             baseUrl: savedAIConfig.apiUrl || '',
             apiKey: savedAIConfig.apiKey || '',
             useCustomApi: savedAIConfig.useCustomApi || false,
             customPrompt: savedAIConfig.customPrompt || '',
-            useCustomPrompt: savedAIConfig.useCustomPrompt || false
+            useCustomPrompt: savedAIConfig.useCustomPrompt || false,
+            useTools: savedAIConfig.useTools || false
         };
     }
 

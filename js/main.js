@@ -1266,7 +1266,7 @@ async function main(){
             mConsole: mConsole,
             api: api,
             appState: APP_STATE,  // APP_STATEを渡す
-            enableTools: true,  // ツール機能を有効化
+            enableTools: chat.config.useTools,  // ツール機能を有効化
             maxToolCallCount: 50,
             requestAIMergeAndPreview: async (aiCode) => {
                 // この関数は必要に応じて実装

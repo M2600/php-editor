@@ -71,7 +71,11 @@ export function changeTheme(theme, currentFile, editor, userConfig, DEBUG){
         document.body.setAttribute("theme", "light");
         editor.THEME = "light";
     }
-    userConfig.set("theme", theme);
+    if (userConfig && userConfig instanceof UserConfig) {
+        // 保存するのは "dark" または "light" のみ
+        if (editor.THEME === "dark" || editor.THEME === "light")
+        userConfig.set("theme", theme);
+    }
 }
 
 // アプリケーション設定定数

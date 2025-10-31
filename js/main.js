@@ -1310,6 +1310,10 @@ async function main(){
     if ((now.getMonth() === 9 && now.getDate() >= 25) || (now.getMonth() === 10 && now.getDate() <= 3)) {
         theme = 'halloween';
     }
+    else if (theme === 'halloween') {
+        // ハロウィン期間外なら通常テーマに戻す
+        theme = 'light';
+    }
 
     changeTheme(theme, APP_STATE.CURRENT_FILE, editor, userConfig, CONFIG.DEBUG);
     if (theme === 'halloween') {

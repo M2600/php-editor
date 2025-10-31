@@ -1068,7 +1068,8 @@ export class MEditor {
         // let leftPanel = this.generateLeftPanel(main);
         // let explorer = this.generateExplorer(leftPanel);
 
-        this.generateHeader(parentObj.header, "PHP Editor");
+        let title = "PHP Editor";
+        this.generateHeader(parentObj.header, title);
         //this.generateExplorer(parentObj.main.left);
         
         // パネルサイズをlocalStorageから復元
@@ -1429,6 +1430,10 @@ export class MEditor {
         parentObj.header.element.appendChild(parentObj.header.menu.element);
 
         parentObj.element.appendChild(parentObj.header.element);
+
+        parentObj.header.setTitle = (title) => {
+            parentObj.header.title.element.innerHTML = title;
+        }
 
         return parentObj.header;
     }

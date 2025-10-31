@@ -1309,6 +1309,9 @@ async function main(){
     theme = 'halloween';
 
     changeTheme(theme, APP_STATE.CURRENT_FILE, editor, userConfig, CONFIG.DEBUG);
+    if (theme === 'halloween') {
+        editor.page.header.header.setTitle("PHP Edit🎃r");
+    }
     
     // JSONエディタのテーマも設定
     if(postJsonEditor && typeof postJsonEditor.setTheme === 'function'){

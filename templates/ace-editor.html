@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>PHP Editor</title>
+    <link rel="icon" href="media/icon.svg">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/editor.css">
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/ace_jp_ime.css">
+    <link rel="stylesheet" href="css/ace_ime_width.css">
+
+    <!--Google font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@100..900&display=swap" rel="stylesheet">
+
+    <style>
+
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>PHP Editor</h1>
+        <div id="user-menu">
+            <a href="/2.php">試験版UI</a>
+            <a href="/logout.php"><i class="fa-solid fa-right-from-bracket"></i>ログアウト</a>
+        </div>
+    </header>
+    <main>
+        <div id="left-side-bar" class="window">
+            <div id="explorer">
+                <h2 class="window-title">エクスプローラー</h2>
+                <div id="explorer-menu">
+                    <div id="explorer-title" class="explorer-menu-item">/</div>
+                    <div id="explorer-controls" class="explorer-menu-item">
+                        <button id="newFile" class="explorer-control-item" title="新たなファイルを作成"><i class="fa-solid fa-file-circle-plus"></i>新規</button>
+                        <button id="uploadFile" class="explorer-control-item" title="コンピュータからファイルをアップロードする"><i class="fa-solid fa-upload"></i>アップロード</button>
+                    </div>
+                </div>
+                <div id="explorer-content"></div>
+            </div>
+        </div>
+
+        <div id="main-container" class="window">
+            <div id="main-top-bar">
+                <div id="main-top-bar-left" class="main-top-bar-item">
+                    <button id="save-button" class="top-bar-button" title="ファイルを保存し、phpの構文チェックを行います"><i class="fa-regular fa-floppy-disk"></i>保存</button>
+                    <button id="open-other-window" class="top-bar-button" title="ファイルを保存し、別ページで表示します"><i class="fa-solid fa-play"></i>実行</button>
+                    <button id="qr-code-button" class="top-bar-button" title="実行ページのQRコードを表示します"><i class="fa-solid fa-qrcode"></i>QRコード</button>
+                    <p class="top-bar-text" id="file-name" style="display: none;"></p>
+                </div>
+                <div id="main-top-bar-right" class="main-top-bar-item">
+                    <button id="run-button" class="top-bar-button" title="phpファイルを実行し、結果をコンソールに表示します"><i class="fa-solid fa-bug"></i>エラーチェック</button>
+                </div>
+            </div>
+            <div id="main-body">
+                <div id="editor"></div>
+            </div>
+            <div id="main-bottom-bar">
+                <div id="log-output" class="console"></div>
+            </div>
+        </div>
+
+    </main>
+    <!-- ace editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ace.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!-- Extensions -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-inline_autocomplete.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-settings_menu.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-language_tools.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-inline_autocomplete.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!-- Language scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-javascript.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-javascript.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-php.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-html.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-json.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <!-- Keybinds -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/keybinding-vim.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/keybinding-emacs.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/keybinding-vscode.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/keybinding-sublime.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <!-- Snippets -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-snippets.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!-- emmet-->
+    <script src="https://cloud9ide.github.io/emmet-core/emmet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-emmet.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!--fontawesome-->
+    <script src="https://kit.fontawesome.com/e87421e015.js" crossorigin="anonymous"></script>
+
+    <!-- qrcode -->
+    <script src="js/qrcode.js"></script>
+    
+    <script src="js/editor.js"></script>
+
+</body>
+</html>

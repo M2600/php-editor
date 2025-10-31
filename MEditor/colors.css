@@ -1,0 +1,106 @@
+
+:root{
+	--me-color-link: #007bff;
+
+	--me-color-accept: #5cb85c;
+	--me-color-accept-hover: #4cae4c;
+	--me-color-reject: #fd231f;
+	--me-color-reject-hover: #c9302c;
+	--me-color-warning: #f0ad4e;
+	--me-color-warning-hover: #ec971f;
+	
+}
+
+body[theme="dark"] {
+
+	--me-color-text: #fff;
+	--me-color-text-secondary: #999;
+	--me-color-title: #fff;
+	--me-color-subtitle: #ccc;
+	--me-color-bg: #333;
+	--me-color-bg-active: #666;
+	--me-color-bg-active-active: #999;
+	--me-color-border: #666;
+
+	--me-color-input-bg: #444;
+	--me-color-input-border: #666;
+
+	--me-color-sash: rgb(255, 255, 255, 0.2);
+
+	--me-color-editor-bg: #272822;
+
+	--me-color-editor-bg-added: #335530;
+	--me-color-editor-bg-removed: #5e2e2d;
+}
+
+body[theme="light"] {
+	--me-color-text: #333;
+	--me-color-text-secondary: #888;
+	--me-color-title: #000;
+	--me-color-subtitle: #555;
+
+	--me-color-bg: #f8f9fa;
+	--me-color-bg-active: #ccc;
+	--me-color-bg-active-active: #ddd;
+	--me-color-border: #ccc;
+
+	--me-color-input-bg: #ddd;
+	--me-color-input-bg-active: #eee;
+
+	--me-color-sash: rgb(0, 0, 0, 0.2);
+
+	--me-color-editor-bg: #e6e6e6;
+
+	--me-color-editor-bg-added: #e6ffe6;
+	--me-color-editor-bg-removed: #ffe6e6;
+}
+
+
+body[theme="halloween"] {
+	/* Primary text/colors for Halloween theme */
+	--me-color-text: #EDEDED; /* pale grey text on dark bg */
+	--me-color-text-secondary: #BDB3A0;
+
+	--me-color-title: #FF6A00; /* pumpkin orange for titles */
+	--me-color-subtitle: #F9D371; /* pale pumpkin for subtitles */
+
+	/* Backgrounds */
+	--me-color-bg: #0B0B0D; /* night background */
+	--me-color-panel: #2E1A06; /* dark wood / panel */
+	--me-color-bg-active: #FF6A00; /* pumpkin orange */
+	--me-color-bg-active-active: #F9D371; /* pale pumpkin */
+
+	/* Borders / inputs */
+	--me-color-border: rgba(255,106,0,0.12);
+	--me-color-input-bg: #2E1A06;
+	--me-color-input-bg-active: #F9D371;
+
+	--me-color-sash: rgba(255,255,255,0.06);
+
+	/* Editor */
+	--me-color-editor-bg: #1A0F06; /* deep editor background */
+	--me-color-editor-bg-added: #335530;
+	--me-color-editor-bg-removed: #5e2e2d;
+
+	/* Action colors */
+	--me-color-accept: #6B8E23; /* mossy green */
+	--me-color-accept-hover: #5a7a1d;
+	--me-color-reject: #fd231f;
+	--me-color-reject-hover: #c9302c;
+
+	/* Additional theme-specific variables */
+	--halloween-accent: #FF6A00;
+	--halloween-accent-2: #F9D371;
+	--halloween-success: #6B8E23;
+	--halloween-link: #7D2A6A;
+	--halloween-border: rgba(255,106,0,0.12);
+	--halloween-bg: #0B0B0D;
+	--halloween-panel: #2E1A06;
+}
+
+
+
+
+
+
+

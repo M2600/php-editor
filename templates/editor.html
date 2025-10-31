@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHP Editor</title>
+    <link rel="icon" href="../media/icon.svg">
+    <style>
+        html{
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+        }
+        body
+        {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="../css/ace_ime_width.css">
+    <link rel="stylesheet" href="../css/ace_jp_ime.css">
+</head>
+<body theme="dark">
+    <div id="main"></div>
+    <!-- ace editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ace.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!-- Extensions -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-inline_autocomplete.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-settings_menu.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-language_tools.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-inline_autocomplete.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!-- Language scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-javascript.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-javascript.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-php.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-html.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-markdown.js" integrity="sha512-0U+vlO9in3vFQg1z+k22wEH08s4XduMRQhJQ5F1sSUZlPQQWRRT4q4E01jyfpfvSbgN7xbUXFrQLSXXIWJvqEA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <!-- Keybinds -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/keybinding-vim.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/keybinding-emacs.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/keybinding-vscode.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/keybinding-sublime.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <!-- Snippets -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/mode-snippets.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!-- emmet-->
+    <script src="https://cloud9ide.github.io/emmet-core/emmet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.4/ext-emmet.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!--fontawesome-->
+    <script src="https://kit.fontawesome.com/e87421e015.js" crossorigin="anonymous"></script>
+    
+    <!-- MEditor -->
+    <!--script src="../MEditor/MEditor.js?v=<?php echo date("ymdHis",filemtime("./MEditor/MEditor.js")); ?>"></script-->
+
+    <!--markdown render-->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+
+    <!-- Import Maps -->
+    <script type="importmap">
+        {
+            "imports": {
+                <?php
+                // モジュールリストの取得
+                function getModuleVersions($baseDir) {
+                    $modules = [];
+                    if (!is_dir($baseDir)) {
+                        return $modules;
+                    }
+                    
+                    $iterator = new RecursiveIteratorIterator(
+                        new RecursiveDirectoryIterator($baseDir, RecursiveDirectoryIterator::SKIP_DOTS)
+                    );
+                    
+                    foreach ($iterator as $file) {
+                        if ($file->isFile() && $file->getExtension() === 'js') {
+                            $relativePath = str_replace($baseDir . '/', '', $file->getPathname());
+                            $modules[$relativePath] = filemtime($file->getPathname());
+                        }
+                    }
+                    return $modules;
+                }
+
+                // js/ と MEditor/ の両方をスキャン
+                $baseDir = realpath(__DIR__ . '/../');
+                $jsDir = $baseDir . '/js';
+                $meditorDir = $baseDir . '/MEditor';
+                
+                $imports = [];
+                
+                // js/ ディレクトリのモジュール
+                $jsModules = getModuleVersions($jsDir);
+                foreach ($jsModules as $path => $version) {
+                    $webPath = './js/' . $path;
+                    $imports[] = json_encode($webPath) . ': ' . json_encode($webPath . '?v=' . $version);
+                }
+                
+                // MEditor/ ディレクトリのモジュール
+                $meditorModules = getModuleVersions($meditorDir);
+                foreach ($meditorModules as $path => $version) {
+                    $webPath = './MEditor/' . $path;
+                    $imports[] = json_encode($webPath) . ': ' . json_encode($webPath . '?v=' . $version);
+                }
+                
+                echo implode(",\n                ", $imports);     
+                ?>
+            }
+        }
+    </script>
+
+
+    <!--jsdiff-->
+    <script src="../js/diff.js?v=<?php echo date("ymdHis",filemtime("./js/diff.js")); ?>"></script>
+
+    <!-- Error Logger -->
+    <script src="../js/error-logger.js?v=<?php echo date("ymdHis",filemtime("./js/error-logger.js")); ?>"></script>
+    
+    <!-- js -->
+    <script src="../js/qrcode.js?v=<?php echo date("ymdHis",filemtime("./js/qrcode.js")); ?>"></script>
+    <script type="module" src="../js/main.js?v=<?php echo date("ymdHis",filemtime("./js/main.js")); ?>"></script>
+</body>
+</html>

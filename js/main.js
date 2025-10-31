@@ -1306,7 +1306,10 @@ async function main(){
     }
 
     // halloween仕様 最初だけhalloweenテーマ
-    theme = 'halloween';
+    const now = new Date();
+    if ((now.getMonth() === 9 && now.getDate() >= 25) || (now.getMonth() === 10 && now.getDate() <= 3)) {
+        theme = 'halloween';
+    }
 
     changeTheme(theme, APP_STATE.CURRENT_FILE, editor, userConfig, CONFIG.DEBUG);
     if (theme === 'halloween') {

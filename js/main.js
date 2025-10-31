@@ -1307,7 +1307,7 @@ async function main(){
 
     // halloween仕様 最初だけhalloweenテーマ
     const now = new Date();
-    if ((now.getMonth() === 9 && now.getDate() >= 25) || (now.getMonth() === 10 && now.getDate() <= 3)) {
+    if ((now.getMonth() === 10 && now.getDate() >= 25) && (now.getMonth() === 10 && now.getDate() <= 31)) {
         theme = 'halloween';
     }
     else if (theme === 'halloween') {

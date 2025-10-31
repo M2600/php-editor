@@ -3330,7 +3330,14 @@ export class MEditor {
                 aceEditor.$blockScrolling = Infinity;
                 
                 // テーマ設定（親のテーマに合わせる）
-                const theme = this.THEME === 'dark' ? 'ace/theme/monokai' : 'ace/theme/chrome';
+                let theme = 'ace/theme/chrome';
+                if (this.THEME === 'dark') {
+                    theme = 'ace/theme/monokai';
+                } else if (this.THEME === 'halloween') {
+                    theme = 'ace/theme/vibrant_ink';
+                } else {
+                    theme = 'ace/theme/chrome';
+                }
                 aceEditor.setTheme(theme);
                 
                 aceEditor.setFontSize(13);
@@ -3486,7 +3493,14 @@ export class MEditor {
                     return;
                 }
                 
-                const aceTheme = theme === 'dark' ? 'ace/theme/monokai' : 'ace/theme/chrome';
+                let aceTheme = 'ace/theme/chrome';
+                if (theme === 'dark') {
+                    aceTheme = 'ace/theme/monokai';
+                } else if (theme === 'halloween') {
+                    aceTheme = 'ace/theme/vibrant_ink';
+                } else {
+                    aceTheme = 'ace/theme/chrome';
+                }
                 ace.setTheme(aceTheme);
             };
             

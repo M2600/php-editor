@@ -93,6 +93,9 @@ export async function openFile(file, aceList, editor, mConsole, extLangMap, DEBU
         if(editor.THEME == "dark") {
             file.aceObj.editor.setTheme("ace/theme/monokai");
         }
+        else if (editor.THEME == "halloween") {
+            file.aceObj.editor.setTheme("ace/theme/vibrant_ink");
+        }
         else{
             file.aceObj.editor.setTheme("ace/theme/chrome");
         }

@@ -57,6 +57,13 @@ export function changeTheme(theme, currentFile, editor, userConfig, DEBUG){
         document.body.setAttribute("theme", "dark");
         editor.THEME = "dark";
     }
+    else if (theme == "halloween"){
+        if(currentFile){
+            currentFile.aceObj.editor.setTheme("ace/theme/vibrant_ink");
+        }
+        document.body.setAttribute("theme", "halloween");
+        editor.THEME = "halloween";
+    }
     else{
         if(currentFile){
             currentFile.aceObj.editor.setTheme("ace/theme/chrome");

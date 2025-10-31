@@ -276,6 +276,9 @@ async function main(){
             if(theme == "dark"){
                 APP_STATE.CURRENT_FILE.aceObj.editor.setTheme("ace/theme/monokai");
             }
+            else if (theme == "halloween"){
+                APP_STATE.CURRENT_FILE.aceObj.editor.setTheme("ace/theme/vibrant_ink");
+            }
             else{
                 APP_STATE.CURRENT_FILE.aceObj.editor.setTheme("ace/theme/chrome");
             }
@@ -1301,6 +1304,10 @@ async function main(){
     if(theme == null){
         theme = "light";
     }
+
+    // halloween仕様 最初だけhalloweenテーマ
+    theme = 'halloween';
+
     changeTheme(theme, APP_STATE.CURRENT_FILE, editor, userConfig, CONFIG.DEBUG);
     
     // JSONエディタのテーマも設定

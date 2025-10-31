@@ -90,15 +90,7 @@ export async function openFile(file, aceList, editor, mConsole, extLangMap, DEBU
             DEBUG && console.log("ace already exists, and file changed flag is true");
         }
         // set theme
-        if(editor.THEME == "dark") {
-            file.aceObj.editor.setTheme("ace/theme/monokai");
-        }
-        else if (editor.THEME == "halloween") {
-            file.aceObj.editor.setTheme("ace/theme/vibrant_ink");
-        }
-        else{
-            file.aceObj.editor.setTheme("ace/theme/chrome");
-        }
+        file.aceObj.editor.setTheme(editor.ACE_THEME || 'ace/theme/chrome');
 
         // reset ace change action
         if(file.aceChangeAction != undefined && file.aceChangeAction != null){

@@ -98,6 +98,51 @@ body[theme="halloween"] {
 	--halloween-panel: #2E1A06;
 }
 
+/* Christmas seasonal theme */
+body[theme="christmas"] {
+	/* Primary text/colors for Christmas theme */
+	--me-color-text: #0b1b12; /* dark green text on light bg */
+	--me-color-text-secondary: #4b6b5a;
+
+	--me-color-title: #C62828; /* festive red for titles */
+	--me-color-subtitle: #2E7D32; /* pine green for subtitles */
+
+	/* Backgrounds */
+	--me-color-bg: #FBFBF9; /* soft cream background */
+	--me-color-panel: #F0EFEA; /* subtle panel */
+	--me-color-bg-active: #C62828; /* action red */
+	--me-color-bg-active-active: #2E7D32; /* active green */
+
+	/* Borders / inputs */
+	--me-color-border: rgba(198,40,40,0.12);
+	/* Slight warm pink so input fields stand out on the light Christmas background */
+	/* Darkened slightly to improve contrast */
+	--me-color-input-bg: #ffe5e5;
+	--me-color-input-bg-active: #F2F7F2;
+
+	--me-color-sash: rgba(0,0,0,0.04);
+
+	/* Editor */
+	--me-color-editor-bg: #FAFAF8; /* light editor background */
+	--me-color-editor-bg-added: #e8f5e9; /* greenish added */
+	--me-color-editor-bg-removed: #ffebee; /* reddish removed */
+
+	/* Action colors */
+	--me-color-accept: #2E7D32; /* pine green */
+	--me-color-accept-hover: #27692b;
+	--me-color-reject: #C62828; /* festive red */
+	--me-color-reject-hover: #9b2020;
+
+	/* Additional theme-specific variables */
+	--christmas-accent: #C62828;
+	--christmas-accent-2: #2E7D32;
+	--christmas-sparkle: #FFD54F; /* golden sparkle */
+	--christmas-link: #0B5F3A;
+	--christmas-border: rgba(198,40,40,0.12);
+	--christmas-bg: #FBFBF9;
+	--christmas-panel: #F0EFEA;
+}
+
 
 
 

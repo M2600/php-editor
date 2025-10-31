@@ -48,28 +48,15 @@ export class UserConfig {
     }
 }
 
-export function changeTheme(theme, currentFile, editor, userConfig, DEBUG){
+export function changeTheme(theme, aceTheme, currentFile, editor, userConfig, DEBUG){
     DEBUG && console.log("Theme: ", theme);
-    if(theme == "dark"){
+    editor.THEME = theme;
+    editor.ACE_THEME = aceTheme;
+    if(aceTheme){
         if(currentFile){
-            currentFile.aceObj.editor.setTheme("ace/theme/monokai");
+            currentFile.aceObj.editor.setTheme(aceTheme);
         }
-        document.body.setAttribute("theme", "dark");
-        editor.THEME = "dark";
-    }
-    else if (theme == "halloween"){
-        if(currentFile){
-            currentFile.aceObj.editor.setTheme("ace/theme/vibrant_ink");
-        }
-        document.body.setAttribute("theme", "halloween");
-        editor.THEME = "halloween";
-    }
-    else{
-        if(currentFile){
-            currentFile.aceObj.editor.setTheme("ace/theme/chrome");
-        }
-        document.body.setAttribute("theme", "light");
-        editor.THEME = "light";
+    document.body.setAttribute("theme", theme);
     }
     if (userConfig && userConfig instanceof UserConfig) {
         // 保存するのは "dark" または "light" のみ

@@ -202,7 +202,8 @@ export class MEditor {
         this.DELETE_DIALOG_DISABLED = false;
         this.RENAME_DIALOG_DISABLED = false;
         this.DUPLICATE_DIALOG_DISABLED = false;
-        this.THEME = "dark"; // dark | light
+        this.THEME = "dark";
+        this.ACE_THEME = "ace/theme/monokai";
         this.runBrowserTab = false;
 
         //this.explorer = {};
@@ -3334,17 +3335,8 @@ export class MEditor {
                 aceEditor = ace.edit(aceEditorId);
                 aceEditor.$blockScrolling = Infinity;
                 
-                // テーマ設定（親のテーマに合わせる）
-                let theme = 'ace/theme/chrome';
-                if (this.THEME === 'dark') {
-                    theme = 'ace/theme/monokai';
-                } else if (this.THEME === 'halloween') {
-                    theme = 'ace/theme/vibrant_ink';
-                } else {
-                    theme = 'ace/theme/chrome';
-                }
-                aceEditor.setTheme(theme);
-                
+                aceEditor.setTheme(this.ACE_THEME || 'ace/theme/chrome');
+
                 aceEditor.setFontSize(13);
                 aceEditor.setShowPrintMargin(false);
                 aceEditor.getSession().setMode("ace/mode/json");
@@ -3491,22 +3483,14 @@ export class MEditor {
 
             
             // テーマ変更メソッド
-            jsonEditor.setTheme = (theme) => {
+            jsonEditor.setTheme = (aceTheme) => {
                 const ace = jsonEditor.aceEditor || initAce();
                 if (!ace) {
                     console.warn('JSON Editor: setTheme skipped - Ace not initialized yet');
                     return;
                 }
-                
-                let aceTheme = 'ace/theme/chrome';
-                if (theme === 'dark') {
-                    aceTheme = 'ace/theme/monokai';
-                } else if (theme === 'halloween') {
-                    aceTheme = 'ace/theme/vibrant_ink';
-                } else {
-                    aceTheme = 'ace/theme/chrome';
-                }
-                ace.setTheme(aceTheme);
+
+                ace.setTheme(aceTheme || 'ace/theme/chrome');
             };
             
         } else {

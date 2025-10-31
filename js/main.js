@@ -46,6 +46,7 @@ import {
     phpSyntaxCheck
 } from './modules/core/file-manager.js';
 import { saveAIConfig, loadAIConfig } from './modules/utils/cookie.js';
+import { getThemeByName, getEventTheme } from './modules/utils/themes.js';
 
 
 // Export main instances for global access
@@ -270,26 +271,20 @@ async function main(){
     await editor.editor("main");
     editor.DEBUG = CONFIG.DEBUG;
 
-    editor.setChangeThemeAction((theme) => {
-        CONFIG.DEBUG && console.log("Theme: ", theme);
+    editor.setChangeThemeAction((themeName) => {
+        CONFIG.DEBUG && console.log("Theme: ", themeName);
+        const theme = getThemeByName(themeName);
         if(APP_STATE.CURRENT_FILE && APP_STATE.CURRENT_FILE.aceObj != undefined){
-            if(theme == "dark"){
-                APP_STATE.CURRENT_FILE.aceObj.editor.setTheme("ace/theme/monokai");
-            }
-            else if (theme == "halloween"){
-                APP_STATE.CURRENT_FILE.aceObj.editor.setTheme("ace/theme/vibrant_ink");
-            }
-            else{
-                APP_STATE.CURRENT_FILE.aceObj.editor.setTheme("ace/theme/chrome");
-            }
+
+            APP_STATE.CURRENT_FILE.aceObj.editor.setTheme(theme.aceTheme);
         }
         
         // JSONエディタのテーマも変更
         if(postJsonEditor && typeof postJsonEditor.setTheme === 'function'){
-            postJsonEditor.setTheme(theme);
+            postJsonEditor.setTheme(theme.aceTheme);
         }
         
-        userConfig.set("theme", theme);
+        userConfig.set("theme", theme.name);
     });
 
     editor.page.header.header.menu.items.push(editor.generateButton(
@@ -1300,29 +1295,27 @@ async function main(){
     });
 
     // テーマ設定
-    let theme = userConfig.get("theme");
-    if(theme == null){
-        theme = "light";
+    let themeName = userConfig.get("theme");
+    if(themeName == null){
+        themeName = CONFIG.DEFAULT_THEME || 'light';
     }
 
-    // halloween仕様 最初だけhalloweenテーマ
-    const now = new Date();
-    if ((now.getMonth() === 10 && now.getDate() >= 25) && (now.getMonth() === 10 && now.getDate() <= 31)) {
-        theme = 'halloween';
-    }
-    else if (theme === 'halloween') {
-        // ハロウィン期間外なら通常テーマに戻す
-        theme = 'light';
-    }
-
-    changeTheme(theme, APP_STATE.CURRENT_FILE, editor, userConfig, CONFIG.DEBUG);
-    if (theme === 'halloween') {
-        editor.page.header.header.setTitle("PHP Edit🎃r");
-    }
+    const theme = getThemeByName(themeName);
     
+    const eventTheme = getEventTheme();
+    if(eventTheme){
+        console.log("Applying event theme:", eventTheme.name);
+        changeTheme(eventTheme.name, eventTheme.aceTheme, APP_STATE.CURRENT_FILE, editor, userConfig, CONFIG.DEBUG);
+        editor.page.header.header.setTitle(eventTheme.customTitle);
+    }
+    else {
+        changeTheme(theme.name, theme.aceTheme, APP_STATE.CURRENT_FILE, editor, userConfig, CONFIG.DEBUG);
+        editor.page.header.header.setTitle(theme.customTitle);
+    }
+
     // JSONエディタのテーマも設定
     if(postJsonEditor && typeof postJsonEditor.setTheme === 'function'){
-        postJsonEditor.setTheme(theme);
+        postJsonEditor.setTheme(eventTheme ? eventTheme.aceTheme : theme.aceTheme);
     }
 
     // セッション生存確認を開始

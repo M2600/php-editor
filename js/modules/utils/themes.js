@@ -18,7 +18,7 @@ export const THEMES = [
 		customTitle: 'PHP Edit🎃r'
 	},
 	{
-		start: {month: 10, day:20},
+		start: {month: 12, day:20},
 		end: {month: 12, day:25},
 		name: 'christmas',
 		aceTheme: 'ace/theme/tomorrow',

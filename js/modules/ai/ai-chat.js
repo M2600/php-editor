@@ -909,8 +909,16 @@ export async function sendAIMessage({
                                     console.log("AI生成がユーザーによって停止されました");
                                     chat.updateLastAIMessage('<span style="color:#888">生成が停止されました</span>', true);
                                 } else {
-                                    chat.updateLastAIMessage('<span style="color:red">AI応答エラー: '+errMsg+'</span>', true);
-                                    console.error("AI応答エラー:", errMsg);
+                                    if (typeof errMsg === 'string') {
+                                        chat.updateLastAIMessage('<span style="color:red">AI応答エラー: '+errMsg+'</span>', true);
+                                        console.warn("AI応答エラー:", errMsg);
+                                    } else if (errMsg && errMsg.message) {
+                                        chat.updateLastAIMessage('<span style="color:red">AI応答エラー: '+errMsg.message+'</span>', true);
+                                        console.warn("AI応答エラー:", errMsg.message);
+                                    } else {
+                                        chat.updateLastAIMessage('<span style="color:red">不明なAI応答エラーが発生しました</span>', true);
+                                        console.warn("不明なAI応答エラー:", errMsg);
+                                    }
                                 }
                                 historyManager.setStreaming(false);
                                 if (typeof chat.hideLoading === 'function') chat.hideLoading();

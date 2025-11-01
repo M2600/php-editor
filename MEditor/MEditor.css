@@ -314,6 +314,7 @@ i {
 .meditor-header-menu {
     margin-left: auto;
     display: flex;
+    flex-direction: row;
     padding-right: .5em;
     align-items: center;
 }
@@ -321,6 +322,10 @@ i {
 .meditor-header-menu button {
     height: fit-content;
     border: none;
+    height: 1.5em;
+}
+.meditor-header-menu label {
+    height: 1.5em;
 }
 
 
@@ -427,6 +432,12 @@ i {
 
 .meditor-explorer-menu-control {
     margin-left: auto;
+    display: flex;
+    flex-direction: row;
+}
+
+.meditor-explorer-top-button {
+    height: 1.5em;
 }
 
 

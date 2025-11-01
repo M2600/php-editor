@@ -1150,10 +1150,15 @@ export class MEditor {
         return label;
     }
 
-    generateButton(parentObj, text, clickAction, tooltip="") {
+    generateButton(parentObj, text, clickAction, tooltip="", opt={}) {
         let button = {};
         button.element = document.createElement("button");
         button.element.classList.add(this.CLASS_NAME_PREFIX + "button");
+        if (opt.classList && Array.isArray(opt.classList)) {
+            opt.classList.forEach(cls => {
+                button.element.classList.add(cls);
+            });
+        }
         button.element.innerHTML = text;
         if(tooltip) button.element.title = tooltip;
         if(clickAction){
@@ -1601,7 +1606,8 @@ export class MEditor {
             parentObj.explorer.menu.control,
             "新規ファイル",
             (e) => {parentObj.explorer.newFileClickAction();},
-            "新しいファイルを作成"
+            "新しいファイルを作成",
+            {classList: [this.CLASS_NAME_PREFIX + "explorer-top-button"]}
         );
         
         parentObj.explorer.menu.control.items.push(newFileButton);
@@ -1611,7 +1617,8 @@ export class MEditor {
             parentObj.explorer.menu.control,
             "↕",
             (e) => { /* ソートメニューはクリックイベントで処理 */ },
-            "ファイルの並び替え"
+            "ファイルの並び替え",
+            {classList: [this.CLASS_NAME_PREFIX + "explorer-top-button"]}
         );
         sortButton.addTrigger("click", (e) => {
             e.stopPropagation();
@@ -1652,7 +1659,8 @@ export class MEditor {
                     parentObj.explorer.reloadClickAction();
                 }
             },
-            "エクスプローラーを再読み込み"
+            "エクスプローラーを再読み込み",
+            {classList: [this.CLASS_NAME_PREFIX + "explorer-top-button"]}
         );
         parentObj.explorer.menu.control.items.push(reloadButton);
         parentObj.explorer.reloadClickAction = () => {
@@ -1667,7 +1675,8 @@ export class MEditor {
             parentObj.explorer.menu.control,
             "⋮",
             (e) => { /* その他メニューはクリックイベントで処理 */ },
-            "その他の操作"
+            "その他の操作",
+            {classList: [this.CLASS_NAME_PREFIX + "explorer-top-button"]}
         );
         otherButton.addTrigger("click", (e) => {
             e.stopPropagation();

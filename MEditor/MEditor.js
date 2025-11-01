@@ -1422,10 +1422,12 @@ export class MEditor {
             if(document.body.getAttribute("theme") == "dark"){
                 document.body.setAttribute("theme", "light");
                 this.THEME = "light";
+                this.ACE_THEME = "ace/theme/chrome";
             }
             else{
                 document.body.setAttribute("theme", "dark");
                 this.THEME = "dark";
+                this.ACE_THEME = "ace/theme/monokai";
             }
             this.changeThemeAction(this.THEME);
         });

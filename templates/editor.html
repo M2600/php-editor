@@ -21,7 +21,15 @@
         }
     </style>
     <link rel="stylesheet" href="css/index.css">
-    <link rel="stylesheet" href="../css/ace_ime_width.css">
+    <script>
+        // Linux環境の場合のみIME width調整用CSSを適用
+        if (navigator.userAgent.includes('Linux') && !navigator.userAgent.includes('Android')) {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = '../css/ace_ime_width.css';
+            document.head.appendChild(link);
+        }
+    </script>
     <link rel="stylesheet" href="../css/ace_jp_ime.css">
 </head>
 <body theme="dark">

@@ -4249,6 +4249,7 @@ export class MEditor {
             checkboxContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-section");
             let label = document.createElement("label");
             label.textContent = "カスタムAI APIを使用する";
+            label.id = "customApiCheckboxLabel";
             label.for = "customApiCheckbox";
             checkboxContainer.appendChild(label);
             let checkbox = document.createElement("input");
@@ -4263,6 +4264,7 @@ export class MEditor {
             let baseUrlContainer = document.createElement("div");
             baseUrlContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-base-url-container");
             baseUrlContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-section");
+            baseUrlContainer.id = "AIChatCustomAPIBaseUrlContainer";
             let baseUrlLabel = document.createElement("label");
             baseUrlLabel.classList.add(this.CLASS_NAME_PREFIX + "chat-config-base-url-label");
             baseUrlLabel.textContent = "ベースURL:";
@@ -4286,6 +4288,7 @@ export class MEditor {
             let apiKeyContainer = document.createElement("div");
             apiKeyContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-api-key-container");
             apiKeyContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-config-section");
+            apiKeyContainer.id = "AIChatCustomAPIKeyContainer";
             let apiKeyLabel = document.createElement("label");
             apiKeyLabel.classList.add(this.CLASS_NAME_PREFIX + "chat-config-api-key-label");
             apiKeyLabel.textContent = "APIキー:";
@@ -4375,6 +4378,7 @@ export class MEditor {
             let description = document.createElement("div");
             description.classList.add(this.CLASS_NAME_PREFIX + "chat-config-description");
             description.classList.add(this.CLASS_NAME_PREFIX + "chat-config-section");
+            description.id = "AIChatCustomAPIDescription";
             description.innerHTML = `
                 <p>OpenAI形式のAPIを提供するAIを使用することができます。<br>
                 APIのURL及び有効なAPIキーを入力してください。</p>

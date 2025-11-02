@@ -1700,6 +1700,26 @@ i {
     border-color: #555;
 }
 
+/* Temporally disable custom AI API */
+#customApiCheckbox {
+    display: none;
+}
+#customApiCheckboxLabel {
+    display: none;
+}
+#AIChatCustomAPIBaseUrlContainer {
+    display: none;
+}
+#AIChatCustomAPIKeyContainer {
+    display: none;
+}
+#AIChatCustomAPIDescription {
+    display: none;
+}
+
+
+
+
 /* --- マークダウン（marked.js）用スタイル --- */
 .meditor-chat-message-ai pre, .meditor-chat-message-ai code {
     font-family: "Noto Sans Mono", "Fira Mono", "Consolas", monospace;

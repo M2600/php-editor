@@ -1121,6 +1121,12 @@ async function main(){
             customApiKey = APP_STATE.AI_CONFIG.apiKey;
         }
         
+        // カスタムプロンプトを取得
+        let customPrompt = null;
+        if (APP_STATE.AI_CONFIG.useCustomPrompt && APP_STATE.AI_CONFIG.customPrompt) {
+            customPrompt = APP_STATE.AI_CONFIG.customPrompt;
+        }
+        
         AIMerge(
             APP_STATE.CURRENT_FILE.aceObj.editor.getValue(), 
             codeText, 
@@ -1131,7 +1137,8 @@ async function main(){
             mConsole,
             editorEditor,
             customUrl,
-            customApiKey
+            customApiKey,
+            customPrompt
         ).then(() => {
             applyBtn.stopLoading();
             // 成功フィードバック

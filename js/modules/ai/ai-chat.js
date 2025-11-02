@@ -250,7 +250,7 @@ export function setupInputHistoryHotkeys(chat, historyManager) {
     });
 }
 
-export async function AIMerge(baseCode, aiCode, modelSelect, fetchAIChat, editor, currentFile, mConsole, editorEditor, customUrl = null, customApiKey = null) {
+export async function AIMerge(baseCode, aiCode, modelSelect, fetchAIChat, editor, currentFile, mConsole, editorEditor, customUrl = null, customApiKey = null, customPrompt = null) {
     const prompt = `Merge the following code snippets:
 
 Base Code:
@@ -275,6 +275,7 @@ Please provide the merged code only, without any additional text or explanations
             smoothOutput: true, // スムーズ出力を有効化
             customUrl: customUrl,
             customApiKey: customApiKey,
+            customPrompt: customPrompt, // ベースプロンプトを渡す
             onDelta: (delta, chunk, isSmooth) => {
                 // ストリーム更新処理
                 if (isSmooth) {
@@ -559,6 +560,7 @@ export async function sendAIMessage({
     requestAIMergeAndPreview,
     customUrl = null,
     customApiKey = null,
+    customPrompt = null,  // ベースプロンプトを追加
     editor = null,
     mConsole = null,
     api = null,
@@ -651,6 +653,7 @@ export async function sendAIMessage({
                 smoothOutput: true, // スムーズ出力を有効化
                 customUrl: customUrl,
                 customApiKey: customApiKey,
+                customPrompt: customPrompt,  // ベースプロンプトを渡す
                 onDelta: async (delta, chunk, isSmooth, tool_calls) => {
                     // ツール呼び出しの処理
                     if (tool_calls && aiTool) {
@@ -864,6 +867,7 @@ export async function sendAIMessage({
                             smoothOutput: true,
                             customUrl: customUrl,
                             customApiKey: customApiKey,
+                            customPrompt: customPrompt, // ベースプロンプトを渡す
                             onDelta: (delta, chunk, isSmooth, tool_calls) => {
                                 // 2回目以降のツール呼び出しにも対応
                                 if (tool_calls && aiTool) {

@@ -149,6 +149,14 @@ async function executeCurrentFile() {
         // Webページモード: プレビューiframeで実行
         console.log("Run in preview iframe (Web page mode)");
         
+        // コンソールとエラーをクリア
+        if (mConsole && typeof mConsole.clear === 'function') {
+            mConsole.clear();
+        }
+        if (APP_STATE.IFRAME_ERROR_HANDLER) {
+            APP_STATE.IFRAME_ERROR_HANDLER.clearErrors();
+        }
+        
         // まずファイルを保存
         if (APP_STATE.CURRENT_FILE.changed && !APP_STATE.CURRENT_FILE.readonly) {
             await saveFile(
@@ -1067,7 +1075,19 @@ async function main(){
     APP_STATE.WEB_PREVIEWER = webPreviewer;
 
     // iframe用エラーハンドラーを初期化
-    const iframeErrorHandler = new IframeErrorHandler(webPreviewer, mConsole);
+    const iframeErrorHandler = new IframeErrorHandler(webPreviewer, mConsole, {
+        // エラー発生時のコールバック: コンソールタブを表示
+        onError: (errorData, errorCount) => {
+            // Webページモードの場合のみコンソールタブを自動表示
+            if (APP_STATE.RUN_MODE === 'WEB_MODE') {
+                // コンソールタブ（API開発メニュー）を表示
+                tabContainer.showTab(dictMenuTab.id);
+                // タブを切り替え
+                tabContainer.activateTab(dictMenuTab.id);
+                console.log(`⚠️ エラー検出: コンソールタブを自動表示 (エラー数: ${errorCount})`);
+            }
+        }
+    });
     APP_STATE.IFRAME_ERROR_HANDLER = iframeErrorHandler;
 
     // リロードボタンのコールバックを設定（保存してからリロード）

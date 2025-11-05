@@ -7,7 +7,6 @@ import { UserConfig, changeTheme, CONFIG, APP_STATE } from './modules/core/confi
 import { loadExplorer, saveSortSettings } from './modules/core/file-manager.js';
 import { startSessionPulse } from './modules/core/pulse.js';
 import { ExplorerAutoReload } from './modules/core/explorer-auto-reload.js';
-import { IframeErrorHandler } from './modules/core/iframe-error-handler.js';
 
 // UI modules
 import { MEditor } from '../MEditor/MEditor.js';
@@ -175,14 +174,9 @@ async function executeCurrentFile() {
             }
         }
         
-        // プレビューiframeにURLを設定（エラーロガーを注入）
+        // プレビューiframeにURLを設定
         if (APP_STATE.WEB_PREVIEWER) {
-            // エラーハンドラーがある場合はエラーロガーを注入して読み込み
-            if (APP_STATE.IFRAME_ERROR_HANDLER) {
-                await APP_STATE.IFRAME_ERROR_HANDLER.injectErrorLoggerAndLoad(previewUrl);
-            } else {
-                APP_STATE.WEB_PREVIEWER.setURL(previewUrl);
-            }
+            APP_STATE.WEB_PREVIEWER.setURL(previewUrl);
             APP_STATE.WEB_PREVIEWER.setTitle("<a href='" + previewUrl + "' target='_blank' title='" + APP_STATE.CURRENT_FILE.name + "を新しいタブで開く'>" + APP_STATE.CURRENT_FILE.name + "</a>");
             APP_STATE.WEB_PREVIEWER.show();
             console.log("Preview URL set:", previewUrl);
@@ -1066,10 +1060,6 @@ async function main(){
     webPreviewTab.setContent(webPreviewer);
     APP_STATE.WEB_PREVIEWER = webPreviewer;
 
-    // iframe用エラーハンドラーを初期化
-    const iframeErrorHandler = new IframeErrorHandler(webPreviewer, mConsole);
-    APP_STATE.IFRAME_ERROR_HANDLER = iframeErrorHandler;
-
     // リロードボタンのコールバックを設定（保存してからリロード）
     webPreviewer.onReload = async () => {
         //console.log("Reload button clicked - executing file with save");
@@ -1086,19 +1076,7 @@ async function main(){
                 APP_STATE
             );
         }
-        
-        // エラーをクリア
-        if (APP_STATE.IFRAME_ERROR_HANDLER) {
-            APP_STATE.IFRAME_ERROR_HANDLER.clearErrors();
-        }
-        
-        // 現在のURLを再読み込み（エラーロガーを再注入）
-        const currentUrl = webPreviewer.getURL();
-        if (currentUrl && currentUrl !== 'about:blank' && APP_STATE.IFRAME_ERROR_HANDLER) {
-            await APP_STATE.IFRAME_ERROR_HANDLER.injectErrorLoggerAndLoad(currentUrl);
-        } else {
-            await webPreviewer.reload();
-        }
+        await webPreviewer.reload();
     };
 
     if(APP_STATE.RUN_MODE === 'WEB_MODE'){

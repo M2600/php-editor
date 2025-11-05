@@ -4,15 +4,12 @@
  */
 
 export class IframeErrorHandler {
-    constructor(webPreviewer, mConsole, options = {}) {
+    constructor(webPreviewer, mConsole) {
         this.webPreviewer = webPreviewer;
         this.mConsole = mConsole;
         this.errors = [];
         this.errorLoggerScript = null;
         this.messageListener = null;
-        
-        // エラー発生時のコールバック関数
-        this.onError = options.onError || null;
         
         // エラーロガースクリプトを読み込み
         this.loadErrorLoggerScript();
@@ -70,11 +67,6 @@ export class IframeErrorHandler {
         
         // 開発者コンソールにも出力
         console.error('[iframe Error]', errorData);
-        
-        // エラー発生時のコールバックを実行
-        if (this.onError && typeof this.onError === 'function') {
-            this.onError(errorData, this.errors.length);
-        }
     }
     
     /**

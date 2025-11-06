@@ -5,6 +5,7 @@
 import { hideAllPreviewer, getParentDir, getCurrentPath } from '../utils/helpers.js';
 import { APP_STATE } from '../core/config.js';
 import { 
+    getFullPath,
     renameFile, 
     deleteFile, 
     createFile, 
@@ -62,9 +63,11 @@ export function renameFileDialog(path, editor, api, mConsole, DEBUG) {
     if (checkWindowExists(windowName, editor, DEBUG)) {
         return;
     }
+    const fileName = path.substring(path.lastIndexOf('/') + 1);
 
     let rename = async () => {
-        const newPath = input.value.startsWith('/') ? input.value : '/' + input.value;
+        const baseDir = path.substr(0, path.lastIndexOf("/")) || '/';
+        const newPath = input.value.startsWith('/') ? input.value : getFullPath(input.value, baseDir);
         console.log("Rename: ", path, " -> ", newPath);
         DEBUG && console.log("popup window: ", popupWindow);
         
@@ -103,9 +106,12 @@ export function renameFileDialog(path, editor, api, mConsole, DEBUG) {
     let input = document.createElement("input");
     input.type = "text";
     input.placeholder = "File name";
-    input.value = path;
+    input.value = fileName;
     input.style.width = "100%";
     input.style.boxSizing = "border-box";
+    const selectionStart = 0;
+    const selectionEnd = fileName.lastIndexOf('.') || fileName.length;
+    input.setSelectionRange(selectionStart, selectionEnd);
     
     // ステータスメッセージ要素（警告のみ表示）
     let statusMessage = document.createElement("div");

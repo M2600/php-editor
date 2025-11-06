@@ -31,6 +31,22 @@ export function fileExistsInList(fileList, targetPath) {
     return false;
 }
 
+/** ファイル名のみの場合フルパスを返す
+ * @param {string} fileName - ファイル名
+ * @param {string} dirPath - ディレクトリパス
+ * @returns {string} フルパス
+ */
+export function getFullPath(fileName, dirPath) {
+    // ファイル名がフルパスの場合(/から始まる)の場合はそのまま返す
+    if (fileName.startsWith('/')) {
+        return fileName;
+    }
+    if (dirPath.endsWith('/')) {
+        return `${dirPath}${fileName}`;
+    }
+    return `${dirPath}/${fileName}`;
+}
+
 /**
  * ファイル名に番号を付けて別の名前を生成する
  * 例: "file.txt" → "file(1).txt", "file(2).txt" など
@@ -463,11 +479,21 @@ export async function saveFile(path, content, api, currentFile, mConsole, DEBUG,
 }
 
 export async function renameFile(path, newPath, api, mConsole) {
+
+    if (!path || !newPath) {
+        mConsole.print("Invalid file paths.", "error");
+        return false;
+    }
+
+    // newPathが相対パスの場合、pathを基準にフルパスに変換
+    const fileDir = path.substr(0, path.lastIndexOf("/")) || '/';
+    const newFullPath = getFullPath(newPath, fileDir);
+
     let ret;
     let body = {
         action: "rename",
         path: path,
-        newPath: newPath,
+        newPath: newFullPath,
     };
     let status = await api("/api/file_manager.php", body=body)
     .then(data => {

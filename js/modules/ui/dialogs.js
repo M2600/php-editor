@@ -12,6 +12,7 @@ import {
     createDir, 
     renameDir, 
     deleteDir, 
+    duplicateFile,
     uploadFiles,
     loadExplorer,
     cleanupAceInstance,
@@ -164,6 +165,133 @@ export function renameFileDialog(path, editor, api, mConsole, DEBUG) {
         await rename();
     });
     controls.appendChild(renameButton);
+    let popupWindow = editor.popupWindow(windowName, contents, {
+        width: "20em"
+    });
+    input.focus();
+}
+
+export function duplicateFileDialog(path, editor, api, mConsole, DEBUG) {
+    let windowName = "Duplicate file";
+    if (checkWindowExists(windowName, editor, DEBUG)) {
+        return;
+    }
+    const fileName = path.substring(path.lastIndexOf('/') + 1);
+    // デフォルトのファイル名を生成（拡張子の前に_copyを追加）
+    const dotIndex = fileName.lastIndexOf('.');
+    const defaultName = dotIndex > 0 
+        ? fileName.substring(0, dotIndex) + "_copy" + fileName.substring(dotIndex)
+        : fileName + "_copy";
+
+    let duplicate = async () => {
+        const baseDir = path.substr(0, path.lastIndexOf("/")) || '/';
+        const newPath = input.value.startsWith('/') ? input.value : getFullPath(input.value, baseDir);
+        console.log("Duplicate: ", path, " -> ", newPath);
+        DEBUG && console.log("popup window: ", popupWindow);
+        
+        // ファイル名の妥当性をチェック
+        const fileName = input.value.startsWith('/') ? input.value.substring(1) : input.value;
+        const validation = validateFileName(fileName);
+        if (!validation.valid) {
+            mConsole.print("Error: " + validation.message, "error");
+            return;
+        }
+        
+        // 元のファイルと同名でないかチェック
+        if (path === newPath) {
+            mConsole.print("Error: 複製先のファイル名が元のファイルと同じです", "error");
+            return;
+        }
+        
+        // 同名のファイルが既に存在するかチェック
+        if (fileExistsInList(APP_STATE.FILE_LIST.files, newPath)) {
+            mConsole.print("Error: A file with the same name already exists: " + newPath, "error");
+            return;
+        }
+        
+        popupWindow.remove();
+        const duplicatedPath = await duplicateFile(path, newPath, api, mConsole);
+        await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
+        
+        // 複製成功時、新しいファイルを開く
+        if (duplicatedPath && editor.explorer && editor.explorer.files && Array.isArray(editor.explorer.files)) {
+            // duplicatedPathが相対パスの場合、先頭に/を追加
+            const normalizedPath = duplicatedPath.startsWith('/') ? duplicatedPath : '/' + duplicatedPath;
+            const fileInfo = editor.explorer.files.find(f => f.path === normalizedPath);
+            if (fileInfo && typeof editor.explorer.fileClickAction === 'function') {
+                editor.explorer.fileClickAction(fileInfo);
+            }
+            editor.explorer.highlightFile(normalizedPath);
+        }
+    }
+
+    let contents = document.createElement("div");
+    let input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = "File name";
+    input.value = defaultName;
+    input.style.width = "100%";
+    input.style.boxSizing = "border-box";
+    const selectionStart = 0;
+    const selectionEnd = defaultName.lastIndexOf('.') || defaultName.length;
+    input.setSelectionRange(selectionStart, selectionEnd);
+    
+    // ステータスメッセージ要素（警告のみ表示）
+    let statusMessage = document.createElement("div");
+    statusMessage.style.marginTop = ".3rem";
+    statusMessage.style.marginBottom = ".5rem";
+    statusMessage.style.color = "red";
+    statusMessage.style.fontSize = "0.85em";
+    statusMessage.style.display = "none";
+    contents.appendChild(statusMessage);
+    
+    // 入力値の変更を監視
+    input.addEventListener("input", () => {
+        const newPath = input.value.startsWith('/') ? input.value : getFullPath(input.value, path.substr(0, path.lastIndexOf("/")) || '/');
+        const fileName = input.value.startsWith('/') ? input.value.substring(1) : input.value;
+        
+        // ファイル名の妥当性をチェック
+        const validation = validateFileName(fileName);
+        if (!validation.valid) {
+            statusMessage.style.display = "block";
+            statusMessage.innerHTML = "❌ " + validation.message;
+            return;
+        }
+        
+        // 元のファイルと同じ場合
+        if (path === newPath) {
+            statusMessage.style.display = "block";
+            statusMessage.innerHTML = "⚠️ 元のファイルと異なる名前を指定してください";
+            return;
+        }
+        
+        // 同名のファイルが存在する場合
+        if (fileExistsInList(APP_STATE.FILE_LIST.files, newPath)) {
+            statusMessage.style.display = "block";
+            statusMessage.innerHTML = "⚠️ このファイル名は既に使用されています";
+        } else {
+            statusMessage.style.display = "none";
+        }
+    });
+    
+    input.addEventListener("keydown", (e) => {
+        if (e.key == "Enter") {
+            duplicate();
+        }
+    });
+    contents.appendChild(input);
+    let controls = document.createElement("div");
+    controls.style.display = "flex";
+    controls.style.flexDirection = "row-reverse";
+    controls.style.marginTop = ".3rem";
+    contents.appendChild(controls);
+    let duplicateButton = document.createElement("button");
+    duplicateButton.innerHTML = "Duplicate";
+    duplicateButton.classList.add("meditor-button");
+    duplicateButton.addEventListener("click", async () => {
+        await duplicate();
+    });
+    controls.appendChild(duplicateButton);
     let popupWindow = editor.popupWindow(windowName, contents, {
         width: "20em"
     });

@@ -514,11 +514,12 @@ export async function renameFile(path, newPath, api, mConsole) {
     return ret;
 }
 
-export async function duplicateFile(path, api, mConsole) {
+export async function duplicateFile(path, newPath, api, mConsole) {
     let ret;
     let body = {
         action: "duplicate",
         path: path,
+        newPath: newPath,
     };
     let status = await api("/api/file_manager.php", body=body)
     .then(data => {

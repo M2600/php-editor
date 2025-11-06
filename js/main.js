@@ -13,6 +13,7 @@ import { MEditor } from '../MEditor/MEditor.js';
 
 import { 
     renameFileDialog, 
+    duplicateFileDialog,
     moveFileDialog, 
     deleteFileDialog,
     newFileDialog,
@@ -629,16 +630,7 @@ async function main(){
 
     explorer.setDuplicateClickAction((file) => {
         console.log("re: Duplicate: ", file);
-        duplicateFile(file.path, api, mConsole).then((newPath) => {
-            loadExplorer(editor.BASE_DIR, api, APP_STATE, editor).then(() => {
-                APP_STATE.CURRENT_FILE = false;
-                // ファイルが閉じられたらボタンを無効化
-                if (APP_STATE.FILE_ACTION_BUTTONS) {
-                    APP_STATE.FILE_ACTION_BUTTONS.update();
-                }
-                // loadFile(newPath); // 新しいファイルを開く場合
-            });
-        });
+        duplicateFileDialog(file.path, editor, api, mConsole, CONFIG.DEBUG);
     });
 
     explorer.setDeleteClickAction((file) => {

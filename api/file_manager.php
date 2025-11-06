@@ -83,7 +83,13 @@ try {
     }
 
     if($action == "duplicate"){
-        $newPath = explode(".", $path)[0] . "_copy." . explode(".", $path)[1];
+        // newPathが指定されていない場合は自動生成
+        if (isset($params["newPath"]) && !empty($params["newPath"])) {
+            $newPath = htmlspecialchars_decode($params["newPath"], ENT_QUOTES);
+        } else {
+            // 後方互換性のため、パラメータがない場合は従来の動作
+            $newPath = explode(".", $path)[0] . "_copy." . explode(".", $path)[1];
+        }
         $newPath = duplicateFile($path, $newPath);
         echo json_encode(array("status" => "success", "newPath" => $newPath));
         exit();

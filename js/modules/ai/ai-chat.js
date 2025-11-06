@@ -602,18 +602,24 @@ export async function sendAIMessage({
         // 送信履歴を制限
         historyManager.limitHistory(CONFIG.MAX_CHAT_HISTORY);
 
-        // ファイル内容を送信するか判定
+        // ファイル内容を送信するか判定（ツール無効時のみ）
         let fileContext = null;
-        if (currentFile && currentFile.aceObj && typeof currentFile.aceObj.editor.getValue === 'function') {
-            const fileContent = currentFile.aceObj.editor.getValue();
-            if (fileContent && fileContent.length > 0) {
-                console.log("Sending file context:", currentFile.path);
-                fileContext = {
-                    name: currentFile.path || 'ファイル',
-                    content: fileContent
-                };
-                if (typeof chat.setFileContextInfo === 'function') {
-                    chat.setFileContextInfo({ name: fileContext.name });
+        if (!enableTools) {
+            if (currentFile && currentFile.aceObj && typeof currentFile.aceObj.editor.getValue === 'function') {
+                const fileContent = currentFile.aceObj.editor.getValue();
+                if (fileContent && fileContent.length > 0) {
+                    console.log("Sending file context:", currentFile.path);
+                    fileContext = {
+                        name: currentFile.path || 'ファイル',
+                        content: fileContent
+                    };
+                    if (typeof chat.setFileContextInfo === 'function') {
+                        chat.setFileContextInfo({ name: fileContext.name });
+                    }
+                } else {
+                    if (typeof chat.setFileContextInfo === 'function') {
+                        chat.setFileContextInfo(null);
+                    }
                 }
             } else {
                 if (typeof chat.setFileContextInfo === 'function') {
@@ -621,15 +627,22 @@ export async function sendAIMessage({
                 }
             }
         } else {
+            // ツール有効時はファイルコンテキストを送信しない
             if (typeof chat.setFileContextInfo === 'function') {
                 chat.setFileContextInfo(null);
             }
+            console.log("Tools enabled: File context disabled");
         }
 
-        // ディレクトリコンテキストを生成
-        const dirContext = generateDirectoryContext(fileList, baseDir);
-        if (dirContext) {
-            console.log("Sending directory context:", dirContext);
+        // ディレクトリコンテキストを生成（ツール無効時のみ）
+        let dirContext = null;
+        if (!enableTools) {
+            dirContext = generateDirectoryContext(fileList, baseDir);
+            if (dirContext) {
+                console.log("Sending directory context:", dirContext);
+            }
+        } else {
+            console.log("Tools enabled: Directory context disabled");
         }
 
         // ストリーム受信（ai_api.js利用）
@@ -860,8 +873,8 @@ export async function sendAIMessage({
                         await fetchAIChat({
                             messages: historyManager.getHistory(),
                             model: selectedModel,
-                            fileContext: fileContext ?? null,
-                            dirContext: dirContext ?? null,
+                            fileContext: null,  // ツール実行後は常にnull
+                            dirContext: null,   // ツール実行後は常にnull
                             tools: tools,
                             signal: controller.signal,
                             smoothOutput: true,

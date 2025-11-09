@@ -31,6 +31,33 @@ export function fileExistsInList(fileList, targetPath) {
     return false;
 }
 
+/**
+ * ファイルリストから指定されたパスのファイル情報を取得する
+ * ネストされた構造にも対応
+ * @param {Array} fileList - ファイルリスト
+ * @param {string} targetPath - 検索対象のファイルパス
+ * @returns {Object|null} ファイル情報オブジェクト、見つからない場合null
+ */
+export function findFileInList(fileList, targetPath) {
+    if (!fileList || !Array.isArray(fileList)) {
+        return null;
+    }
+    
+    for (let file of fileList) {
+        if (file.path === targetPath) {
+            return file;
+        }
+        // ディレクトリの場合は再帰的に検索
+        if (file.type === "dir" && file.files && Array.isArray(file.files)) {
+            const found = findFileInList(file.files, targetPath);
+            if (found) {
+                return found;
+            }
+        }
+    }
+    return null;
+}
+
 /** ファイル名のみの場合フルパスを返す
  * @param {string} fileName - ファイル名
  * @param {string} dirPath - ディレクトリパス

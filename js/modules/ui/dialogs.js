@@ -18,6 +18,7 @@ import {
     cleanupAceInstance,
     cleanupAceInstancesInDir,
     fileExistsInList,
+    findFileInList,
     generateUniqueFileName
 } from '../core/file-manager.js';
 
@@ -92,14 +93,17 @@ export function renameFileDialog(path, editor, api, mConsole, DEBUG) {
         await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
         
         // リネーム成功時、新しいファイル名でファイルを開く
-        if (renamedPath && editor.explorer && editor.explorer.files && Array.isArray(editor.explorer.files)) {
+        if (renamedPath && APP_STATE.FILE_LIST && APP_STATE.FILE_LIST.files) {
             // renamedPathが相対パスの場合、先頭に/を追加
             const normalizedPath = renamedPath.startsWith('/') ? renamedPath : '/' + renamedPath;
-            const fileInfo = editor.explorer.files.find(f => f.path === normalizedPath);
-            if (fileInfo && typeof editor.explorer.fileClickAction === 'function') {
+            
+            // 全ファイルリストから再帰的に検索
+            const fileInfo = findFileInList(APP_STATE.FILE_LIST.files, normalizedPath);
+            if (fileInfo && editor.explorer && typeof editor.explorer.fileClickAction === 'function') {
+                console.log("Open renamed file: ", normalizedPath);
                 editor.explorer.fileClickAction(fileInfo);
+                editor.explorer.highlightFile(normalizedPath);
             }
-            editor.explorer.highlightFile(normalizedPath);
         }
     }
 
@@ -214,14 +218,16 @@ export function duplicateFileDialog(path, editor, api, mConsole, DEBUG) {
         await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
         
         // 複製成功時、新しいファイルを開く
-        if (duplicatedPath && editor.explorer && editor.explorer.files && Array.isArray(editor.explorer.files)) {
+        if (duplicatedPath && APP_STATE.FILE_LIST && APP_STATE.FILE_LIST.files) {
             // duplicatedPathが相対パスの場合、先頭に/を追加
             const normalizedPath = duplicatedPath.startsWith('/') ? duplicatedPath : '/' + duplicatedPath;
-            const fileInfo = editor.explorer.files.find(f => f.path === normalizedPath);
-            if (fileInfo && typeof editor.explorer.fileClickAction === 'function') {
+            
+            // 全ファイルリストから再帰的に検索
+            const fileInfo = findFileInList(APP_STATE.FILE_LIST.files, normalizedPath);
+            if (fileInfo && editor.explorer && typeof editor.explorer.fileClickAction === 'function') {
                 editor.explorer.fileClickAction(fileInfo);
+                editor.explorer.highlightFile(normalizedPath);
             }
-            editor.explorer.highlightFile(normalizedPath);
         }
     }
 
@@ -456,12 +462,13 @@ export function newFileDialog(dir, editor, api, mConsole, currentFile, saveFile,
         await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
         
         // 新規作成したファイルを自動で開く
-        if (editor.explorer && editor.explorer.files && Array.isArray(editor.explorer.files)) {
-            const fileInfo = editor.explorer.files.find(f => f.path === newFilePath);
-            if (fileInfo && typeof editor.explorer.fileClickAction === 'function') {
+        if (APP_STATE.FILE_LIST && APP_STATE.FILE_LIST.files) {
+            // 全ファイルリストから再帰的に検索
+            const fileInfo = findFileInList(APP_STATE.FILE_LIST.files, newFilePath);
+            if (fileInfo && editor.explorer && typeof editor.explorer.fileClickAction === 'function') {
                 editor.explorer.fileClickAction(fileInfo);
+                editor.explorer.highlightFile(newFilePath);
             }
-            editor.explorer.highlightFile(newFilePath);
         }
     }
 

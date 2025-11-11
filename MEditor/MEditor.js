@@ -2044,7 +2044,7 @@ export class MEditor {
         iconElm.classList.add(this.CLASS_NAME_PREFIX + "file-icon");
         iconElm.textContent = iconText;
         if (iconTitle) iconElm.title = iconTitle;
-        iconContainer.appendChild(iconElm);
+        iconContainer.prepend(iconElm);
         return true;
     }
 
@@ -4940,7 +4940,7 @@ export class MEditor {
             //　変更なしに設定
             file.changed = false;
             // エクスプローラーのアイコンを元に戻す
-            this.setFileIcon(file.path, null);
+            this.removeFileIcon(file.path, '*');
         };
     }
 

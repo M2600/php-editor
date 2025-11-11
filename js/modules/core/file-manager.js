@@ -523,8 +523,8 @@ export async function saveFile(path, content, api, currentFile, mConsole, DEBUG,
         // 保存成功時のUI更新
         if (currentFile && currentFile.path === path) {
             currentFile.changed = false;
-            if(editor && typeof editor.setFileIcon === 'function'){
-                editor.setFileIcon(currentFile.path, null);
+            if(editor && typeof editor.removeFileIcon === 'function'){
+                editor.removeFileIcon(currentFile.path, '*');
             }
             mConsole.print("File saved: " + currentFile.path, "success");
             phpSyntaxCheck(currentFile.path, api, DEBUG);

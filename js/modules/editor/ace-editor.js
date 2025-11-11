@@ -100,17 +100,17 @@ export async function openFile(file, aceList, editor, mConsole, extLangMap, DEBU
         file.aceChangeAction = (e) => {
             file.changed = true;
             DEBUG && console.log("File changed: ", file.path);
-            if(typeof editor.setFileIcon === 'function'){
-                editor.setFileIcon(file.path, '*');
+            if(typeof editor.addFileIcon === 'function'){
+                editor.addFileIcon(file.path, '*');
             }
         };
         file.aceObj.on("change", file.aceChangeAction);
 
         // 初期状態で未保存なら*表示、そうでなければ消す
-        if(file.changed && typeof editor.setFileIcon === 'function'){
-            editor.setFileIcon(file.path, '*');
-        } else if(typeof editor.setFileIcon === 'function'){
-            editor.setFileIcon(file.path, null);
+        if(file.changed && typeof editor.addFileIcon === 'function'){
+            editor.addFileIcon(file.path, '*');
+        } else if(typeof editor.removeFileIcon === 'function'){
+            editor.removeFileIcon(file.path, '*');
         }
 
         file.aceObj.show();

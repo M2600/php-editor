@@ -31,6 +31,10 @@ body[theme="dark"] {
 
 	--me-color-editor-bg-added: #335530;
 	--me-color-editor-bg-removed: #5e2e2d;
+
+	--me-color-safe-text: #5cb85c;
+	--me-color-safe-file-bg: rgba(34, 139, 34, 0.12);
+	--me-color-safe-file-bg-active: rgba(34, 139, 34, 0.2);
 }
 
 body[theme="light"] {
@@ -53,6 +57,10 @@ body[theme="light"] {
 
 	--me-color-editor-bg-added: #e6ffe6;
 	--me-color-editor-bg-removed: #ffe6e6;
+
+	--me-color-safe-text: #5cb85c;
+	--me-color-safe-file-bg: rgba(34, 139, 34, 0.12);
+	--me-color-safe-file-bg-active: rgba(34, 139, 34, 0.2);
 }
 
 
@@ -87,6 +95,10 @@ body[theme="halloween"] {
 	--me-color-accept-hover: #5a7a1d;
 	--me-color-reject: #fd231f;
 	--me-color-reject-hover: #c9302c;
+
+	--me-color-safe-text: #5cb85c;
+	--me-color-safe-file-bg: rgba(34, 139, 34, 0.12);
+	--me-color-safe-file-bg-active: rgba(34, 139, 34, 0.2);
 
 	/* Additional theme-specific variables */
 	--halloween-accent: #FF6A00;
@@ -132,6 +144,10 @@ body[theme="christmas"] {
 	--me-color-accept-hover: #27692b;
 	--me-color-reject: #C62828; /* festive red */
 	--me-color-reject-hover: #9b2020;
+
+	--me-color-safe-text: #5cb85c;
+	--me-color-safe-file-bg: rgba(34, 139, 34, 0.12);
+	--me-color-safe-file-bg-active: rgba(34, 139, 34, 0.2);
 
 	/* Additional theme-specific variables */
 	--christmas-accent: #C62828;

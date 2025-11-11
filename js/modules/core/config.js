@@ -100,6 +100,22 @@ export const AI_CONFIG = {
     TOOLS_MAX_COUNT: 20,
 }
 
+// 非公開ファイルのパターン（実行時にアクセス不可にするファイル）
+export const PRIVATE_FILE_PATTERNS = [
+    /(^|\/)\./, // ドットファイル・ドットフォルダ（任意の階層）
+    /(^|\/)config(\/|$)/ // configディレクトリ内のファイル
+];
+
+/**
+ * ファイルパスが非公開パターンに一致するか判定
+ * @param {string} filePath - チェックするファイルのフルパス
+ * @returns {boolean} 非公開ファイルの場合true
+ */
+export function isPrivateFile(filePath) {
+    if (!filePath) return false;
+    return PRIVATE_FILE_PATTERNS.some(pattern => pattern.test(filePath));
+}
+
 // アプリケーション状態変数
 export const APP_STATE = {
     USER_ID: "user_id",

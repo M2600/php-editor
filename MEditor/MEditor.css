@@ -471,6 +471,8 @@ i {
     background-color: var(--me-color-bg-active);
 }
 
+
+
 .meditor-file-control {
     display: flex;
     margin-left: auto;
@@ -558,6 +560,27 @@ i {
 .meditor-dir-content-show {
     display: block;
 }
+
+/* 非公開ファイル（実行時アクセス不可）のスタイル */
+.meditor-file-private {
+    /*background-color: var(--me-color-safe-file-bg);*/
+    color: var(--me-color-safe-text);
+}
+.meditor-file-private:hover {
+    /*background-color: var(--me-color-safe-file-bg-active);*/
+}
+.meditor-file-private.meditor-file-selected {
+    /*background-color: var(--me-color-safe-file-bg-active) ;*/
+}
+
+.meditor-dir-menu-private .meditor-dir-name-text {
+    /*background-color: var(--me-color-safe-file-bg);*/
+    color: var(--me-color-safe-text);
+}
+.meditor-dir-menu-private:hover {
+    /*background-color: var(--me-color-safe-file-bg-active);*/
+}
+
 
 
 

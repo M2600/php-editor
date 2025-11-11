@@ -22,7 +22,7 @@ export const THEMES = [
 		end: {month: 12, day:25},
 		name: 'christmas',
 		aceTheme: 'ace/theme/tomorrow',
-		customTitle: 'PHP Ed🎄tor'
+		customTitle: 'PHP Editor 🎄'
 	}
 	// 将来的に他のイベントテーマを追加する場合はここに追加
 

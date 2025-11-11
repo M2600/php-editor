@@ -4,6 +4,41 @@
 
 import { sessionError } from '../utils/helpers.js';
 import { Path } from '../utils/api.js';
+import { isPrivateFile } from './config.js';
+
+/**
+ * ファイルリストに非公開フラグとパスを追加する（再帰的）
+ * @param {Array} fileList - ファイルリスト
+ * @param {string} parentPath - 親ディレクトリのパス（デフォルト: '/'）
+ * @returns {Array} 非公開フラグとパスが追加されたファイルリスト
+ */
+export function markPrivateFiles(fileList, parentPath = '/') {
+    if (!fileList || !Array.isArray(fileList)) {
+        return fileList;
+    }
+    
+    return fileList.map(file => {
+        // ファイルのフルパスを構築
+        const fullPath = parentPath + file.name;
+        const isPrivate = isPrivateFile(fullPath);
+        
+        // フラグとパスを追加
+        const markedFile = {
+            ...file,
+            isPrivate: isPrivate,
+            path: fullPath  // パスを明示的に追加
+        };
+        
+        // ディレクトリの場合は再帰的に処理
+        if (file.type === 'dir' && file.files && Array.isArray(file.files)) {
+            // ディレクトリの場合、パスの末尾に/を付ける
+            const dirPath = fullPath.endsWith('/') ? fullPath : fullPath + '/';
+            markedFile.files = markPrivateFiles(file.files, dirPath);
+        }
+        
+        return markedFile;
+    });
+}
 
 /**
  * ファイルリストから指定されたパスのファイルが存在するか確認する
@@ -401,6 +436,11 @@ export async function loadExplorer(path, api, appState, editor) {
         const sortSettings = getSortSettings();
         if (appState.FILE_LIST && appState.FILE_LIST.files) {
             appState.FILE_LIST.files = sortFiles(appState.FILE_LIST.files, sortSettings.sortBy, sortSettings.order);
+        }
+        
+        // 非公開ファイルのマーキング（パスとisPrivateフラグを追加）
+        if (appState.FILE_LIST && appState.FILE_LIST.files) {
+            appState.FILE_LIST.files = markPrivateFiles(appState.FILE_LIST.files, path);
         }
         
         // エクスプローラー表示でファイルパスを設定

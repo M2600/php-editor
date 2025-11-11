@@ -1918,10 +1918,17 @@ export class MEditor {
         file.name = fileInfo.name;
         file.type = fileInfo.type;
         file.path = fileInfo.path;
+        file.isPrivate = fileInfo.isPrivate || false;
         file.element = document.createElement("button");
         file.element.id = file.path;
         file.element.classList.add(this.CLASS_NAME_PREFIX + "file");
+        if (file.isPrivate) {
+            file.element.classList.add(this.CLASS_NAME_PREFIX + "file-private");
+        }
         file.element.title = fileInfo.path;
+        if (file.isPrivate) {
+            file.element.title += " (非公開のファイル)";
+        }
         // highlight selected file
         if (fileInfo.name == "../"){
             file.element.addEventListener("click", (e) => {
@@ -2142,15 +2149,23 @@ export class MEditor {
         dir.name = dirInfo.name;
         dir.type = dirInfo.type;
         dir.path = dirInfo.path;
+        dir.isPrivate = dirInfo.isPrivate || false;
         dir.files = [];
         dir.element = document.createElement("div");
         dir.element.id = dir.path;
         dir.element.classList.add(this.CLASS_NAME_PREFIX + "dir");
         
+        
         let dirMenu = {};
         dirMenu.element = document.createElement("button");
         dirMenu.element.classList.add(this.CLASS_NAME_PREFIX + "dir-menu");
+        if (dir.isPrivate) {
+            dirMenu.element.classList.add(this.CLASS_NAME_PREFIX + "dir-menu-private");
+        }
         dirMenu.element.title = dirInfo.name;
+        if (dir.isPrivate) {
+            dirMenu.element.title += " (非公開のフォルダ)";
+        }
         dirMenu.element.addEventListener("click", (e) => {
             //this.explorer.toggleExpand(dir.path);
             this.explorer.dirClickAction(dirInfo);

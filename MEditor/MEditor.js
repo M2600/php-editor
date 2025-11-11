@@ -2005,6 +2005,20 @@ export class MEditor {
      * @param {string|object|null} icon 追加したいアイコン（"*"や{ text, title, class }）。null/空で非表示
      */
     setFileIcon(path, icon) {
+        this.clearFileIcons(path);
+        if (icon) {
+            this.addFileIcon(path, icon);
+        }
+    }
+
+    /**
+     * エクスプローラのファイルにアイコンを追加する
+     * @param {string} path ファイルの絶対パス
+     * @param {string} iconText アイコンテキスト
+     * @param {string} iconTitle アイコンタイトル
+     * @returns 
+     */
+    addFileIcon(path, iconText, iconTitle="") {
         // ファイル要素を取得
         const fileBtn = document.getElementById(path);
         if (!fileBtn) return false;
@@ -2012,39 +2026,67 @@ export class MEditor {
         const fileNameDiv = fileBtn.querySelector('.' + this.CLASS_NAME_PREFIX + 'file-name');
         if (!fileNameDiv) return false;
         // 既存アイコン要素
-        let iconElm = fileNameDiv.querySelector('.' + this.CLASS_NAME_PREFIX + 'file-icon');
-        if (iconElm) {
-            if (!icon) {
-                iconElm.remove();
-                return true;
-            }
-            // 更新
-            if (typeof icon === "string") {
-                iconElm.textContent = icon;
-                iconElm.title = "";
-                iconElm.className = this.CLASS_NAME_PREFIX + "file-icon";
-            } else if (typeof icon === "object") {
-                iconElm.textContent = icon.text || "";
-                iconElm.title = icon.title || "";
-                iconElm.className = this.CLASS_NAME_PREFIX + "file-icon";
-                if (icon.class) iconElm.classList.add(icon.class);
-            }
-            return true;
-        } else if (icon) {
-            // 新規追加
-            iconElm = document.createElement("span");
-            iconElm.classList.add(this.CLASS_NAME_PREFIX + "file-icon");
-            if (typeof icon === "string") {
-                iconElm.textContent = icon;
-            } else if (typeof icon === "object") {
-                iconElm.textContent = icon.text || "";
-                if (icon.title) iconElm.title = icon.title;
-                if (icon.class) iconElm.classList.add(icon.class);
-            }
-            fileNameDiv.prepend(iconElm);
-            return true;
+        let iconContainer = fileNameDiv.querySelector('.' + this.CLASS_NAME_PREFIX + 'file-icon-container');
+        if (!iconContainer) {
+            iconContainer = document.createElement("span");
+            iconContainer.classList.add(this.CLASS_NAME_PREFIX + "file-icon-container");
+            fileNameDiv.prepend(iconContainer);
         }
-        return false;
+        // 新しいアイコン要素を追加
+        const iconElm = document.createElement("span");
+        iconElm.classList.add(this.CLASS_NAME_PREFIX + "file-icon");
+        iconElm.textContent = iconText;
+        if (iconTitle) iconElm.title = iconTitle;
+        iconContainer.appendChild(iconElm);
+        return true;
+    }
+
+    /**
+     * エクスプローラのファイルから指定したアイコンを削除する
+     * @param {string} path 
+     * @param {string} icon 
+     * @returns 
+     */
+    removeFileIcon(path, icon) {
+        if (icon) {
+            const fileBtn = document.getElementById(path);
+            const fileNameDiv = fileBtn.querySelector('.' + this.CLASS_NAME_PREFIX + 'file-name');
+            const iconContainer = fileNameDiv.querySelector('.' + this.CLASS_NAME_PREFIX + 'file-icon-container');
+            if (!iconContainer) return false;
+            const iconElms = fileNameDiv.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'file-icon');
+            for (let iconElm of iconElms) {
+                if (iconElm.textContent === icon) {
+                    iconElm.remove();
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    clearFileIcons(path) {
+        const fileBtn = document.getElementById(path);
+        if (!fileBtn) return false;
+        const fileNameDiv = fileBtn.querySelector('.' + this.CLASS_NAME_PREFIX + 'file-name');
+        const iconContainer = fileNameDiv.querySelector('.' + this.CLASS_NAME_PREFIX + 'file-icon-container');
+        if (iconContainer) {
+            iconContainer.remove();
+        }
+        return true;
+    }
+
+    /**
+     *  エクスプローラのファイルの背景色を変更する
+     * @param {string} path ファイルの絶対パス（explorerFileで設定されるfile.pathと同じ）
+     * @param {string} color (例: "red", "#ff0000", "rgba(255,0,0,0.5)")
+     * @returns {boolean}
+     */
+    setFileBackground(path, color) {
+        // ファイル要素を取得
+        const fileBtn = document.getElementById(path);
+        if (!fileBtn) return false;
+        fileBtn.style.backgroundColor = color;
+        return true;
     }
 
     dirControl(parentObj, dirInfo){

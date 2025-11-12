@@ -2057,7 +2057,9 @@ export class MEditor {
     removeFileIcon(path, icon) {
         if (icon) {
             const fileBtn = document.getElementById(path);
+            if (!fileBtn) return false; // ファイルが存在しない場合
             const fileNameDiv = fileBtn.querySelector('.' + this.CLASS_NAME_PREFIX + 'file-name');
+            if (!fileNameDiv) return false; // file-nameが存在しない場合
             const iconContainer = fileNameDiv.querySelector('.' + this.CLASS_NAME_PREFIX + 'file-icon-container');
             if (!iconContainer) return false;
             const iconElms = fileNameDiv.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'file-icon');

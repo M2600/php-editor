@@ -100,7 +100,8 @@ export async function openFile(file, aceList, editor, mConsole, extLangMap, DEBU
         file.aceChangeAction = (e) => {
             file.changed = true;
             DEBUG && console.log("File changed: ", file.path);
-            if(typeof editor.addFileIcon === 'function'){
+            if(typeof editor.addFileIcon === 'function' && typeof editor.removeFileIcon === 'function'){
+                editor.removeFileIcon(file.path, '*');
                 editor.addFileIcon(file.path, '*');
             }
         };

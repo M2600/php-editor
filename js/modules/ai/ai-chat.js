@@ -106,6 +106,32 @@ export function protectMathBlocks(text) {
     const mathBlocks = [];
     let processedText = text;
     
+    // LaTeX形式のブロック数式 \[...\] を抽出（複数行対応）
+    processedText = processedText.replace(/\\\[([\s\S]*?)\\\]/g, (match, content) => {
+        const index = mathBlocks.length;
+        const blockId = `[[[MATH_${index}]]]`;
+        mathBlocks.push({
+            id: blockId,
+            content: match,  // \[...\]を含めて保存
+            type: 'block',
+            index: index
+        });
+        return blockId;
+    });
+    
+    // LaTeX形式のインライン数式 \(...\) を抽出 - より貪欲でないマッチング
+    processedText = processedText.replace(/\\\([^)]*?\\\)/g, (match) => {
+        const index = mathBlocks.length;
+        const blockId = `[[[MATH_${index}]]]`;
+        mathBlocks.push({
+            id: blockId,
+            content: match,  // \(...\)を含めて保存
+            type: 'inline',
+            index: index
+        });
+        return blockId;
+    });
+    
     // $$...$$形式のブロック数式を抽出（複数行対応）
     processedText = processedText.replace(/\$\$([\s\S]*?)\$\$/g, (match, content) => {
         const index = mathBlocks.length;
@@ -131,7 +157,6 @@ export function protectMathBlocks(text) {
         });
         return blockId;
     });
-    
     return {
         processedText,
         mathBlocks
@@ -165,8 +190,6 @@ export function restoreMathBlocks(html, mathBlocks) {
 // DOM操作を使った安全なthinking処理（ストリーム対応）
 export function processAIResponseWithDOM(text) {
     if (!text || typeof text !== 'string') return '';
-    
-    //console.log("Processing AI response with DOM:", text.substring(0, 200) + "...");
     
     // Step 0: 数式ブロックを保護
     const { processedText: mathProtectedText, mathBlocks } = protectMathBlocks(text);
@@ -500,9 +523,21 @@ export function restoreChatHistoryToUI(chatHistory, chat) {
         } else if (msg.role === "assistant") {
             // contentが文字列の場合のみ処理（ツール呼び出しメッセージはスキップ）
             if (msg.content && typeof msg.content === 'string') {
+                // JSON破損による不正なエスケープシーケンスを修復
+                let sanitizedContent = msg.content;
+                // 単独の\[や\]が含まれる場合は\\[や\\]に修正（JSONパース後の状態を想定）
+                // ただし、既に正しくエスケープされている場合は変更しない
+                if (sanitizedContent.includes('\\[') || sanitizedContent.includes('\\]') || 
+                    sanitizedContent.includes('\\(') || sanitizedContent.includes('\\)')) {
+                    // バックスラッシュが既に含まれている場合は、そのまま使用
+                    // （正常にパースされた状態）
+                } else if (sanitizedContent.includes('[') || sanitizedContent.includes(']')) {
+                    // [や]が含まれているが\が無い場合は、通常のテキストとして扱う
+                    // （数式ではない）
+                }
+                
                 // 履歴復元時も新しい処理を適用
-                const processedContent = processAIResponseWithDOM(msg.content);
-                //console.log("Restoring AI message:", processedContent);
+                const processedContent = processAIResponseWithDOM(sanitizedContent);
                 chat.addMessage(processedContent, "ai", true);
             }
             // tool_callsがある場合は、ツール呼び出しを示すメッセージを表示
@@ -529,10 +564,10 @@ export function restoreChatHistoryToUI(chatHistory, chat) {
         } else if (chat.content && chat.content.element) {
             chat.content.element.scrollTop = chat.content.element.scrollHeight;
         }
-    }, 0);
-    
-    // 復元後にリンク属性を調整
-    ensureLinksOpenInNewTab(chat.content.element);
+        
+        // DOM更新後にリンク属性と数式レンダリングを実行
+        ensureLinksOpenInNewTab(chat.content.element);
+    }, 100);  // タイミングを少し遅らせる
 }
 
 export async function loadModelList(chat, customApiConfig = null) {

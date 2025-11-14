@@ -101,23 +101,83 @@ export function renderThinkingBlocks(thinkingBlocks) {
     });
 }
 
+// 数式ブロックを抽出・保護する関数
+export function protectMathBlocks(text) {
+    const mathBlocks = [];
+    let processedText = text;
+    
+    // $$...$$形式のブロック数式を抽出（複数行対応）
+    processedText = processedText.replace(/\$\$([\s\S]*?)\$\$/g, (match, content) => {
+        const index = mathBlocks.length;
+        const blockId = `[[[MATH_${index}]]]`;
+        mathBlocks.push({
+            id: blockId,
+            content: match,  // $$を含めて保存
+            type: 'block',
+            index: index
+        });
+        return blockId;
+    });
+    
+    // $...$形式のインライン数式を抽出
+    processedText = processedText.replace(/\$([^\$\n]+?)\$/g, (match, content) => {
+        const index = mathBlocks.length;
+        const blockId = `[[[MATH_${index}]]]`;
+        mathBlocks.push({
+            id: blockId,
+            content: match,  // $を含めて保存
+            type: 'inline',
+            index: index
+        });
+        return blockId;
+    });
+    
+    return {
+        processedText,
+        mathBlocks
+    };
+}
+
+// 数式ブロックを復元する関数
+export function restoreMathBlocks(html, mathBlocks) {
+    let restoredHtml = html;
+    
+    mathBlocks.forEach((block) => {
+        const placeholder = `[[[MATH_${block.index}]]]`;
+        
+        // エスケープされた特殊文字に対応
+        const escapedPlaceholder = placeholder.replace(/\[/g, '\\[').replace(/\]/g, '\\]');
+        
+        // プレースホルダーを数式に戻す（段落タグで囲まれている場合も考慮）
+        restoredHtml = restoredHtml.replace(
+            new RegExp(`<p>${escapedPlaceholder}</p>`, 'g'), 
+            block.content
+        );
+        restoredHtml = restoredHtml.replace(
+            new RegExp(escapedPlaceholder, 'g'), 
+            block.content
+        );
+    });
+    
+    return restoredHtml;
+}
+
 // DOM操作を使った安全なthinking処理（ストリーム対応）
 export function processAIResponseWithDOM(text) {
     if (!text || typeof text !== 'string') return '';
     
     //console.log("Processing AI response with DOM:", text.substring(0, 200) + "...");
     
+    // Step 0: 数式ブロックを保護
+    const { processedText: mathProtectedText, mathBlocks } = protectMathBlocks(text);
+    
     // Step 1: Thinkingブロックを抽出（完了・未完了両方）
-    const { processedText, thinkingBlocks } = processThinkingBlocks(text);
+    const { processedText, thinkingBlocks } = processThinkingBlocks(mathProtectedText);
     //console.log("Extracted thinking blocks:", thinkingBlocks.length);
     // console.log("Thinking blocks:", thinkingBlocks.map(b => ({
     //     content: b.content.substring(0, 50) + "...",
     //     isComplete: b.isComplete
     // })));
-    
-    if (thinkingBlocks.length === 0) {
-        return sanitizeAIResponse(marked.parse(text));
-    }
     
     // Step 2: 通常のMarkdownレンダリング
     let renderedHtml = marked.parse(processedText);
@@ -145,6 +205,9 @@ export function processAIResponseWithDOM(text) {
             console.log("Failed to replace placeholder");
         }
     });
+    
+    // Step 5: 数式ブロックを復元
+    renderedHtml = restoreMathBlocks(renderedHtml, mathBlocks);
     
     const result = renderedHtml;
     //console.log("Final result:", result.substring(0, 300) + "...");
@@ -177,7 +240,35 @@ export function sanitizeAIResponse(html) {
     return sanitized;
 }
 
-// チャット内リンクを必ず新規タブで開く
+// 数式をレンダリングする関数（KaTeX使用）
+export function renderMathInElement(element) {
+    if (!element) return;
+    
+    // KaTeX の auto-render が読み込まれているか確認
+    if (typeof window.renderMathInElement === 'undefined') {
+        console.warn('KaTeX auto-render が読み込まれていません');
+        return;
+    }
+    
+    try {
+        // KaTeX の自動レンダリング機能を使用
+        window.renderMathInElement(element, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},   // ブロック数式
+                {left: '$', right: '$', display: false},    // インライン数式
+                {left: '\\(', right: '\\)', display: false}, // LaTeX形式インライン
+                {left: '\\[', right: '\\]', display: true}   // LaTeX形式ブロック
+            ],
+            throwOnError: false,  // エラー時も処理を継続
+            errorColor: '#cc0000', // エラー時の色
+            strict: false  // 厳密なLaTeX構文チェックを無効化
+        });
+    } catch (e) {
+        console.error('数式レンダリングエラー:', e);
+    }
+}
+
+// チャット内リンクを必ず新規タブで開く + 数式レンダリング
 export function ensureLinksOpenInNewTab(container) {
     try {
         if (!container) return;
@@ -186,6 +277,9 @@ export function ensureLinksOpenInNewTab(container) {
             a.setAttribute('target', '_blank');
             a.setAttribute('rel', 'noopener noreferrer');
         });
+        
+        // 数式レンダリングを実行
+        renderMathInElement(container);
     } catch (e) {
         console.error('リンク属性設定エラー:', e);
     }

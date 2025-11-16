@@ -564,7 +564,7 @@ async function main(){
                 APP_STATE
             );
         }
-        APP_STATE.CURRENT_FILE = await openFile(
+        const currentFile = await openFile(
             file,
             APP_STATE.ACE_LIST,
             editor,
@@ -582,6 +582,12 @@ async function main(){
             ),
             api
         );
+        if (!currentFile) {
+            //console.error("Failed to open file: ", file);
+            loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
+            return;
+        }
+        APP_STATE.CURRENT_FILE = currentFile;
         
         // ファイルを開いた後、正しいファイルをハイライト
         if (APP_STATE.CURRENT_FILE && editor.explorer && typeof editor.explorer.highlightFile === 'function') {

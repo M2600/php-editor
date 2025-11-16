@@ -3,7 +3,7 @@
  */
 
 import { hideAllPreviewer } from '../utils/helpers.js';
-import { extToLang, loadFile } from '../core/file-manager.js';
+import { extToLang, loadExplorer, loadFile } from '../core/file-manager.js';
 import { Path } from '../utils/api.js';
 import { AceWrapper } from '../../../MEditor/MEditor.js';
 
@@ -38,6 +38,11 @@ export function aceKeybinds(ace, pushSaveButton, openInOtherWindow){
 export async function openFile(file, aceList, editor, mConsole, extLangMap, DEBUG, aceKeybinds, api) {
     DEBUG && console.log("fileInfo", file);
     const apiRet = await loadFile(file.path, api);
+    if (!apiRet) {
+        mConsole.print("Error loading file: " + file.path + " error");
+        // reload Explorer
+        return;
+    }
     hideAllPreviewer();
     
     if(file.type == "text"){

@@ -479,7 +479,7 @@ export async function loadFile(path, api) {
     await api("/api/file_manager.php", body=body)
     .then(data => {
         if (data.status === "error") {
-            console.error(data.error);
+            console.error(data.message);
             return;
         }
         if (data.status === "session_error") {

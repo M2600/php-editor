@@ -4518,7 +4518,133 @@ export class MEditor {
         chat.topMenu.element.appendChild(chat.configButton.element);
         chat.configButton.element.addEventListener("click", () => chat.openConfigWindow());
 
+
+        // ファイル
+        chat.inputArea.fileContextContainer = document.createElement("div");
+        chat.inputArea.fileContextContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-input-file-container");
+        chat.inputArea.element.appendChild(chat.inputArea.fileContextContainer);
+
+        // 添付ファイルリスト
+        chat.attachedFiles = [];
+        
+        
+        chat.inputArea.fileContextContainer.addFileButton = document.createElement("button");
+        chat.inputArea.fileContextContainer.addFileButton.classList.add(this.CLASS_NAME_PREFIX + "chat-add-file-btn");
+        chat.inputArea.fileContextContainer.addFileButton.innerHTML = "+";
+        chat.inputArea.fileContextContainer.addFileButton.title = "ファイルを添付";
+        chat.inputArea.fileContextContainer.appendChild(chat.inputArea.fileContextContainer.addFileButton);
+        
+        // 添付ファイル表示エリア
+        chat.inputArea.attachedFilesDisplay = document.createElement("div");
+        chat.inputArea.attachedFilesDisplay.classList.add(this.CLASS_NAME_PREFIX + "chat-attached-files");
+        chat.inputArea.fileContextContainer.appendChild(chat.inputArea.attachedFilesDisplay);
+
+        // ファイル選択input（非表示）
+        const fileInput = document.createElement("input");
+        fileInput.type = "file";
+        fileInput.multiple = true;
+        fileInput.style.display = "none";
+        chat.inputArea.fileContextContainer.appendChild(fileInput);
+
+        // ファイル添付ボタンのクリックイベント
+        chat.inputArea.fileContextContainer.addFileButton.addEventListener("click", () => {
+            fileInput.click();
+        });
+
+        // ファイル選択時の処理
+        fileInput.addEventListener("change", (e) => {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                // ファイルサイズチェック（10MB制限）
+                const maxSize = 10 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    console.warn(`ファイル "${file.name}" は10MBを超えているため添付できません。`);
+                    return;
+                }
+
+                // 画像ファイルかテキストファイルかを判定
+                const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                const textTypes = ['text/', 'application/json', 'application/javascript', 'application/xml'];
+                const isImage = imageTypes.includes(file.type);
+                const isText = textTypes.some(type => file.type.startsWith(type)) || 
+                               /\.(txt|md|js|jsx|ts|tsx|html|css|json|xml|yaml|yml|php|py|java|c|cpp|h|hpp|sh|sql)$/i.test(file.name);
+                
+                if (!isImage && !isText) {
+                    console.warn(`ファイル "${file.name}" はサポートされていない形式です。画像（JPEG/PNG/GIF/WebP）またはテキストファイルのみ添付できます。`);
+                    return;
+                }
+
+                // ファイルを読み込み
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const fileData = {
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                        fileType: isImage ? 'image' : 'text',
+                        content: ev.target.result
+                    };
+                    chat.attachedFiles.push(fileData);
+                    updateAttachedFilesDisplay();
+                };
+                
+                // 画像の場合はbase64、テキストの場合は文字列として読み込み
+                if (isImage) {
+                    reader.readAsDataURL(file);
+                } else {
+                    reader.readAsText(file);
+                }
+            });
+            fileInput.value = ""; // 入力をリセット
+        });
+
+        // 添付ファイル表示を更新する関数
+        const updateAttachedFilesDisplay = () => {
+            chat.inputArea.attachedFilesDisplay.innerHTML = "";
+            chat.attachedFiles.forEach((file, index) => {
+                const fileTag = document.createElement("div");
+                fileTag.classList.add(this.CLASS_NAME_PREFIX + "chat-attached-file-tag");
+                
+                // 画像の場合はサムネイルを表示
+                if (file.fileType === 'image') {
+                    const thumbnail = document.createElement("img");
+                    thumbnail.src = file.content;
+                    thumbnail.classList.add(this.CLASS_NAME_PREFIX + "chat-attached-file-thumbnail");
+                    thumbnail.title = `${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+                    fileTag.appendChild(thumbnail);
+                }
+                
+                const fileName = document.createElement("span");
+                fileName.classList.add(this.CLASS_NAME_PREFIX + "chat-attached-file-name");
+                fileName.textContent = file.name;
+                fileName.title = `${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+                fileTag.appendChild(fileName);
+
+                const removeBtn = document.createElement("button");
+                removeBtn.classList.add(this.CLASS_NAME_PREFIX + "chat-attached-file-remove");
+                removeBtn.innerHTML = "×";
+                removeBtn.title = "削除";
+                removeBtn.addEventListener("click", () => {
+                    chat.attachedFiles.splice(index, 1);
+                    updateAttachedFilesDisplay();
+                });
+                fileTag.appendChild(removeBtn);
+
+                chat.inputArea.attachedFilesDisplay.appendChild(fileTag);
+            });
+        };
+
+        // 添付ファイルをクリアするメソッド
+        chat.clearAttachedFiles = () => {
+            chat.attachedFiles = [];
+            updateAttachedFilesDisplay();
+        };
+
         // テキストエリア（入力内容に応じて高さ自動調整）
+        chat.inputArea.textContainer = document.createElement("div");
+        chat.inputArea.textContainer.classList.add(this.CLASS_NAME_PREFIX + "chat-input-text-container");
+        chat.inputArea.element.appendChild(chat.inputArea.textContainer);
+
         chat.inputArea.textarea = document.createElement("textarea");
         chat.inputArea.textarea.classList.add(this.CLASS_NAME_PREFIX + "chat-input");
         chat.inputArea.textarea.placeholder = "メッセージを入力...";
@@ -4526,13 +4652,13 @@ export class MEditor {
             this.style.height = 'auto';
             this.style.height = (this.scrollHeight) + 'px';
         });
-        chat.inputArea.element.appendChild(chat.inputArea.textarea);
+        chat.inputArea.textContainer.appendChild(chat.inputArea.textarea);
 
         // 送信ボタン
         chat.inputArea.sendBtn = document.createElement("button");
         chat.inputArea.sendBtn.classList.add(this.CLASS_NAME_PREFIX + "chat-send-btn");
         chat.inputArea.sendBtn.innerHTML = "送信";
-        chat.inputArea.element.appendChild(chat.inputArea.sendBtn);
+        chat.inputArea.textContainer.appendChild(chat.inputArea.sendBtn);
 
         // --- スクロール制御 ---
         chat.autoScroll = true;
@@ -4753,14 +4879,8 @@ export class MEditor {
 
         // 送信処理
         chat.inputArea.sendBtn.addEventListener("click", () => {
-            const value = chat.inputArea.textarea.value.trim();
-            if (value) {
-                chat.addMessage(value, "user");
-                //chat.inputArea.textarea.value = "";
-                chat.inputArea.textarea.rows = 1;
-                // ここでAIへの送信処理を追加可能
-                // 例: chat.addMessage("AIの返答例", "ai");
-            }
+            // 送信処理は外部（main.js等）で実装される
+            // ここでは何もしない（イベントリスナーは外部で追加される）
         });
 
         // Enterキーで送信（Shift+Enterで改行）

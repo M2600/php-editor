@@ -10,6 +10,90 @@ import { loadSelectedModel, saveSelectedModel } from '../utils/cookie.js';
 import { AITool } from './ai-tool.js';
 export { AITool };
 
+/**
+ * モデルの機能を判別するヘルパー関数
+ */
+export const ModelCapabilities = {
+    /**
+     * モデルがVision（画像入力）に対応しているか判別
+     * @param {string} modelId - モデルID
+     * @returns {boolean}
+     */
+    supportsVision(modelId) {
+        if (!modelId) return false;
+        const id = modelId.toLowerCase();
+        
+        // OpenAI Vision対応モデル
+        if (id.includes('gpt-4o') || id.includes('gpt-4-turbo') || id.includes('gpt-4-vision')) {
+            return true;
+        }
+        
+        // Claude Vision対応モデル
+        if (id.includes('claude-3')) {
+            return true;
+        }
+        
+        // Gemini Vision対応モデル
+        if (id.includes('gemini') && id.includes('vision')) {
+            return true;
+        }
+        
+        return false;
+    },
+    
+    /**
+     * モデルがFunction Calling（ツール）に対応しているか判別
+     * @param {string} modelId - モデルID
+     * @returns {boolean}
+     */
+    supportsTools(modelId) {
+        if (!modelId) return false;
+        const id = modelId.toLowerCase();
+        
+        // OpenAI Function Calling対応モデル
+        if (id.includes('gpt-4') || id.includes('gpt-3.5-turbo')) {
+            return true;
+        }
+        
+        // Claude Tool Use対応モデル
+        if (id.includes('claude-3')) {
+            return true;
+        }
+        
+        // Gemini Function Calling対応モデル
+        if (id.includes('gemini-1.5') || id.includes('gemini-pro')) {
+            return true;
+        }
+        
+        return false;
+    },
+    
+    /**
+     * モデルの機能情報を取得
+     * @param {string} modelId - モデルID
+     * @returns {Object} {vision: boolean, tools: boolean}
+     */
+    getCapabilities(modelId) {
+        return {
+            vision: this.supportsVision(modelId),
+            tools: this.supportsTools(modelId)
+        };
+    },
+    
+    /**
+     * モデルの機能を文字列で取得（UI表示用）
+     * @param {string} modelId - モデルID
+     * @returns {string}
+     */
+    getCapabilitiesString(modelId) {
+        const caps = this.getCapabilities(modelId);
+        const features = [];
+        if (caps.vision) features.push('📷 Vision');
+        if (caps.tools) features.push('🔧 Tools');
+        return features.length > 0 ? ` (${features.join(', ')})` : '';
+    }
+};
+
 // Markedのセキュリティ設定（一度だけ実行）
 if (typeof marked !== 'undefined' && !marked._securityConfigured) {
     marked.setOptions({
@@ -445,7 +529,27 @@ export class ChatHistoryManager {
 
     saveChatHistory() {
         try {
-            localStorage.setItem(this.storageKey, JSON.stringify(this.chatHistory));
+            // 画像を除外した履歴を作成（localStorage容量節約）
+            const storageHistory = this.chatHistory.map(msg => {
+                if (msg.role === 'user' && Array.isArray(msg.content)) {
+                    // content配列から画像を除外し、テキストのみ保存
+                    // これによりリロード後もAPI互換性を保つ
+                    const textParts = [];
+                    msg.content.forEach(item => {
+                        if (item.type === 'text') {
+                            textParts.push(item.text);
+                        } else if (item.type === 'image_url') {
+                            // 画像はファイル名として記録
+                            const filename = item.image_url?.filename || '画像ファイル';
+                            textParts.push(`[画像: ${filename}]`);
+                        }
+                    });
+                    // content配列を単一の文字列に変換（API互換）
+                    return {...msg, content: textParts.join('\n\n')};
+                }
+                return msg;
+            });
+            localStorage.setItem(this.storageKey, JSON.stringify(storageHistory));
             this.DEBUG && console.log("Chat history saved to localStorage");
         } catch(e) {
             console.error("Failed to save chat history:", e);
@@ -482,7 +586,7 @@ export class ChatHistoryManager {
             // contentがメッセージ全体の場合（role, content, tool_callsなどを含む）
             this.chatHistory.push(content);
         } else {
-            // 通常のメッセージ
+            // 通常のメッセージ（画像を含むcontent配列もそのまま保存）
             this.chatHistory.push({role, content});
         }
         this.saveChatHistory();
@@ -519,7 +623,36 @@ export function restoreChatHistoryToUI(chatHistory, chat) {
     
     chatHistory.forEach(msg => {
         if (msg.role === "user") {
-            chat.addMessage(msg.content, "user");
+            // content配列形式（Vision API）またはテキスト形式に対応
+            if (Array.isArray(msg.content)) {
+                // content配列の場合、テキストと画像ファイル名を抽出して表示
+                const textParts = [];
+                const attachments = [];
+                
+                msg.content.forEach(item => {
+                    if (item.type === 'text') {
+                        textParts.push(item.text);
+                    } else if (item.type === 'image_url') {
+                        const filename = item.image_url?.filename || '画像ファイル';
+                        attachments.push(`📎 ${filename}`);
+                    }
+                });
+                
+                // テキストと添付ファイル情報を結合
+                const displayParts = [];
+                if (textParts.length > 0) {
+                    displayParts.push(textParts.join('\n'));
+                }
+                if (attachments.length > 0) {
+                    displayParts.push(attachments.join('\n'));
+                }
+                
+                const displayText = displayParts.length > 0 ? displayParts.join('\n\n') : '(メッセージ)';
+                chat.addMessage(displayText, "user");
+            } else {
+                // 通常のテキスト形式
+                chat.addMessage(msg.content, "user");
+            }
         } else if (msg.role === "assistant") {
             // contentが文字列の場合のみ処理（ツール呼び出しメッセージはスキップ）
             if (msg.content && typeof msg.content === 'string') {
@@ -595,8 +728,18 @@ export async function loadModelList(chat, customApiConfig = null) {
         if (!res.ok) throw new Error("モデル一覧取得失敗: " + res.status);
         const data = await res.json();
         if (!data.data || !Array.isArray(data.data)) throw new Error("モデルデータ不正");
-        // nameを表示名に使う
-        const models = data.data.map(m => ({ id: m.id, name: m.name }));
+        
+        // モデルIDと名前、機能情報を含むオブジェクトを作成
+        const models = data.data.map(m => {
+            const capabilities = ModelCapabilities.getCapabilitiesString(m.id);
+            return {
+                id: m.id,
+                name: m.name + capabilities,
+                rawName: m.name,
+                supportsVision: ModelCapabilities.supportsVision(m.id),
+                supportsTools: ModelCapabilities.supportsTools(m.id)
+            };
+        });
         
         // 保存されたモデルがあり、かつモデルリストに存在するかチェック
         const savedModel = loadSelectedModel();
@@ -624,6 +767,37 @@ export async function loadModelList(chat, customApiConfig = null) {
                 console.log("Model selection saved:", selectedModelId);
             }
         });
+        
+        // モデルの機能情報を取得するメソッドを追加
+        modelSelector.getModelCapabilities = (modelId) => {
+            if (!modelId) {
+                modelId = modelSelector.getValue();
+            }
+            return ModelCapabilities.getCapabilities(modelId);
+        };
+        
+        // 現在選択中のモデルが指定の機能をサポートしているか確認
+        modelSelector.supportsVision = () => {
+            const modelId = modelSelector.getValue();
+            return ModelCapabilities.supportsVision(modelId);
+        };
+        
+        modelSelector.supportsTools = () => {
+            const modelId = modelSelector.getValue();
+            return ModelCapabilities.supportsTools(modelId);
+        };
+        
+        // モデル情報を保存
+        modelSelector._modelsData = models;
+        
+        // デバッグ情報：選択されたモデルの機能を表示
+        const currentModel = modelSelector.getValue();
+        if (currentModel) {
+            const caps = ModelCapabilities.getCapabilities(currentModel);
+            console.log(`Selected model: ${currentModel}`);
+            console.log(`  - Vision support: ${caps.vision ? '✓' : '✗'}`);
+            console.log(`  - Tools support: ${caps.tools ? '✓' : '✗'}`);
+        }
         
         return modelSelector;
     } catch(e) {
@@ -701,14 +875,95 @@ export async function sendAIMessage({
         // 入力履歴ナビを初期化（初回のみバインド）
         setupInputHistoryHotkeys(chat, historyManager);
         const userMsg = chat.inputArea.textarea.value.trim();
-        if(!userMsg) return;
+        
+        // メッセージも添付ファイルもない場合のみreturn
+        if(!userMsg && (!chat.attachedFiles || chat.attachedFiles.length === 0)) return;
+        
+        // ユーザーメッセージを構築（添付ファイルがある場合はcontent配列形式）
+        let userMessage;
+        if (chat.attachedFiles && chat.attachedFiles.length > 0) {
+            // Vision API形式: content配列
+            const contentArray = [];
+            
+            // テキストメッセージを追加
+            if (userMsg) {
+                contentArray.push({
+                    type: 'text',
+                    text: userMsg
+                });
+            }
+            
+            // 添付ファイルを追加
+            chat.attachedFiles.forEach(file => {
+                if (file.fileType === 'image') {
+                    // 画像ファイル: Vision API形式
+                    contentArray.push({
+                        type: 'image_url',
+                        image_url: {
+                            url: file.content,  // data:image/...;base64,...
+                            filename: file.name  // ファイル名を記録
+                        }
+                    });
+                } else {
+                    // テキストファイル: コードブロックとして追加
+                    const fileContent = `[添付ファイル: ${file.name}]\n\`\`\`\n${file.content}\n\`\`\``;
+                    contentArray.push({
+                        type: 'text',
+                        text: fileContent
+                    });
+                }
+            });
+            
+            // content配列形式の場合は配列をそのまま履歴に保存
+            userMessage = contentArray;
+            console.log("Sending message with attachments:", chat.attachedFiles.length, "files");
+        } else {
+            // 通常のテキストメッセージ
+            userMessage = userMsg;
+        }
+        
         chat.inputArea.textarea.value = "";
         chat.inputArea.textarea.style.height = '';
         // 履歴カーソルをリセット
         chat.inputArea.textarea._historyCursor = -1;
         chat.inputArea.textarea._historyDraft = '';
 
-        historyManager.addMessage("user", userMsg);
+        // 添付ファイルをクリア
+        if (chat.attachedFiles && chat.attachedFiles.length > 0) {
+            chat.clearAttachedFiles();
+        }
+
+        historyManager.addMessage("user", userMessage);
+        
+        // ユーザーメッセージをUIに表示
+        if (Array.isArray(userMessage)) {
+            // content配列形式の場合
+            const textParts = [];
+            const attachments = [];
+            
+            userMessage.forEach(item => {
+                if (item.type === 'text') {
+                    textParts.push(item.text);
+                } else if (item.type === 'image_url') {
+                    const filename = item.image_url?.filename || '画像ファイル';
+                    attachments.push(`📎 ${filename}`);
+                }
+            });
+            
+            const displayParts = [];
+            if (textParts.length > 0) {
+                displayParts.push(textParts.join('\n'));
+            }
+            if (attachments.length > 0) {
+                displayParts.push(attachments.join('\n'));
+            }
+            
+            chat.addMessage(displayParts.join('\n\n'), "user");
+        } else {
+            // 通常のテキストメッセージ
+            chat.addMessage(userMessage, "user");
+        }
+        
         historyManager.setStreaming(true);
 
         // ローディング表示

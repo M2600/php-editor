@@ -64,17 +64,19 @@ export async function openFile(file, aceList, editor, mConsole, extLangMap, DEBU
                 aceDOM.classList.add("viewer");
                 aceDOM.style.width = "100%";
                 aceDOM.style.height = "100%";
-                const ace = new AceWrapper(aceDOM.id);
-                ace.loadMySettings();
+                const aceW = new AceWrapper(aceDOM.id);
+                aceW.loadMySettings();
                 let mode = extToLang(file.path.split(".").pop(), extLangMap);
-                ace.setMode(mode);
-                file.aceObj = ace;
+                aceW.setMode(mode);
+                file.aceObj = aceW;
                 aceList.push({
-                    aceObj: ace,
+                    aceObj: aceW,
                     filePath: file.path,
                 });
                 aceKeybinds(file.aceObj.editor);
                 file.aceObj.setValue(apiRet.content);
+                // Reset history
+                file.aceObj.editor.getSession().setUndoManager(new ace.UndoManager())
                 file.aceObj.editor.gotoLine(0);
                 // Set changed flag to false as default after setValue()
                 file.changed = false;
@@ -82,6 +84,14 @@ export async function openFile(file, aceList, editor, mConsole, extLangMap, DEBU
         }
         else if(!file.changed){
             DEBUG && console.log("ace already exists, but file changed flag is false");
+            // historyの処理
+            const history = file.aceObj.editor.getSession().getUndoManager().$undoStack;
+            console.log("ace history: " + file.path, history);
+            //const rev = file.aceObj.editor.getSession().getUndoManager().getRevision();
+            //console.log("markIgnored at revision: ", rev);
+            //file.aceObj.editor.getSession().getUndoManager().markIgnored(rev, rev+1);
+            //console.log("ace history after markIgnored: ", file.aceObj.editor.getSession().getUndoManager().$undoStack);
+            
             // Get current cursor position
             const currentCursor = file.aceObj.editor.getCursorPosition();
             // Set value to ace editor

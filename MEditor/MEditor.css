@@ -1550,6 +1550,8 @@ i {
     color: var(--me-color-text);
     border: solid 1px #666;
     cursor: pointer;
+    width: 1.5em;
+    height: 1.5em;
     border-radius: 1em;
     padding: 0em .4em;
     font-size: 1.2em;

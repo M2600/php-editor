@@ -69,7 +69,7 @@ export function changeTheme(theme, aceTheme, currentFile, editor, userConfig, DE
 export const CONFIG = {
     DEBUG: true,
     FILE_PAGE_BASE_URL: "/user-programs/",
-    MAX_CHAT_HISTORY: 6,
+    MAX_CHAT_HISTORY: 100,
     CHAT_STORAGE_KEY: "php-editor-chat-history",
     SESSION_PULSE_INTERVAL: 300000, // セッション維持のためのパルス送信間隔（ミリ秒）
     EXPLORER_AUTO_RELOAD_INTERVAL: 3600000, // エクスプローラー自動リロード間隔（ミリ秒、0で無効）

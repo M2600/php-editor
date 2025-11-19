@@ -33,6 +33,27 @@ export function aceKeybinds(ace, pushSaveButton, openInOtherWindow){
     })
 
     ace.commands.removeCommand("jumptomatching");
+
+    // Vim キーバインド用のカスタムコマンドを追加
+    // 保存コマンド
+    window.ace.config.loadModule('ace/keyboard/vim', function(module) {
+        const vimApi = require('ace/keyboard/vim').Vim;
+        // Add custom ex command :w to save file
+        vimApi.defineEx("write", "w", function(cm, input) {
+            console.log("Vim :w command triggered");
+            pushSaveButton();
+        });
+    })
+
+    // 実行コマンド
+    window.ace.config.loadModule('ace/keyboard/vim', function(module) {
+        const vimApi = require('ace/keyboard/vim').Vim;
+        // Add custom ex command :run to run file
+        vimApi.defineEx("!", "!", function(cm, input) {
+            console.log("Vim :! command triggered: ", cm , input);
+            openInOtherWindow();
+        });
+    })
 }
 
 export async function openFile(file, aceList, editor, mConsole, extLangMap, DEBUG, aceKeybinds, api) {

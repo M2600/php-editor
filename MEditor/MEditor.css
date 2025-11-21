@@ -445,6 +445,13 @@ i {
     overflow-y: auto;
     padding-bottom: 1.2em;
     max-height: 100%;
+    outline: none; /* デフォルトのフォーカスアウトラインを削除 */
+}
+
+/* エクスプローラーにフォーカスがある時の視覚的フィードバック */
+.meditor-explorer-content:focus {
+    outline: 2px solid var(--me-color-border);
+    outline-offset: -2px;
 }
 
 .meditor-file {
@@ -506,6 +513,10 @@ i {
     display: flex;
 }
 .meditor-dir-menu:hover {
+    background-color: var(--me-color-bg-active);
+}
+/* フォルダが選択されている状態 */
+.meditor-dir-menu.meditor-file-selected {
     background-color: var(--me-color-bg-active);
 }
 

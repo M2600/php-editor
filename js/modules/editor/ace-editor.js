@@ -7,7 +7,7 @@ import { extToLang, loadExplorer, loadFile } from '../core/file-manager.js';
 import { Path } from '../utils/api.js';
 import { AceWrapper } from '../../../MEditor/MEditor.js';
 
-export function aceKeybinds(ace, pushSaveButton, openInOtherWindow){
+export function aceKeybinds(ace, pushSaveButton, openInOtherWindow, focusExplorer){
     ace.commands.addCommand({
         name: "save",
         bindKey: {
@@ -54,6 +54,21 @@ export function aceKeybinds(ace, pushSaveButton, openInOtherWindow){
             openInOtherWindow();
         });
     })
+
+    // エクスプローラにフォーカスするコマンド
+    if (focusExplorer && typeof focusExplorer === 'function') {
+        window.ace.config.loadModule('ace/keyboard/vim', function(module) {
+            const vimApi = require('ace/keyboard/vim').Vim;
+            // Add custom ex command :e (explore) to focus explorer
+            vimApi.defineEx("explore", "e", function(cm, input) {
+                console.log("Vim :e (explore) command triggered");
+                // エディタのフォーカスが戻らないように遅延実行
+                setTimeout(() => {
+                    focusExplorer();
+                }, 10);
+            });
+        });
+    }
 }
 
 export async function openFile(file, aceList, editor, mConsole, extLangMap, DEBUG, aceKeybinds, api) {

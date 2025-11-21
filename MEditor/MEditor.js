@@ -1703,8 +1703,15 @@ export class MEditor {
         parentObj.explorer.content = {};
         parentObj.explorer.content.element = document.createElement("div");
         parentObj.explorer.content.element.classList.add(this.CLASS_NAME_PREFIX + "explorer-content");
+        // エクスプローラーをキーボードでフォーカス可能にする
+        parentObj.explorer.content.element.setAttribute('tabindex', '0');
         parentObj.explorer.element.appendChild(parentObj.explorer.content.element);
 
+        // キーボードナビゲーション用の状態管理
+        parentObj.explorer._keyboardNavigation = {
+            enabled: true,
+            currentIndex: -1
+        };
 
         // Methods
 
@@ -1829,6 +1836,303 @@ export class MEditor {
                 fileElement.classList.add(this.CLASS_NAME_PREFIX + "file-selected");
             }
         }
+
+        /**
+         * エクスプローラー内の表示中のファイル/フォルダ要素を取得
+         * @returns {Array<HTMLElement>} ファイル/フォルダのボタン要素の配列
+         */
+        parentObj.explorer.getVisibleItems = () => {
+            const items = [];
+            // ファイルボタンを取得
+            const fileButtons = parentObj.explorer.content.element.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'file');
+            fileButtons.forEach(button => {
+                // 表示されている要素のみを含める
+                if (button.offsetParent !== null) {
+                    items.push(button);
+                }
+            });
+            // フォルダボタンも取得（.meditor-dir-menu）
+            const dirButtons = parentObj.explorer.content.element.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'dir-menu');
+            dirButtons.forEach(button => {
+                // 表示されている要素のみを含める
+                if (button.offsetParent !== null) {
+                    items.push(button);
+                }
+            });
+            
+            // DOM順にソート（画面上の表示順序に合わせる）
+            items.sort((a, b) => {
+                const comparison = a.compareDocumentPosition(b);
+                if (comparison & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
+                if (comparison & Node.DOCUMENT_POSITION_PRECEDING) return 1;
+                return 0;
+            });
+            
+            return items;
+        }
+
+        /**
+         * 指定されたインデックスのアイテムを選択状態にする
+         * @param {number} index - 選択するアイテムのインデックス
+         */
+        parentObj.explorer.selectItemByIndex = (index) => {
+            const items = parentObj.explorer.getVisibleItems();
+            if (index < 0 || index >= items.length) return;
+
+            // 既存の選択を解除
+            items.forEach(item => {
+                item.classList.remove(this.CLASS_NAME_PREFIX + "file-selected");
+            });
+
+            // 新しいアイテムを選択
+            const selectedItem = items[index];
+            selectedItem.classList.add(this.CLASS_NAME_PREFIX + "file-selected");
+            
+            // 選択されたアイテムが見えるようにスクロール
+            selectedItem.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest'
+            });
+
+            // 現在のインデックスを更新
+            parentObj.explorer._keyboardNavigation.currentIndex = index;
+        }
+
+        /**
+         * 次のアイテムを選択
+         */
+        parentObj.explorer.selectNextItem = () => {
+            const items = parentObj.explorer.getVisibleItems();
+            if (items.length === 0) return;
+
+            let currentIndex = parentObj.explorer._keyboardNavigation.currentIndex;
+            
+            // 現在の選択がない場合は最初のアイテムを選択
+            if (currentIndex === -1) {
+                parentObj.explorer.selectItemByIndex(0);
+                return;
+            }
+
+            // 次のアイテムを選択（最後の場合は最後のまま）
+            const nextIndex = Math.min(currentIndex + 1, items.length - 1);
+            parentObj.explorer.selectItemByIndex(nextIndex);
+        }
+
+        /**
+         * 前のアイテムを選択
+         */
+        parentObj.explorer.selectPreviousItem = () => {
+            const items = parentObj.explorer.getVisibleItems();
+            if (items.length === 0) return;
+
+            let currentIndex = parentObj.explorer._keyboardNavigation.currentIndex;
+            
+            // 現在の選択がない場合は最初のアイテムを選択
+            if (currentIndex === -1) {
+                parentObj.explorer.selectItemByIndex(0);
+                return;
+            }
+
+            // 前のアイテムを選択（最初の場合は最初のまま）
+            const prevIndex = Math.max(currentIndex - 1, 0);
+            parentObj.explorer.selectItemByIndex(prevIndex);
+        }
+
+        /**
+         * 選択中のアイテムを開く
+         */
+        parentObj.explorer.openSelectedItem = () => {
+            const items = parentObj.explorer.getVisibleItems();
+            const currentIndex = parentObj.explorer._keyboardNavigation.currentIndex;
+            
+            if (currentIndex === -1 || currentIndex >= items.length) return;
+
+            const selectedItem = items[currentIndex];
+            // クリックイベントをトリガー
+            selectedItem.click();
+        }
+
+        /**
+         * 選択中のフォルダを展開する（左右矢印キー用）
+         */
+        parentObj.explorer.expandSelectedFolder = () => {
+            const items = parentObj.explorer.getVisibleItems();
+            const currentIndex = parentObj.explorer._keyboardNavigation.currentIndex;
+            
+            if (currentIndex === -1 || currentIndex >= items.length) return false;
+
+            const selectedItem = items[currentIndex];
+            
+            // フォルダボタン（.meditor-dir-menu）の場合、親の.meditor-dir要素からパスを取得
+            let itemPath = selectedItem.id;
+            if (!itemPath && selectedItem.classList.contains(this.CLASS_NAME_PREFIX + 'dir-menu')) {
+                const parentDir = selectedItem.closest('.' + this.CLASS_NAME_PREFIX + 'dir');
+                if (parentDir) {
+                    itemPath = parentDir.id;
+                }
+            }
+            
+            // フォルダかどうかを確認（パスが/で終わる）
+            if (!itemPath || !itemPath.endsWith('/')) return false;
+
+            // フォルダの展開状態を確認
+            const dirElement = document.getElementById(itemPath);
+            if (!dirElement) return false;
+
+            const dirName = dirElement.querySelector('.' + this.CLASS_NAME_PREFIX + 'dir-name');
+            const isExpanded = dirName && dirName.classList.contains(this.CLASS_NAME_PREFIX + 'dir-name-expanded');
+
+            // 折りたたまれている場合のみ展開
+            if (!isExpanded) {
+                parentObj.explorer.toggleExpand(itemPath);
+                return true;
+            }
+            return false;
+        }
+
+        /**
+         * 選択中のフォルダを折りたたむ（左右矢印キー用）
+         */
+        parentObj.explorer.collapseSelectedFolder = () => {
+            const items = parentObj.explorer.getVisibleItems();
+            const currentIndex = parentObj.explorer._keyboardNavigation.currentIndex;
+            
+            if (currentIndex === -1 || currentIndex >= items.length) return false;
+
+            const selectedItem = items[currentIndex];
+            
+            // フォルダボタン（.meditor-dir-menu）の場合、親の.meditor-dir要素からパスを取得
+            let itemPath = selectedItem.id;
+            if (!itemPath && selectedItem.classList.contains(this.CLASS_NAME_PREFIX + 'dir-menu')) {
+                const parentDir = selectedItem.closest('.' + this.CLASS_NAME_PREFIX + 'dir');
+                if (parentDir) {
+                    itemPath = parentDir.id;
+                }
+            }
+            
+            // フォルダかどうかを確認（パスが/で終わる）
+            if (!itemPath || !itemPath.endsWith('/')) return false;
+
+            // フォルダの展開状態を確認
+            const dirElement = document.getElementById(itemPath);
+            if (!dirElement) return false;
+
+            const dirName = dirElement.querySelector('.' + this.CLASS_NAME_PREFIX + 'dir-name');
+            const isExpanded = dirName && dirName.classList.contains(this.CLASS_NAME_PREFIX + 'dir-name-expanded');
+
+            // 展開されている場合のみ折りたたむ
+            if (isExpanded) {
+                parentObj.explorer.toggleExpand(itemPath);
+                return true;
+            }
+            return false;
+        }
+
+        /**
+         * 最初のアイテムを選択
+         */
+        parentObj.explorer.selectFirstItem = () => {
+            const items = parentObj.explorer.getVisibleItems();
+            if (items.length > 0) {
+                parentObj.explorer.selectItemByIndex(0);
+            }
+        }
+
+        /**
+         * 最後のアイテムを選択
+         */
+        parentObj.explorer.selectLastItem = () => {
+            const items = parentObj.explorer.getVisibleItems();
+            if (items.length > 0) {
+                parentObj.explorer.selectItemByIndex(items.length - 1);
+            }
+        }
+
+        /**
+         * エクスプローラにフォーカスを当てる
+         * Vimコマンドやショートカットから呼び出すための関数
+         */
+        parentObj.explorer.focus = () => {
+            if (parentObj.explorer.content && parentObj.explorer.content.element) {
+                // 他の要素からフォーカスを強制的に移す
+                if (document.activeElement && document.activeElement.blur) {
+                    document.activeElement.blur();
+                }
+                
+                // わずかな遅延を入れてフォーカスを確実に移す
+                setTimeout(() => {
+                    parentObj.explorer.content.element.focus();
+                    
+                    // フォーカス時に選択がない場合は最初のアイテムを選択
+                    const items = parentObj.explorer.getVisibleItems();
+                    if (items.length > 0 && parentObj.explorer._keyboardNavigation.currentIndex === -1) {
+                        parentObj.explorer.selectItemByIndex(0);
+                    }
+                }, 0);
+                
+                return true;
+            }
+            return false;
+        }
+
+        /**
+         * キーボードナビゲーションを有効化
+         */
+        parentObj.explorer.setupKeyboardNavigation = () => {
+            parentObj.explorer.content.element.addEventListener('keydown', (e) => {
+                if (!parentObj.explorer._keyboardNavigation.enabled) return;
+
+                switch(e.key) {
+                    case 'ArrowDown':
+                    case 'j':  // Vim: 下へ移動
+                        e.preventDefault();
+                        parentObj.explorer.selectNextItem();
+                        break;
+                    case 'ArrowUp':
+                    case 'k':  // Vim: 上へ移動
+                        e.preventDefault();
+                        parentObj.explorer.selectPreviousItem();
+                        break;
+                    case 'ArrowRight':
+                    case 'l':  // Vim: 右へ移動（フォルダ展開）
+                        e.preventDefault();
+                        // フォルダを展開
+                        parentObj.explorer.expandSelectedFolder();
+                        break;
+                    case 'ArrowLeft':
+                    case 'h':  // Vim: 左へ移動（フォルダ折りたたみ）
+                        e.preventDefault();
+                        // フォルダを折りたたむ
+                        parentObj.explorer.collapseSelectedFolder();
+                        break;
+                    case 'Enter':
+                        e.preventDefault();
+                        parentObj.explorer.openSelectedItem();
+                        break;
+                    case 'Home':
+                    case 'g':  // Vim: ファイルの先頭へ（gg相当）
+                        e.preventDefault();
+                        parentObj.explorer.selectFirstItem();
+                        break;
+                    case 'End':
+                    case 'G':  // Vim: ファイルの末尾へ
+                        e.preventDefault();
+                        parentObj.explorer.selectLastItem();
+                        break;
+                }
+            });
+
+            // フォーカス時に最初のアイテムを自動選択（選択がない場合）
+            parentObj.explorer.content.element.addEventListener('focus', () => {
+                const items = parentObj.explorer.getVisibleItems();
+                if (items.length > 0 && parentObj.explorer._keyboardNavigation.currentIndex === -1) {
+                    parentObj.explorer.selectItemByIndex(0);
+                }
+            });
+        }
+
+        // キーボードナビゲーションを初期化
+        parentObj.explorer.setupKeyboardNavigation();
 
 
         this.explorer = parentObj.explorer;

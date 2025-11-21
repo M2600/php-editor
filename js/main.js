@@ -578,6 +578,12 @@ async function main(){
                 async () => {
                     // F10キーで実行：共通の実行関数を呼び出し
                     await executeCurrentFile();
+                },
+                () => {
+                    // エクスプローラにフォーカス
+                    if (editor.explorer && typeof editor.explorer.focus === 'function') {
+                        editor.explorer.focus();
+                    }
                 }
             ),
             api

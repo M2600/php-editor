@@ -106,6 +106,21 @@ export async function openFile(file, aceList, editor, mConsole, extLangMap, DEBU
                 aceW.loadMySettings();
                 let mode = extToLang(file.path.split(".").pop(), extLangMap);
                 aceW.setMode(mode);
+                
+                // JSの場合はworkerの設定を変更してES2022以降に対応
+                if(mode === 'javascript') {
+                    const worker = aceW.editor.session.$worker;
+                    console.log("JS worker: ", worker);
+                    if (worker) {
+                        worker.send("changeOptions", [{
+                            "esversion": 13, // ES2022相当（またはそれ以上）を指定
+                            "esnext": true   // 次世代の機能を有効化
+                        }]);
+                        console.log("Configured JS worker for ES2022+");
+                    }
+                }
+
+
                 file.aceObj = aceW;
                 aceList.push({
                     aceObj: aceW,

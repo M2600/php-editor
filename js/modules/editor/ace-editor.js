@@ -69,6 +69,8 @@ export function aceKeybinds(ace, pushSaveButton, openInOtherWindow, focusExplore
             });
         });
     }
+
+    ace.setKeyboardHandler(window.APP_STATE.ACE_KEYBOARD_HANDLER || "ace/keyboard/ace");
 }
 
 export async function openFile(file, aceList, editor, mConsole, extLangMap, DEBUG, aceKeybinds, api) {

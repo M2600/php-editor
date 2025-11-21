@@ -127,5 +127,6 @@ export const APP_STATE = {
     RUN_BROWSER_TAB: undefined,
     ACE_LIST: [],
     AI_CONFIG: { baseUrl: "", apiKey: "" , userCustomApi: false },
-    RUN_MODE: 'WEB_MODE'  // 'API_MODE': API開発モード(デバッグ実行), 'WEB_MODE': Webページモード(別タブ実行)
+    RUN_MODE: 'WEB_MODE',  // 'API_MODE': API開発モード(デバッグ実行), 'WEB_MODE': Webページモード(別タブ実行)
+    ACE_KEYBOARD_HANDLER: "ace/keyboard/ace",
 };

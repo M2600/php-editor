@@ -2,6 +2,8 @@
  * API通信ユーティリティ
  */
 
+import { sessionError } from '../utils/helpers.js';
+
 // API関数を定義 (既存のコードから抽出)
 export async function api(url, body = {}) {
     try {
@@ -14,6 +16,11 @@ export async function api(url, body = {}) {
         });
         
         if (!response.ok) {
+            // 認証エラーの処理
+            if(response.status === 401) {
+                sessionError();
+                throw new Error("未ログインまたはセッションが無効です。再度ログインしてください。");
+            }
             const errorMessage = `HTTP error! status: ${response.status}`;
             // エラーロガーがあれば API エラーを記録
             if (window.errorLogger) {

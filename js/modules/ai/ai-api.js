@@ -1,6 +1,8 @@
 // ai_api.js
 // AIチャットAPI通信・ストリーム処理モジュール
 
+import { sessionError } from "../utils/helpers.js";
+
 /**
  * スムーズな文字出力を行うクラス
  */
@@ -94,6 +96,12 @@ export async function fetchAIChat({messages, model, fileContext, dirContext, too
             signal
         });
         if (!res.ok) {
+            // 認証エラーの処理
+            if(res.status === 401) {
+                onError && onError("未ログインまたはセッションが無効です。再度ログインしてください。");
+                sessionError();
+                return;
+            }
             let errMsg = `サーバエラー: ${res.status} ${res.statusText}`;
             try {
                 const errJson = await res.json();

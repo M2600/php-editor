@@ -38,8 +38,9 @@ session_start();
 /**
  * ログイン認証チェック
  * ログインが必要なページで呼び出す
+ * @param string | array $role 必要なユーザーロール（'user'または'admin', ['teacher', 'admin']など。空文字列の場合は全てのユーザーを許可）
  */
-function requireLogin() {
+function requireLogin(string|array $role = '') {
     if (!isset($_SESSION["id"]) || empty($_SESSION["id"])) {
         // APIリクエストの場合はJSONでエラーを返す
         if (isApiRequest()) {
@@ -57,6 +58,33 @@ function requireLogin() {
         // 現在のURLをセッションに保存（ログイン後にリダイレクトするため）
         $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
         header("Location: /login.php");
+        exit();
+    }
+
+    // ユーザーロールのチェック
+    $roleExists = !empty($role);
+    $sessionRoleExists = isset($_SESSION["role"]);
+    $roleIsString = is_string($role);
+    $roleIsArray = is_array($role);
+    $roleMatches = $roleIsString && $_SESSION["role"] === $role
+        || $roleIsArray && in_array($_SESSION["role"], $role);
+    if ($roleExists && (!$sessionRoleExists || !$roleMatches)) {
+        // APIリクエストの場合はJSONでエラーを返す
+        if (isApiRequest()) {
+            header('Content-Type: application/json');
+            http_response_code(403);
+            echo json_encode([
+                "status" => "permission_error",
+                "error" => "Forbidden",
+                "message" => "この操作には権限がありません。"
+            ]);
+            exit();
+        }
+
+        // 通常のページの場合は403エラーページにリダイレクト
+        //header("Location: /403.php");
+        http_response_code(403);
+        echo "<h1>403 Forbidden</h1><p>この操作には権限がありません。</p>";
         exit();
     }
 }

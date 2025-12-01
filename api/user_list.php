@@ -40,6 +40,12 @@ function getAllUsers() {
                     'role' => $data[2]
                 ];
             }
+            else if(count($data) == 2) {
+                $users[] = [
+                    'id' => $data[0],
+                    'role' => 'user' // デフォルトロール
+                ];
+            }
         }
         fclose($handle);
     }

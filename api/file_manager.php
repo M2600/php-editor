@@ -38,6 +38,17 @@ try {
     }
 
     if($action == "save"){
+        // 代理ログイン中の読み取り専用モードでは保存不可
+        if (!canEditFiles()) {
+            http_response_code(403);
+            echo json_encode(array(
+                "status" => "error", 
+                "error" => "Permission denied",
+                "message" => "代理ログイン中は読み取り専用モードのため、ファイルを保存できません。"
+            ));
+            exit();
+        }
+        
         $file = $params["content"];
         saveFile($path, $file);
         echo json_encode(array("status" => "success"));
@@ -45,6 +56,16 @@ try {
     }
 
     if($action == "touch"){
+        if (!canEditFiles()) {
+            http_response_code(403);
+            echo json_encode(array(
+                "status" => "error", 
+                "error" => "Permission denied",
+                "message" => "代理ログイン中は読み取り専用モードのため、ファイルを作成できません。"
+            ));
+            exit();
+        }
+        
         $createdFilePath = touchFile($path);
         echo json_encode(array("status" => "success", "createdFilePath" => $createdFilePath));
         exit();
@@ -52,6 +73,16 @@ try {
 
     if($action == "create"){
         // ファイルを作成して内容を書き込む
+        if (!canEditFiles()) {
+            http_response_code(403);
+            echo json_encode(array(
+                "status" => "error", 
+                "error" => "Permission denied",
+                "message" => "代理ログイン中は読み取り専用モードのため、ファイルを作成できません。"
+            ));
+            exit();
+        }
+        
         try {
             $content = isset($params["content"]) ? $params["content"] : "";
             $createdFilePath = createFileWithContent($path, $content);
@@ -63,12 +94,32 @@ try {
     }
 
     if($action == "mkdir"){
+        if (!canEditFiles()) {
+            http_response_code(403);
+            echo json_encode(array(
+                "status" => "error", 
+                "error" => "Permission denied",
+                "message" => "代理ログイン中は読み取り専用モードのため、ディレクトリを作成できません。"
+            ));
+            exit();
+        }
+        
         $newPath = makeDirectory($path);
         echo json_encode(array("status" => "success", "newPath" => $newPath));
         exit();
     }
 
     if($action == "rename"){
+        if (!canEditFiles()) {
+            http_response_code(403);
+            echo json_encode(array(
+                "status" => "error", 
+                "error" => "Permission denied",
+                "message" => "代理ログイン中は読み取り専用モードのため、ファイルをリネームできません。"
+            ));
+            exit();
+        }
+        
         $newPath = $params["newPath"];
         $newPath = renameFile($path, $newPath);
         echo json_encode(array("status" => "success", "newPath" => $newPath));
@@ -76,6 +127,16 @@ try {
     }
 
     if($action == "renameDir"){
+        if (!canEditFiles()) {
+            http_response_code(403);
+            echo json_encode(array(
+                "status" => "error", 
+                "error" => "Permission denied",
+                "message" => "代理ログイン中は読み取り専用モードのため、ディレクトリをリネームできません。"
+            ));
+            exit();
+        }
+        
         $newPath = $params["newPath"];
         $newPath = renameDirectory($path, $newPath);
         echo json_encode(array("status" => "success", "newPath" => $newPath));
@@ -83,6 +144,16 @@ try {
     }
 
     if($action == "duplicate"){
+        if (!canEditFiles()) {
+            http_response_code(403);
+            echo json_encode(array(
+                "status" => "error", 
+                "error" => "Permission denied",
+                "message" => "代理ログイン中は読み取り専用モードのため、ファイルを複製できません。"
+            ));
+            exit();
+        }
+        
         // newPathが指定されていない場合は自動生成
         if (isset($params["newPath"]) && !empty($params["newPath"])) {
             $newPath = htmlspecialchars_decode($params["newPath"], ENT_QUOTES);
@@ -96,6 +167,16 @@ try {
     }
 
     if($action == "upload"){
+        if (!canEditFiles()) {
+            http_response_code(403);
+            echo json_encode(array(
+                "status" => "error", 
+                "error" => "Permission denied",
+                "message" => "代理ログイン中は読み取り専用モードのため、ファイルをアップロードできません。"
+            ));
+            exit();
+        }
+        
         $fileInfo = $_FILES["file"];
         uploadFile($path, $fileInfo);
         echo json_encode(array("status" => "success"));
@@ -103,12 +184,32 @@ try {
     }
 
     if($action == "delete"){
+        if (!canEditFiles()) {
+            http_response_code(403);
+            echo json_encode(array(
+                "status" => "error", 
+                "error" => "Permission denied",
+                "message" => "代理ログイン中は読み取り専用モードのため、ファイルを削除できません。"
+            ));
+            exit();
+        }
+        
         deleteFile($path);
         echo json_encode(array("status" => "success"));
         exit();
     }
 
     if($action == "deleteDir"){
+        if (!canEditFiles()) {
+            http_response_code(403);
+            echo json_encode(array(
+                "status" => "error", 
+                "error" => "Permission denied",
+                "message" => "代理ログイン中は読み取り専用モードのため、ディレクトリを削除できません。"
+            ));
+            exit();
+        }
+        
         deleteDirectory($path);
         echo json_encode(array("status" => "success"));
         exit();

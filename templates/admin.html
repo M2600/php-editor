@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理者ページ - PHPEditor</title>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>管理者ページ</h1>
+			<hr>
+            <p>代理ログイン機能でユーザの画面を確認できます</p>
+        </div>
+
+        <!-- 代理ログイン中の場合のステータス表示 -->
+        <div id="proxyStatus" class="proxy-status" style="display: none;">
+            <h2>🔄 代理ログイン中</h2>
+            <p><strong>代理ログインユーザ:</strong> <span id="proxyTargetUser"></span></p>
+            <p><strong>モード:</strong> <span id="proxyMode"></span></p>
+            <p><strong>ログイン時刻:</strong> <span id="proxyLoginTime"></span></p>
+            <button onclick="exitProxyLogin()">代理ログインを解除</button>
+        </div>
+
+        <!-- 代理ログインオプション -->
+        <div class="controls">
+            <label>
+                <input type="checkbox" id="readonlyMode" checked>
+                読み取り専用モード（ファイル編集を禁止）
+            </label>
+            <span class="info">代理ログイン時のファイル編集の可否を設定します</span>
+        </div>
+
+        <!-- ユーザ一覧 -->
+        <div class="user-list">
+            <h2>ユーザ一覧</h2>
+            <div id="error" class="error" style="display: none;"></div>
+            <div id="loading" class="loading">読み込み中...</div>
+            <table id="userTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>ユーザID</th>
+                        <th>ロール</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="userTableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <a href="/2.php" class="back-link">← エディタに戻る</a>
+    </div>
+
+    <script>
+        // ユーザリストを読み込む
+        async function loadUsers() {
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const table = document.getElementById('userTable');
+            const tbody = document.getElementById('userTableBody');
+            
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            table.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/user_list.php');
+                const data = await response.json();
+                
+                if (data.status !== 'success') {
+                    throw new Error(data.message || 'ユーザ一覧の取得に失敗しました');
+                }
+                
+                // 代理ログイン中の場合はステータス表示
+                if (data.is_proxy && data.proxy_info) {
+                    showProxyStatus(data.proxy_info);
+                }
+                
+                // テーブルを生成
+                tbody.innerHTML = '';
+                data.users.forEach(user => {
+                    const row = document.createElement('tr');
+                    const isCurrentUser = user.id === data.current_user;
+                    
+                    row.innerHTML = `
+                        <td class="${isCurrentUser ? 'current-user' : ''}">
+                            ${user.id}
+                            ${isCurrentUser ? '(現在のユーザ)' : ''}
+                        </td>
+                        <td>
+                            <span class="role-badge role-${user.role}">
+                                ${getRoleLabel(user.role)}
+                            </span>
+                        </td>
+                        <td style="text-align: center;">
+                            <button 
+                                class="proxy-btn" 
+                                onclick="proxyLogin('${user.id}')"
+                                ${isCurrentUser ? 'disabled' : ''}
+                            >
+                                代理ログイン
+                            </button>
+                        </td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                });
+                
+                loading.style.display = 'none';
+                table.style.display = 'table';
+                
+            } catch (err) {
+                console.error('Error loading users:', err);
+                error.textContent = err.message;
+                error.style.display = 'block';
+                loading.style.display = 'none';
+            }
+        }
+        
+        // 代理ログインステータスを表示
+        function showProxyStatus(proxyInfo) {
+            const status = document.getElementById('proxyStatus');
+            const targetUser = document.getElementById('proxyTargetUser');
+            const mode = document.getElementById('proxyMode');
+            const loginTime = document.getElementById('proxyLoginTime');
+            
+            targetUser.textContent = proxyInfo.target_user;
+            mode.textContent = proxyInfo.readonly ? '読み取り専用' : '編集可能';
+            loginTime.textContent = proxyInfo.login_time;
+            
+            status.style.display = 'block';
+        }
+        
+        // ロールのラベルを取得
+        function getRoleLabel(role) {
+            const labels = {
+            };
+            return labels[role] || role;
+        }
+        
+        // 代理ログインを実行
+        async function proxyLogin(userId) {
+            const readonly = document.getElementById('readonlyMode').checked;
+            
+            if (!confirm(`ユーザ「${userId}」として代理ログインしますか？\nモード: ${readonly ? '読み取り専用' : '編集可能'}`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/proxy_login.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        target_user: userId,
+                        readonly: readonly
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    alert('代理ログインしました。エディタページに移動します。');
+                    window.location.href = '/2.php';
+                } else {
+                    alert('エラー: ' + (data.message || '代理ログインに失敗しました'));
+                }
+                
+            } catch (err) {
+                console.error('Proxy login error:', err);
+                alert('エラー: ' + err.message);
+            }
+        }
+        
+        // 代理ログインを解除
+        async function exitProxyLogin() {
+            if (!confirm('代理ログインを解除して管理者アカウントに戻りますか？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/proxy_logout.php', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    alert('代理ログインを解除しました。');
+                    window.location.reload();
+                } else {
+                    alert('エラー: ' + (data.message || '解除に失敗しました'));
+                }
+                
+            } catch (err) {
+                console.error('Proxy logout error:', err);
+                alert('エラー: ' + err.message);
+            }
+        }
+        
+        // ページ読み込み時にユーザリストを取得
+        document.addEventListener('DOMContentLoaded', loadUsers);
+    </script>
+</body>
+</html>

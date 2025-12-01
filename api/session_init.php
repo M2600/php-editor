@@ -103,3 +103,128 @@ function isApiRequest() {
     
     return $isApiPath || $isAjax;
 }
+
+/**
+ * 代理ログイン中かどうかを判定
+ */
+function isProxyLogin() {
+    return isset($_SESSION['proxy_login']) && 
+           isset($_SESSION['proxy_login']['is_proxy']) && 
+           $_SESSION['proxy_login']['is_proxy'] === true;
+}
+
+/**
+ * 読み取り専用モードかどうかを判定
+ */
+function isReadOnlyMode() {
+    if (!isProxyLogin()) {
+        return false;
+    }
+    return isset($_SESSION['proxy_login']['readonly']) && 
+           $_SESSION['proxy_login']['readonly'] === true;
+}
+
+/**
+ * ファイル編集可能かどうかを判定
+ * 読み取り専用モードでもユーザプログラムからの呼び出しは許可
+ */
+function canEditFiles() {
+    // 代理ログインでない場合は常に編集可能
+    if (!isProxyLogin()) {
+        return true;
+    }
+    
+    // 読み取り専用モードでない場合は編集可能
+    if (!isReadOnlyMode()) {
+        return true;
+    }
+    
+    // ユーザプログラムからの呼び出しかチェック
+    return isCalledFromUserScript();
+}
+
+/**
+ * ユーザスクリプトからの呼び出しかどうかを判定
+ * cgi_run アクションの実行中はユーザプログラムからの呼び出しとみなす
+ */
+function isCalledFromUserScript() {
+    // バックトレースから呼び出し元を確認
+    $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+    
+    // cgi_run の実行中かチェック
+    foreach ($backtrace as $trace) {
+        if (isset($trace['file']) && strpos($trace['file'], 'user-programs') !== false) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+/**
+ * 実際の管理者IDを取得
+ * 代理ログイン中の場合は元の管理者ID、そうでない場合は現在のセッションID
+ */
+function getActualAdminId() {
+    if (isProxyLogin() && isset($_SESSION['proxy_login']['admin_id'])) {
+        return $_SESSION['proxy_login']['admin_id'];
+    }
+    return $_SESSION['id'] ?? null;
+}
+
+/**
+ * 代理ログインの監査ログを記録
+ */
+function logProxyLogin($adminId, $targetUserId, $action = 'login') {
+    $logDir = $_SERVER['HOME'] . '/data/php_editor/logs';
+    if (!is_dir($logDir)) {
+        mkdir($logDir, 0755, true);
+    }
+    
+    $logFile = $logDir . '/proxy_login.log';
+    $timestamp = date('Y-m-d H:i:s');
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
+    
+    $logEntry = sprintf(
+        "[%s] %s: Admin=%s, Target=%s, IP=%s, UA=%s\n",
+        $timestamp,
+        strtoupper($action),
+        $adminId,
+        $targetUserId,
+        $ip,
+        $userAgent
+    );
+    
+    file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+}
+
+/**
+ * dev ロールかどうかを判定
+ */
+function isDevRole() {
+    return isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+}
+
+/**
+ * dev ロール専用のアクセス制限
+ */
+function requireDevRole() {
+    requireLogin();
+    
+    if (!isDevRole()) {
+        if (isApiRequest()) {
+            header('Content-Type: application/json');
+            http_response_code(403);
+            echo json_encode([
+                "status" => "error",
+                "error" => "Access denied",
+                "message" => "この機能は管理者のみ使用できます。"
+            ]);
+            exit();
+        }
+        
+        header("Location: /index.php");
+        exit();
+    }
+}

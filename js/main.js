@@ -90,6 +90,104 @@ function saveExplorerAutoReloadConfig() {
 window.saveExplorerAutoReloadConfig = saveExplorerAutoReloadConfig;
 
 /**
+ * 代理ログイン警告バーを表示
+ */
+function showProxyLoginWarning() {
+    const proxyInfo = window.SESSION_DATA.proxy_info;
+    if (!proxyInfo) return;
+    
+    // 警告バーのHTML要素を作成
+    const warningBar = document.createElement('div');
+    warningBar.className = 'proxy-login-warning';
+    warningBar.innerHTML = `
+        <div class="proxy-login-warning-content">
+            <!--span class="proxy-login-warning-icon">⚠️</span-->
+            <div class="proxy-login-warning-text">
+                <div class="proxy-login-warning-title">代理ログイン中</div>
+                <div class="proxy-login-warning-info">
+                    対象ユーザ: <strong>${window.SESSION_DATA.id}</strong> | 
+                    モード: <strong>${proxyInfo.readonly ? '読み取り専用' : '編集可能'}</strong> | 
+                    管理者: ${proxyInfo.admin_id}
+                </div>
+            </div>
+        </div>
+        <div class="proxy-login-warning-actions">
+            <!--button class="proxy-login-warning-btn" onclick="location.href='/admin.php'">管理画面へ</button-->
+            <button class="proxy-login-warning-btn proxy-login-warning-btn-primary" onclick="exitProxyLogin()">代理ログイン解除</button>
+        </div>
+    `;
+    
+    // bodyの先頭に挿入
+    document.body.insertBefore(warningBar, document.body.firstChild);
+    document.body.classList.add('proxy-login-active');
+    
+    // 読み取り専用モードの場合はエディタも読み取り専用に設定
+    if (proxyInfo.readonly) {
+        // グローバルフラグを設定
+        window.PROXY_READONLY_MODE = true;
+        
+        // 既存のエディタを読み取り専用に設定
+        const setEditorsReadOnly = () => {
+            if (window.editor && window.editor.EDITORS && window.editor.EDITORS.length > 0) {
+                window.editor.EDITORS.forEach(editorInstance => {
+                    if (editorInstance.aceObj && editorInstance.aceObj.editor) {
+                        editorInstance.aceObj.editor.setReadOnly(true);
+                        editorInstance.aceObj.editor.setOption('highlightActiveLine', false);
+                        editorInstance.aceObj.editor.setOption('highlightGutterLine', false);
+                        console.log('Editor set to read-only mode:', editorInstance.path);
+                    }
+                });
+            }
+        };
+        
+        // 初期化後と定期的にチェック
+        setTimeout(setEditorsReadOnly, 500);
+        // setTimeout(setEditorsReadOnly, 1000);
+        // setTimeout(setEditorsReadOnly, 2000);
+        
+        // エディタ変更を監視（新しいファイルが開かれた時用）
+        const checkInterval = setInterval(() => {
+            if (window.editor && window.editor.EDITORS) {
+                setEditorsReadOnly();
+            }
+        }, 1000);
+        
+        // 10秒後に監視を停止
+        setTimeout(() => clearInterval(checkInterval), 10000);
+    }
+}
+
+/**
+ * 代理ログイン解除
+ */
+async function exitProxyLogin() {
+    if (!confirm('代理ログインを解除して管理者に戻りますか？')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/proxy_logout.php', {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            alert(data.message);
+            // 管理画面にリダイレクト
+            window.location.href = '/admin.php';
+        } else {
+            throw new Error(data.message || '代理ログイン解除に失敗しました');
+        }
+    } catch (error) {
+        alert('エラー: ' + error.message);
+    }
+}
+
+// グローバルに公開
+window.exitProxyLogin = exitProxyLogin;
+
+/**
  * 実行処理を共通化した関数
  * RUN_MODEに応じてWebプレビューまたはAPI開発モードで実行
  */
@@ -254,6 +352,11 @@ async function executeCurrentFile() {
 
 
 async function main(){
+    // 代理ログイン警告バーを表示
+    if (window.SESSION_DATA && window.SESSION_DATA.is_proxy) {
+        showProxyLoginWarning();
+    }
+    
     // localStorageから実行モードを復元
     const savedRunMode = localStorage.getItem('runMode');
     if (savedRunMode !== null && (savedRunMode === 'API_MODE' || savedRunMode === 'WEB_MODE')) {

@@ -160,6 +160,14 @@ export async function openFile(file, aceList, editor, mConsole, extLangMap, DEBU
         // set theme
         file.aceObj.editor.setTheme(editor.ACE_THEME || 'ace/theme/chrome');
 
+        // 代理ログイン読み取り専用モードの場合はエディタを読み取り専用に設定
+        if (window.PROXY_READONLY_MODE) {
+            file.aceObj.editor.setReadOnly(true);
+            file.aceObj.editor.setOption('highlightActiveLine', false);
+            file.aceObj.editor.setOption('highlightGutterLine', false);
+            console.log('File opened in read-only mode (proxy login):', file.path);
+        }
+
         // reset ace change action
         if(file.aceChangeAction != undefined && file.aceChangeAction != null){
             file.aceObj.off("change", file.aceChangeAction);

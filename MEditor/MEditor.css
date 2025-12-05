@@ -1936,6 +1936,7 @@ i {
     margin: 1em 0;
     width: 100%;
     background: var(--me-color-bg, #fff);
+    color: var(--me-color-text, #333);
 }
 .meditor-chat-message-ai th,
 .meditor-chat-message-ai td {

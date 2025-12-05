@@ -4559,7 +4559,7 @@ export class MEditor {
             const promptInput = document.createElement("textarea");
             promptInput.id = "customPromptInput";
             promptInput.value = chat.config.customPrompt || "";
-            promptInput.placeholder = "ここにカスタムプロンプトを入力してください...";
+            promptInput.placeholder = "例: まずsearchFilesで検索してから、readFileで構造確認、その後必要な部分のみ行範囲指定で読み込む\n\n詳細は docs/AI_CUSTOM_PROMPT_TEMPLATES.md を参照";
             promptInput.style.width = "100%";
             promptInput.style.height = "10em";
             promptInput.style.maxHeight = "20em";
@@ -4577,6 +4577,20 @@ export class MEditor {
             promptDesc.innerHTML = `
                 <p>カスタムプロンプトを有効にするとすべてのAIリクエストにこのプロンプトが追加されます。<br>
                 コーディング規則の指定や独自のルールを設定できます。</p>
+                <details style="margin-top: 0.5em; padding: 0.5em; background: var(--me-color-panel-bg); border-radius: 4px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: var(--me-color-accent);">💡 効率的なツール使用ガイド</summary>
+                    <div style="margin-top: 0.5em; font-size: 0.9em; line-height: 1.6;">
+                        <p><strong>推奨ワークフロー:</strong></p>
+                        <ol style="margin: 0.5em 0; padding-left: 1.5em;">
+                            <li><code>searchFiles</code> でファイル・関数を検索</li>
+                            <li><code>readFile</code> で構造のみ確認（パラメータなし）</li>
+                            <li><code>readFile</code> で必要な行範囲のみ取得</li>
+                            <li>編集後は必ず <code>readFile</code> で確認</li>
+                        </ol>
+                        <p><strong>禁止事項:</strong> 大きなファイルを全て読む、検索せずに総当たり</p>
+                        <p><a href="docs/AI_CUSTOM_PROMPT_TEMPLATES.md" target="_blank" style="color: var(--me-color-accent);">📄 テンプレート集を見る</a></p>
+                    </div>
+                </details>
             `;
             content.appendChild(promptDesc);
 

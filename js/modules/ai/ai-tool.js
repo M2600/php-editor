@@ -1,7 +1,7 @@
 
 // ai-tool.js
 // ai用のツールモジュール
-import { createFile, editFileByReplace, editFileByLines, readFile, deleteFile, ls } from './ai_tools/fileEditor.js';
+import { createFile, editFileByReplace, editFileByLines, readFile, deleteFile, ls, searchFiles } from './ai_tools/fileEditor.js';
 import { getAllTools, getToolByName } from './toolDefinitions.js';
 
 
@@ -28,7 +28,12 @@ export class AITool {
                     ...context
                 });
             } else if (toolName === 'readFile') {
-                return await readFile(args.filename, context);
+                return await readFile(args.filename, {
+                    ...context,
+                    startLine: args.startLine,
+                    endLine: args.endLine,
+                    maxLines: args.maxLines
+                });
             } else if (toolName === 'editFileByReplace') {
                 return await editFileByReplace(
                     args.filename, 
@@ -60,6 +65,16 @@ export class AITool {
                 return await ls(args.directory, {
                     ...context
                 })
+            } else if (toolName === 'searchFiles') {
+                return await searchFiles(args.query, {
+                    ...context,
+                    searchIn: args.searchIn,
+                    regex: args.regex,
+                    caseSensitive: args.caseSensitive,
+                    filePattern: args.filePattern,
+                    maxResults: args.maxResults,
+                    contextLines: args.contextLines
+                });
             } else {
                 throw new Error('未対応のツール: ' + toolName);
             }

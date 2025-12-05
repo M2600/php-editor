@@ -127,6 +127,124 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+/**
+ * ツール実行結果を圧縮（大きな結果を要約）
+ * @param {Object} toolResult - ツール実行結果（tool messageオブジェクト）
+ * @param {Object} originalResult - 元の結果オブジェクト
+ * @returns {Object} - 圧縮されたツール結果
+ */
+function compressToolResult(toolResult, originalResult) {
+    const MAX_CONTENT_LENGTH = 2000; // 2000文字以上は圧縮対象
+    
+    // contentをパース
+    let parsedContent;
+    try {
+        parsedContent = typeof toolResult.content === 'string' 
+            ? JSON.parse(toolResult.content) 
+            : toolResult.content;
+    } catch (e) {
+        // パースできない場合はそのまま返す
+        return toolResult;
+    }
+    
+    const contentStr = JSON.stringify(parsedContent);
+    
+    // 小さい結果はそのまま返す
+    if (contentStr.length <= MAX_CONTENT_LENGTH) {
+        return toolResult;
+    }
+    
+    // 圧縮処理
+    const compressed = { ...parsedContent };
+    let compressionApplied = false;
+    
+    // readFileの結果圧縮
+    if (toolResult.name === 'readFile' && parsedContent.content) {
+        const contentLength = parsedContent.content.length;
+        if (contentLength > MAX_CONTENT_LENGTH) {
+            // 構造情報がある場合はそれを優先
+            if (parsedContent.structure) {
+                compressed.content = `[圧縮済み: ${contentLength}文字]\n\n構造情報:\n${JSON.stringify(parsedContent.structure, null, 2)}`;
+                compressed.compressed = true;
+                compressed.originalLength = contentLength;
+                compressionApplied = true;
+            } else {
+                // 構造情報がない場合は冒頭と末尾のみ保持
+                const head = parsedContent.content.substring(0, 500);
+                const tail = parsedContent.content.substring(contentLength - 500);
+                compressed.content = `[圧縮済み: ${contentLength}文字]\n\n=== 冒頭500文字 ===\n${head}\n\n=== 末尾500文字 ===\n${tail}`;
+                compressed.compressed = true;
+                compressed.originalLength = contentLength;
+                compressed.hint = "完全な内容が必要な場合は、startLineとendLineを指定して再度readFileを実行してください";
+                compressionApplied = true;
+            }
+        }
+    }
+    
+    // searchFilesの結果圧縮
+    else if (toolResult.name === 'searchFiles' && parsedContent.results) {
+        const resultsCount = parsedContent.results.length;
+        if (resultsCount > 20) {
+            // 結果が多すぎる場合は最初の20件のみ保持
+            compressed.results = parsedContent.results.slice(0, 20);
+            compressed.compressed = true;
+            compressed.truncated = true;
+            compressed.originalResultsCount = resultsCount;
+            compressed.hint = `${resultsCount}件中20件のみ表示。より絞り込んだ検索をお勧めします`;
+            compressionApplied = true;
+        } else if (parsedContent.results.some(r => r.matches && r.matches.length > 5)) {
+            // 各ファイルのマッチ数を制限
+            compressed.results = parsedContent.results.map(result => {
+                if (result.matches && result.matches.length > 5) {
+                    return {
+                        ...result,
+                        matches: result.matches.slice(0, 5),
+                        truncatedMatches: result.matches.length - 5
+                    };
+                }
+                return result;
+            });
+            compressed.compressed = true;
+            compressionApplied = true;
+        }
+    }
+    
+    // lsの結果圧縮
+    else if (toolResult.name === 'ls' && parsedContent.files) {
+        const totalItems = (parsedContent.files?.length || 0) + (parsedContent.directories?.length || 0);
+        if (totalItems > 100) {
+            // ファイル数が多すぎる場合
+            compressed.files = parsedContent.files?.slice(0, 50) || [];
+            compressed.directories = parsedContent.directories?.slice(0, 50) || [];
+            compressed.compressed = true;
+            compressed.truncated = true;
+            compressed.originalFileCount = parsedContent.files?.length || 0;
+            compressed.originalDirCount = parsedContent.directories?.length || 0;
+            compressed.hint = `ファイル数が多いため最初の50件のみ表示`;
+            compressionApplied = true;
+        }
+    }
+    
+    // 圧縮が適用された場合
+    if (compressionApplied) {
+        console.log(`Tool result compressed: ${toolResult.name}`, {
+            original: contentStr.length,
+            compressed: JSON.stringify(compressed).length,
+            reduction: `${Math.round((1 - JSON.stringify(compressed).length / contentStr.length) * 100)}%`
+        });
+        
+        return {
+            ...toolResult,
+            content: JSON.stringify(compressed),
+            _compressionApplied: true,
+            _originalLength: contentStr.length
+        };
+    }
+    
+    // 圧縮不要の場合はそのまま返す
+    return toolResult;
+}
+
 // <think>ブロックを抽出・処理する関数（ストリーム対応）
 export function processThinkingBlocks(text) {
     const thinkingBlocks = [];
@@ -1226,7 +1344,8 @@ export async function sendAIMessage({
                             tool_call_id: toolCall.id,
                             role: "tool",
                             name: toolName,
-                            content: JSON.stringify(result)
+                            content: JSON.stringify(result),
+                            _originalResult: result // 元の結果を保持（圧縮前）
                         });
                     }
                     
@@ -1241,10 +1360,12 @@ export async function sendAIMessage({
                         // メッセージ全体をそのまま追加（第2引数にオブジェクトを渡す）
                         historyManager.addMessage("assistant", toolCallMessage);
                         
-                        // ツール実行結果を履歴に追加
+                        // ツール実行結果を履歴に追加（圧縮処理を適用）
                         for (const toolResult of toolResults) {
+                            // ツール結果の圧縮処理
+                            const compressedResult = compressToolResult(toolResult, toolResult._originalResult);
                             // ツールメッセージ全体をそのまま追加
-                            historyManager.addMessage("tool", toolResult);
+                            historyManager.addMessage("tool", compressedResult);
                         }
                         
                         // AIに再度問い合わせ（ツール実行結果を含む）

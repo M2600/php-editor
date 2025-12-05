@@ -451,10 +451,17 @@ export async function createFile(filename, content, options = {}) {
 }
 
 /**
- * ファイルを読み込み
+ * ファイルを読み込み（行範囲制限対応）
  */
 export async function readFile(filename, options = {}) {
-    const { api: apiFunc, mConsole, baseDir } = options;
+    const { 
+        api: apiFunc, 
+        mConsole, 
+        baseDir,
+        startLine = null,
+        endLine = null,
+        maxLines = 100
+    } = options;
     
     try {
         // APIが渡されていない場合はエラー
@@ -479,28 +486,90 @@ export async function readFile(filename, options = {}) {
             };
         }
         
+        // ファイル全体を読み込み
         const result = await apiFunc('/api/file_manager.php', {
             action: 'read',
             path: fullPath
         });
         
-        // デバッグ: APIレスポンスを確認
-        console.log('readFile API response:', { status: result.status, contentLength: result.content?.length });
-        
-        await logToolExecution('readFile', { filename }, 'success', { length: result.content?.length });
-        
-        if (result.status === 'success') {
-            return {
-                success: true,
-                content: result.content,
-                path: filename,
-                message: `${filename}を読み込みました`
-            };
-        } else {
+        if (result.status !== 'success') {
             const errorMsg = result.message || result.error || 'ファイル読み込みに失敗しました';
             console.error('readFile failed:', result);
             throw new Error(errorMsg);
         }
+        
+        const fullContent = result.content;
+        const lines = fullContent.split('\n');
+        const totalLines = lines.length;
+        
+        // 行範囲が指定されている場合
+        if (startLine !== null || endLine !== null) {
+            const start = Math.max(1, startLine || 1);
+            const end = Math.min(totalLines, endLine || totalLines);
+            
+            if (start > totalLines) {
+                return {
+                    success: false,
+                    message: `指定された開始行 ${start} がファイルの総行数 ${totalLines} を超えています`
+                };
+            }
+            
+            // 指定範囲を抽出（1-indexed → 0-indexed）
+            const selectedLines = lines.slice(start - 1, end);
+            const content = selectedLines.join('\n');
+            
+            await logToolExecution('readFile', { filename, startLine: start, endLine: end }, 'success', { 
+                length: content.length,
+                linesRead: selectedLines.length 
+            });
+            
+            return {
+                success: true,
+                content: content,
+                path: filename,
+                lineRange: { start, end, total: totalLines },
+                message: `${filename} (${start}〜${end}行目 / 全${totalLines}行) を読み込みました`
+            };
+        }
+        
+        // 行範囲が指定されていない場合: maxLines制限をチェック
+        if (totalLines > maxLines) {
+            // ファイルが大きい場合は構造要約を返す
+            const structure = extractCodeStructure(fullContent, filename);
+            
+            await logToolExecution('readFile', { filename }, 'success', { 
+                totalLines,
+                compressed: true,
+                structureOnly: true
+            });
+            
+            if (mConsole) {
+                mConsole.print(`${filename} は ${totalLines} 行あります。構造要約のみ返します。`, 'info');
+            }
+            
+            return {
+                success: true,
+                compressed: true,
+                structureOnly: true,
+                structure: structure,
+                totalLines: totalLines,
+                path: filename,
+                message: `${filename} (全${totalLines}行) は大きいため構造要約のみ返します。特定の行範囲が必要な場合は startLine と endLine を指定してください。`,
+                hint: `特定の部分を読むには: readFile(filename="${filename}", startLine=1, endLine=100)`
+            };
+        }
+        
+        // ファイルが小さい場合は全体を返す
+        await logToolExecution('readFile', { filename }, 'success', { length: fullContent.length });
+        
+        return {
+            success: true,
+            content: fullContent,
+            path: filename,
+            totalLines: totalLines,
+            message: `${filename} (全${totalLines}行) を読み込みました`
+        };
+        
     } catch (error) {
         await logToolExecution('readFile', { filename }, 'error', { error: error.message });
         if (mConsole) {
@@ -1066,5 +1135,380 @@ export async function ls(directory = "", options = {}) {
             files: [],
             directories: []
         };
+    }
+}
+
+/**
+ * コード構造を抽出（クライアント側で軽量に処理）
+ * PHP, JavaScript, HTMLなどの言語に対応
+ * 
+ * @param {string} content - ファイル内容
+ * @param {string} filename - ファイル名（拡張子から言語を判定）
+ * @returns {Object} - 構造情報（関数、クラス、メソッドなど）
+ */
+function extractCodeStructure(content, filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const structure = {
+        language: ext,
+        classes: [],
+        functions: [],
+        methods: [],
+        summary: ''
+    };
+    
+    const lines = content.split('\n');
+    
+    // PHP構造抽出
+    if (ext === 'php') {
+        // クラス定義を抽出
+        const classRegex = /^\s*(abstract\s+|final\s+)?\s*class\s+(\w+)(\s+extends\s+\w+)?(\s+implements\s+[\w\s,]+)?/gm;
+        let match;
+        while ((match = classRegex.exec(content)) !== null) {
+            const lineNum = content.substring(0, match.index).split('\n').length;
+            structure.classes.push({
+                name: match[2],
+                line: lineNum,
+                modifiers: match[1] ? match[1].trim() : null
+            });
+        }
+        
+        // 関数定義を抽出（クラス外の関数）
+        const functionRegex = /^\s*function\s+(\w+)\s*\(/gm;
+        while ((match = functionRegex.exec(content)) !== null) {
+            const lineNum = content.substring(0, match.index).split('\n').length;
+            structure.functions.push({
+                name: match[1],
+                line: lineNum
+            });
+        }
+        
+        // メソッド定義を抽出
+        const methodRegex = /^\s*(public|protected|private)?\s*(static\s+)?function\s+(\w+)\s*\(/gm;
+        while ((match = methodRegex.exec(content)) !== null) {
+            const lineNum = content.substring(0, match.index).split('\n').length;
+            structure.methods.push({
+                name: match[3],
+                line: lineNum,
+                visibility: match[1] || 'public',
+                static: !!match[2]
+            });
+        }
+    }
+    
+    // JavaScript構造抽出
+    else if (ext === 'js' || ext === 'mjs') {
+        // クラス定義
+        const classRegex = /^\s*(?:export\s+)?(?:default\s+)?class\s+(\w+)/gm;
+        let match;
+        while ((match = classRegex.exec(content)) !== null) {
+            const lineNum = content.substring(0, match.index).split('\n').length;
+            structure.classes.push({
+                name: match[1],
+                line: lineNum
+            });
+        }
+        
+        // 関数定義（function宣言）
+        const functionRegex = /^\s*(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(/gm;
+        while ((match = functionRegex.exec(content)) !== null) {
+            const lineNum = content.substring(0, match.index).split('\n').length;
+            structure.functions.push({
+                name: match[1],
+                line: lineNum
+            });
+        }
+        
+        // アロー関数（const/let/var）
+        const arrowFunctionRegex = /^\s*(?:export\s+)?(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>/gm;
+        while ((match = arrowFunctionRegex.exec(content)) !== null) {
+            const lineNum = content.substring(0, match.index).split('\n').length;
+            structure.functions.push({
+                name: match[1],
+                line: lineNum,
+                type: 'arrow'
+            });
+        }
+        
+        // メソッド定義（クラス内）
+        const methodRegex = /^\s*(?:async\s+)?(\w+)\s*\([^)]*\)\s*\{/gm;
+        while ((match = methodRegex.exec(content)) !== null) {
+            const lineNum = content.substring(0, match.index).split('\n').length;
+            // constructorやgetterなども含む
+            if (match[1] !== 'if' && match[1] !== 'for' && match[1] !== 'while') {
+                structure.methods.push({
+                    name: match[1],
+                    line: lineNum
+                });
+            }
+        }
+    }
+    
+    // HTML構造抽出
+    else if (ext === 'html' || ext === 'htm') {
+        const titleMatch = content.match(/<title[^>]*>(.*?)<\/title>/i);
+        if (titleMatch) {
+            structure.title = titleMatch[1];
+        }
+        
+        // 主要なタグを抽出
+        const scriptTags = (content.match(/<script[^>]*>/gi) || []).length;
+        const styleTags = (content.match(/<style[^>]*>/gi) || []).length;
+        const linkTags = (content.match(/<link[^>]*>/gi) || []).length;
+        
+        structure.summary = `HTML: ${scriptTags} scripts, ${styleTags} styles, ${linkTags} links`;
+    }
+    
+    // CSS構造抽出
+    else if (ext === 'css') {
+        const selectorRegex = /^\s*([.#]?[\w-]+(?:\s*[>+~]\s*[\w-]+)*)\s*\{/gm;
+        let match;
+        const selectors = [];
+        while ((match = selectorRegex.exec(content)) !== null && selectors.length < 20) {
+            selectors.push(match[1].trim());
+        }
+        structure.selectors = selectors;
+        structure.summary = `CSS: ${selectors.length}+ selectors`;
+    }
+    
+    // 要約を生成
+    if (!structure.summary) {
+        const parts = [];
+        if (structure.classes.length > 0) {
+            parts.push(`${structure.classes.length} classes`);
+        }
+        if (structure.functions.length > 0) {
+            parts.push(`${structure.functions.length} functions`);
+        }
+        if (structure.methods.length > 0) {
+            parts.push(`${structure.methods.length} methods`);
+        }
+        structure.summary = parts.length > 0 ? parts.join(', ') : 'No structure detected';
+    }
+    
+    return structure;
+}
+
+/**
+ * ファイルを検索（キーワード検索、正規表現対応）
+ * クライアント側でファイルリストを取得し、検索処理を実行
+ * 
+ * @param {string} query - 検索キーワード
+ * @param {Object} options - 検索オプション
+ * @returns {Promise<Object>} - 検索結果
+ */
+export async function searchFiles(query, options = {}) {
+    const {
+        api: apiFunc,
+        mConsole,
+        baseDir,
+        searchIn = 'both', // 'filename', 'content', 'both'
+        regex = false,
+        caseSensitive = false,
+        filePattern = null,
+        maxResults = 50,
+        contextLines = 2
+    } = options;
+    
+    try {
+        if (!apiFunc) {
+            throw new Error('API関数が渡されていません');
+        }
+        
+        if (!query) {
+            throw new Error('検索キーワードが指定されていません');
+        }
+        
+        // 検索用の正規表現を作成
+        let searchRegex;
+        if (regex) {
+            try {
+                searchRegex = new RegExp(query, caseSensitive ? 'g' : 'gi');
+            } catch (e) {
+                throw new Error(`無効な正規表現: ${e.message}`);
+            }
+        } else {
+            // 通常検索の場合は特殊文字をエスケープ
+            const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            searchRegex = new RegExp(escapedQuery, caseSensitive ? 'g' : 'gi');
+        }
+        
+        // ファイルパターンの正規表現を作成
+        let filePatternRegex = null;
+        if (filePattern) {
+            const pattern = filePattern.replace(/\*/g, '.*').replace(/\?/g, '.');
+            filePatternRegex = new RegExp(pattern, 'i');
+        }
+        
+        // ベースディレクトリのファイル一覧を再帰的に取得
+        const allFiles = await getFileListRecursive(baseDir, apiFunc, filePatternRegex);
+        
+        const results = [];
+        let filesSearched = 0;
+        
+        for (const file of allFiles) {
+            if (results.length >= maxResults) break;
+            
+            filesSearched++;
+            
+            // ファイル名検索
+            if (searchIn === 'filename' || searchIn === 'both') {
+                if (searchRegex.test(file.name)) {
+                    results.push({
+                        file: file.path,
+                        matchType: 'filename',
+                        matches: [{
+                            line: 0,
+                            content: file.name
+                        }]
+                    });
+                    continue;
+                }
+            }
+            
+            // 内容検索
+            if (searchIn === 'content' || searchIn === 'both') {
+                try {
+                    // ファイル内容を読み込み（キャッシュ不要、直接読み込み）
+                    const readResult = await apiFunc('/api/file_manager.php', {
+                        action: 'read',
+                        path: file.path
+                    });
+                    
+                    if (readResult.status === 'success') {
+                        const content = readResult.content;
+                        const lines = content.split('\n');
+                        const fileMatches = [];
+                        
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i];
+                            if (searchRegex.test(line)) {
+                                // コンテキスト行を含めて抽出
+                                const contextStart = Math.max(0, i - contextLines);
+                                const contextEnd = Math.min(lines.length - 1, i + contextLines);
+                                
+                                const contextSnippet = [];
+                                for (let j = contextStart; j <= contextEnd; j++) {
+                                    contextSnippet.push({
+                                        lineNum: j + 1,
+                                        content: lines[j],
+                                        isMatch: j === i
+                                    });
+                                }
+                                
+                                fileMatches.push({
+                                    line: i + 1,
+                                    content: line,
+                                    context: contextSnippet
+                                });
+                                
+                                // 同一ファイル内で多すぎる結果は制限
+                                if (fileMatches.length >= 10) break;
+                            }
+                            // 正規表現のlastIndexをリセット
+                            searchRegex.lastIndex = 0;
+                        }
+                        
+                        if (fileMatches.length > 0) {
+                            results.push({
+                                file: file.path,
+                                matchType: 'content',
+                                matchCount: fileMatches.length,
+                                matches: fileMatches
+                            });
+                        }
+                    }
+                } catch (error) {
+                    // ファイル読み込みエラーは無視して次へ
+                    console.warn(`Failed to read ${file.path}:`, error.message);
+                }
+            }
+        }
+        
+        await logToolExecution('searchFiles', { 
+            query, 
+            searchIn, 
+            regex, 
+            filePattern 
+        }, 'success', {
+            filesSearched,
+            resultsFound: results.length
+        });
+        
+        if (mConsole) {
+            mConsole.print(`検索完了: ${filesSearched}件のファイルを検索し、${results.length}件の結果を発見`, 'success');
+        }
+        
+        return {
+            success: true,
+            query: query,
+            filesSearched: filesSearched,
+            resultsCount: results.length,
+            results: results,
+            message: `"${query}" の検索結果: ${results.length}件 (検索対象: ${filesSearched}ファイル)`
+        };
+        
+    } catch (error) {
+        await logToolExecution('searchFiles', { query }, 'error', { error: error.message });
+        if (mConsole) {
+            mConsole.print(`検索エラー: ${error.message}`, 'error');
+        }
+        return {
+            success: false,
+            message: error.message,
+            results: []
+        };
+    }
+}
+
+/**
+ * ディレクトリ配下のファイル一覧を再帰的に取得（ヘルパー関数）
+ * 
+ * @param {string} dirPath - ディレクトリパス
+ * @param {Function} apiFunc - API関数
+ * @param {RegExp} filePatternRegex - ファイルパターンの正規表現（nullの場合は全ファイル）
+ * @param {number} maxDepth - 最大再帰深度
+ * @param {number} currentDepth - 現在の深度
+ * @returns {Promise<Array>} - ファイル情報の配列
+ */
+async function getFileListRecursive(dirPath, apiFunc, filePatternRegex = null, maxDepth = 5, currentDepth = 0) {
+    if (currentDepth >= maxDepth) {
+        return [];
+    }
+    
+    try {
+        const result = await apiFunc('/api/file_manager.php', {
+            action: 'list-object',
+            path: dirPath
+        });
+        
+        if (result.status !== 'success' || !result.files || !result.files.files) {
+            return [];
+        }
+        
+        const files = [];
+        
+        for (const item of result.files.files) {
+            const itemPath = `${dirPath}/${item.name}`.replace(/\/+/g, '/');
+            
+            if (item.type === 'dir') {
+                // ディレクトリの場合は再帰的に取得
+                const subFiles = await getFileListRecursive(itemPath, apiFunc, filePatternRegex, maxDepth, currentDepth + 1);
+                files.push(...subFiles);
+            } else {
+                // ファイルパターンマッチング
+                if (!filePatternRegex || filePatternRegex.test(item.name)) {
+                    files.push({
+                        name: item.name,
+                        path: itemPath,
+                        size: item.size || 0
+                    });
+                }
+            }
+        }
+        
+        return files;
+    } catch (error) {
+        console.error(`Failed to list directory ${dirPath}:`, error);
+        return [];
     }
 }

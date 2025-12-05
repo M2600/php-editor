@@ -34,13 +34,29 @@ export const FILE_EDITOR_TOOLS = [
         type: "function",
         function: {
             name: "readFile",
-            description: "ファイルの内容を読み込みます。",
+            description: "ファイルの内容を読み込みます。大きなファイル（100行超）の場合、パラメータなしでは構造要約（関数/クラス名一覧）のみを返します。特定の行範囲が必要な場合はstartLineとendLineを指定してください。効率的な使い方: 1) まず構造を取得 2) 必要な部分のみ行範囲指定で読み込み。",
             parameters: {
                 type: "object",
                 properties: {
                     filename: {
                         type: "string",
                         description: "読み込むファイル名"
+                    },
+                    startLine: {
+                        type: "integer",
+                        description: "読み込み開始行（1から始まる、省略時は1）",
+                        minimum: 1
+                    },
+                    endLine: {
+                        type: "integer",
+                        description: "読み込み終了行（1から始まる、省略時はファイル末尾またはmaxLines制限まで）",
+                        minimum: 1
+                    },
+                    maxLines: {
+                        type: "integer",
+                        description: "最大読み込み行数（デフォルト: 100行、省略時は100行まで読み込み、超過時は構造要約を返す）",
+                        minimum: 1,
+                        maximum: 1000
                     }
                 },
                 required: ["filename"]
@@ -145,7 +161,7 @@ export const FILE_EDITOR_TOOLS = [
         type: "function",
         function: {
             name: "ls",
-            description: "指定したディレクトリ内のファイルとサブディレクトリの一覧を取得します。",
+            description: "指定したディレクトリ内のファイルとサブディレクトリの一覧を取得します。ファイル名、タイプ（file/dir）、サイズ、更新日時を返します。",
             parameters: {
                 type: "object",
                 properties: {
@@ -155,6 +171,57 @@ export const FILE_EDITOR_TOOLS = [
                     }
                 },
                 required: ["directory"]
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "searchFiles",
+            description: "プロジェクト内のファイルをキーワードで検索します。ファイル名検索と内容検索の両方に対応。効率的な使い方: 1) まずsearchFilesで該当ファイル/行を特定 2) readFileで必要な行範囲のみ取得。大量のファイルを読み込む前に、この検索機能で対象を絞り込むことを推奨します。",
+            parameters: {
+                type: "object",
+                properties: {
+                    query: {
+                        type: "string",
+                        description: "検索キーワード（正規表現も使用可能）"
+                    },
+                    searchIn: {
+                        type: "string",
+                        description: "検索対象: 'filename' (ファイル名のみ), 'content' (ファイル内容のみ), 'both' (両方)",
+                        enum: ["filename", "content", "both"],
+                        default: "both"
+                    },
+                    regex: {
+                        type: "boolean",
+                        description: "queryを正規表現として扱うか（デフォルト: false、部分一致検索）",
+                        default: false
+                    },
+                    caseSensitive: {
+                        type: "boolean",
+                        description: "大文字小文字を区別するか（デフォルト: false）",
+                        default: false
+                    },
+                    filePattern: {
+                        type: "string",
+                        description: "検索対象ファイルのパターン（例: '*.php', '*.js'、省略時は全ファイル）"
+                    },
+                    maxResults: {
+                        type: "integer",
+                        description: "最大検索結果数（デフォルト: 50）",
+                        minimum: 1,
+                        maximum: 200,
+                        default: 50
+                    },
+                    contextLines: {
+                        type: "integer",
+                        description: "マッチ箇所の前後に表示する行数（デフォルト: 2）",
+                        minimum: 0,
+                        maximum: 10,
+                        default: 2
+                    }
+                },
+                required: ["query"]
             }
         }
     }

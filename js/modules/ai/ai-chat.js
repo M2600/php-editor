@@ -1302,6 +1302,15 @@ export async function sendAIMessage({
                         const result = await aiTool.callTool(toolName, args, toolContext);
                         
                         // ツール側からのメッセージがある場合は表示
+                        let hasDisplayedMessage = false;
+                        
+                        // result.message（単数形）を優先的に表示
+                        if (result.message) {
+                            chat.addMessage(result.message, "system");
+                            hasDisplayedMessage = true;
+                        }
+                        
+                        // result.messages（複数形配列）がある場合は追加で表示
                         if (result.messages && Array.isArray(result.messages)) {
                             for (const msg of result.messages) {
                                 if (typeof msg === 'string') {
@@ -1319,20 +1328,25 @@ export async function sendAIMessage({
                                     chat.addMessage(msg.text, "system");
                                 }
                             }
-                            // スクロール位置を更新
-                            if (chat.content && chat.content.element) {
-                                chat.content.element.scrollTop = chat.content.element.scrollHeight;
-                            }
+                            hasDisplayedMessage = true;
+                        }
+                        
+                        // スクロール位置を更新
+                        if (hasDisplayedMessage && chat.content && chat.content.element) {
+                            chat.content.element.scrollTop = chat.content.element.scrollHeight;
                         }
                         
                         // 結果をチャットに表示（デフォルトメッセージ）
                         if (result.success) {
                             // カスタムメッセージがない場合のみデフォルトメッセージを表示
-                            if (!result.messages || result.messages.length === 0) {
+                            if (!hasDisplayedMessage) {
                                 chat.addMessage(`✅ ツール実行完了: ${toolName}`, "system");
                             }
                         } else {
-                            chat.addMessage(`❌ ツール実行失敗: ${toolName} - ${result.error || '不明なエラー'}`, "system");
+                            // 失敗時は常にエラーメッセージを表示（messageがあってもエラー詳細を追加）
+                            if (!hasDisplayedMessage) {
+                                chat.addMessage(`❌ ツール実行失敗: ${toolName} - ${result.error || '不明なエラー'}`, "system");
+                            }
                         }
                         // スクロール位置を更新
                         if (chat.content && chat.content.element) {

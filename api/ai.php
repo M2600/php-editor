@@ -248,7 +248,7 @@ if ($customApiKey) {
 }
 
 // コンテキスト圧縮を実行（AI要約機能付き）
-$messages = compressContext($messages, 5000, $API_URL, $API_KEY);
+$messages = compressContext($messages, 10000, $API_URL, $API_KEY);
 
 
 // $logDir = __DIR__ . '/../log';

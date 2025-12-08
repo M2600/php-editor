@@ -575,7 +575,7 @@ export async function readFile(filename, options = {}) {
             content: fullContent,
             path: filename,
             totalLines: totalLines,
-            message: `📖 **${filename}**\n全${totalLines}行 (${fullContent.length}文字) を読み込みました`
+            message: `✅ ${filename} (${totalLines})`
         };
         
     } catch (error) {
@@ -1466,7 +1466,7 @@ export async function searchFiles(query, options = {}) {
         
         // 最初の3件の結果を表示
         if (results.length > 0) {
-            displayMessage += '\n\n**検索結果:**';
+            displayMessage += '\n\n検索結果:';
             for (let i = 0; i < Math.min(3, results.length); i++) {
                 const result = results[i];
                 if (result.matchType === 'filename') {

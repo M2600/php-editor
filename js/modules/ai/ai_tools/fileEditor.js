@@ -407,12 +407,12 @@ export async function createFile(filename, content, options = {}) {
             await logToolExecution('createFile', { filename, content }, 'approved', result, approvalTime);
             if (mConsole) {
                 const lines = content.split('\n').length;
-                mConsole.print(`📝 createFile: "${filename}" を作成 (${lines}行, ${content.length}文字)`, 'success');
+                mConsole.print(`✅ createFile: "${filename}" を作成 (${lines}行, ${content.length}文字)`, 'success');
             }
             const lines = content.split('\n').length;
             return {
                 success: true,
-                message: `📝 **${filename}** を作成しました\n${lines}行 (${content.length}文字)`,
+                message: `✅ ${filename}(${lines}行)`,
                 path: filename
             };
         } else {
@@ -429,7 +429,7 @@ export async function createFile(filename, content, options = {}) {
                 return {
                     success: false,
                     error: 'file_already_exists',
-                    message: `ファイル "${filename}" は既に存在します。既存のファイルを編集するには、editFileByReplace または editFileByLines を使用してください。`,
+                    message: `ファイル "${filename}" は既に存在します。`,
                     suggestion: 'use_edit_tool',
                     filename: filename
                 };
@@ -524,7 +524,7 @@ export async function readFile(filename, options = {}) {
             });
             
             if (mConsole) {
-                mConsole.print(`📖 readFile: "${filename}" (${start}〜${end}行目 / 全${totalLines}行) ${content.length}文字`, 'info');
+                mConsole.print(`✅ readFile: "${filename}" (${start}〜${end} / ${totalLines})`, 'info');
             }
             
             return {
@@ -532,7 +532,7 @@ export async function readFile(filename, options = {}) {
                 content: content,
                 path: filename,
                 lineRange: { start, end, total: totalLines },
-                message: `📖 **${filename}** (${start}〜${end}行目 / 全${totalLines}行)\n${content.length}文字を読み込みました`
+                message: `✅ ${filename} (${start}〜${end} / ${totalLines})`
             };
         }
         
@@ -548,7 +548,7 @@ export async function readFile(filename, options = {}) {
             });
             
             if (mConsole) {
-                mConsole.print(`📖 readFile: "${filename}" (全${totalLines}行) → 構造要約のみ (${structure.summary})`, 'info');
+                mConsole.print(`✅ readFile: "${filename}" (${totalLines}) → 構造要約のみ (${structure.summary})`, 'info');
             }
             
             return {
@@ -558,7 +558,7 @@ export async function readFile(filename, options = {}) {
                 structure: structure,
                 totalLines: totalLines,
                 path: filename,
-                message: `📖 **${filename}** (全${totalLines}行)\n大きいため構造要約のみ返します: ${structure.summary}\n\n💡 特定の行範囲を読むには: \`readFile(filename="${filename}", startLine=1, endLine=100)\``,
+                message: `✅ ${filename} (${totalLines})`,
                 hint: `特定の部分を読むには: readFile(filename="${filename}", startLine=1, endLine=100)`
             };
         }
@@ -567,7 +567,7 @@ export async function readFile(filename, options = {}) {
         await logToolExecution('readFile', { filename }, 'success', { length: fullContent.length });
         
         if (mConsole) {
-            mConsole.print(`📖 readFile: "${filename}" (全${totalLines}行, ${fullContent.length}文字)`, 'info');
+            mConsole.print(`✅ readFile: "${filename}" (${totalLines}`, 'info');
         }
         
         return {
@@ -751,7 +751,7 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
             );
             if (mConsole) {
                 const replacements = (newContent.match(new RegExp(replaceText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
-                mConsole.print(`✏️ editFileByReplace: "${filename}" を更新 (${replacements}箇所置換)`, 'success');
+                mConsole.print(`✅ editFileByReplace: "${filename}" を更新 (${replacements}箇所置換)`, 'success');
             }
             
             // 置換箇所数をカウント
@@ -760,7 +760,7 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
             
             return {
                 success: true,
-                message: `✏️ **${filename}** を更新しました\n${replacements}箇所を置換`,
+                message: `✅ ${filename}:${replacements}`,
                 path: filename
             };
         } else {
@@ -911,7 +911,7 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
             if (mConsole) {
                 const oldLineCount = lineEnd - lineStart + 1;
                 const newLineCount = newContent.split('\n').length;
-                mConsole.print(`✏️ editFileByLines: "${filename}" (${lineStart}〜${lineEnd}行目) ${oldLineCount}行 → ${newLineCount}行`, 'success');
+                mConsole.print(`✅ editFileByLines: "${filename}" (${lineStart}〜${lineEnd}行目) ${oldLineCount}行 → ${newLineCount}行`, 'success');
             }
             
             const oldLineCount = lineEnd - lineStart + 1;
@@ -919,7 +919,7 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
             
             return {
                 success: true,
-                message: `✏️ **${filename}** (${lineStart}〜${lineEnd}行目) を更新\n${oldLineCount}行 → ${newLineCount}行`,
+                message: `✅ ${filename} (${lineStart}〜${lineEnd})`,
                 path: filename
             };
         } else {
@@ -1099,7 +1099,7 @@ export async function ls(directory = "", options = {}) {
             
             // ファイル一覧をコンソールに表示
             if (mConsole) {
-                mConsole.print(`📁 ls: "${fullPath}" (${directories.length}個のディレクトリ, ${files.length}個のファイル)`, 'info');
+                mConsole.print(`✅ ls: "${fullPath}" (${directories.length}個のディレクトリ, ${files.length}個のファイル)`, 'info');
                 if (directories.length > 0 && directories.length <= 10) {
                     mConsole.print(`  [ディレクトリ]: ${directories.join(', ')}`, 'info');
                 } else if (directories.length > 10) {
@@ -1113,18 +1113,18 @@ export async function ls(directory = "", options = {}) {
             }
             
             // チャット表示用のメッセージを作成
-            let displayMessage = `📁 **${fullPath}**\n${directories.length}個のディレクトリ, ${files.length}個のファイル`;
+            let displayMessage = `✅ ${fullPath}`;
             
             if (directories.length > 0 && directories.length <= 5) {
-                displayMessage += `\n\n**ディレクトリ:** ${directories.join(', ')}`;
+                displayMessage += `\n\nディレクトリ: ${directories.join(', ')}`;
             } else if (directories.length > 5) {
-                displayMessage += `\n\n**ディレクトリ:** ${directories.slice(0, 5).join(', ')} ... 他${directories.length - 5}個`;
+                displayMessage += `\n\nディレクトリ: ${directories.slice(0, 5).join(', ')} ... 他${directories.length - 5}個`;
             }
             
             if (files.length > 0 && files.length <= 10) {
-                displayMessage += `\n**ファイル:** ${files.join(', ')}`;
+                displayMessage += `\nファイル: ${files.join(', ')}`;
             } else if (files.length > 10) {
-                displayMessage += `\n**ファイル:** ${files.slice(0, 10).join(', ')} ... 他${files.length - 10}個`;
+                displayMessage += `\nファイル: ${files.slice(0, 10).join(', ')} ... 他${files.length - 10}個`;
             }
             
             return {
@@ -1454,7 +1454,7 @@ export async function searchFiles(query, options = {}) {
             const searchType = searchIn === 'both' ? 'ファイル名+内容' : searchIn === 'filename' ? 'ファイル名' : '内容';
             const patternInfo = filePattern ? ` (パターン: ${filePattern})` : '';
             const regexInfo = regex ? ' [正規表現]' : '';
-            mConsole.print(`🔍 searchFiles: "${query}"${regexInfo} を${searchType}で検索${patternInfo} → ${results.length}件ヒット (${filesSearched}ファイル検索)`, 'success');
+            mConsole.print(`✅ searchFiles: "${query}"${regexInfo} を${searchType}で検索${patternInfo} → ${results.length}件ヒット (${filesSearched}ファイル検索)`, 'success');
         }
         
         // チャット表示用のメッセージを作成
@@ -1462,7 +1462,7 @@ export async function searchFiles(query, options = {}) {
         const regexInfo = regex ? ' [正規表現]' : '';
         const patternInfo = filePattern ? ` (パターン: ${filePattern})` : '';
         
-        let displayMessage = `🔍 **"${query}"${regexInfo}** を検索${patternInfo}\n${results.length}件ヒット (${filesSearched}ファイル検索, ${searchType})`;
+        let displayMessage = `✅ "${query}"${regexInfo} を検索${patternInfo}\n${results.length}件ヒット (${filesSearched}ファイル検索, ${searchType})`;
         
         // 最初の3件の結果を表示
         if (results.length > 0) {

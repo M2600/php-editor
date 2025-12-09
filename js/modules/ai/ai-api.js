@@ -67,8 +67,14 @@ class SmoothTextStreamer {
     }
 }
 
-export async function fetchAIChat({messages, model, fileContext, dirContext, tools, onDelta, onError, signal, smoothOutput = true, customUrl = null, customApiKey = null, customPrompt = null}) {
+export async function fetchAIChat({messages, model, fileContext, dirContext, tools, onDelta, onError, onComplete, signal, smoothOutput = true, customUrl = null, customApiKey = null, customPrompt = null}) {
     try {
+        // 統計情報を収集
+        const stats = {
+            model: model || 'unknown',
+            modelFromResponse: null
+        };
+        
         // リクエストボディを作成
         const requestBody = {
             messages, 
@@ -177,6 +183,12 @@ export async function fetchAIChat({messages, model, fileContext, dirContext, too
                             onError && onError(errMsg);
                             return;
                         }
+                        
+                        // モデル名を取得（レスポンスから）
+                        if (chunk.model && !stats.modelFromResponse) {
+                            stats.modelFromResponse = chunk.model;
+                        }
+                        
                         // delta.contentがあれば処理
                         const delta = chunk.choices?.[0]?.delta;
                         if (delta && typeof delta.content === "string") {
@@ -212,6 +224,13 @@ export async function fetchAIChat({messages, model, fileContext, dirContext, too
         if (!hasValidStream) {
             onError && onError("AIサーバーから正常な応答がありませんでした。サーバーがダウンしている可能性があります。");
             return;
+        }
+        
+        // 統計情報をコールバックで返す
+        if (onComplete) {
+            onComplete({
+                model: stats.modelFromResponse || stats.model
+            });
         }
     } catch(e) {
         // fetch自体のエラーやネットワークエラー

@@ -2099,6 +2099,32 @@ i {
     background: var(--me-color-reject-hover, #c9302c);
 }
 
+/* AI統計情報 */
+.meditor-chat-stats {
+    margin-top: 0.5em;
+    padding-top: 0.5em;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    font-size: 0.75em;
+    color: #888;
+}
+
+.meditor-chat-stats-model {
+    font-family: monospace;
+    color: #666;
+}
+
+/* ダークテーマ対応 */
+@media (prefers-color-scheme: dark) {
+    .meditor-chat-stats {
+        border-top-color: rgba(255, 255, 255, 0.1);
+        color: #aaa;
+    }
+    
+    .meditor-chat-stats-model {
+        color: #999;
+    }
+}
+
 
 
 

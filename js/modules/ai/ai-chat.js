@@ -1169,6 +1169,12 @@ export async function sendAIMessage({
                 customUrl: customUrl,
                 customApiKey: customApiKey,
                 customPrompt: customPrompt,  // ベースプロンプトを渡す
+                onComplete: (stats) => {
+                    // MEditorの統計情報表示メソッドを呼び出し
+                    if (chat.addStatsToLastAIMessage) {
+                        chat.addStatsToLastAIMessage(stats);
+                    }
+                },
                 onDelta: async (delta, chunk, isSmooth, tool_calls) => {
                     // ツール呼び出しの処理
                     if (tool_calls && aiTool) {
@@ -1400,6 +1406,12 @@ export async function sendAIMessage({
                             customUrl: customUrl,
                             customApiKey: customApiKey,
                             customPrompt: customPrompt, // ベースプロンプトを渡す
+                            onComplete: (stats) => {
+                                // ツール実行後の応答でも統計情報を表示
+                                if (chat.addStatsToLastAIMessage) {
+                                    chat.addStatsToLastAIMessage(stats);
+                                }
+                            },
                             onDelta: (delta, chunk, isSmooth, tool_calls) => {
                                 // 2回目以降のツール呼び出しにも対応
                                 if (tool_calls && aiTool) {

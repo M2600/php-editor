@@ -5195,6 +5195,40 @@ export class MEditor {
             return lastAiMsg.innerText || lastAiMsg.textContent || '';
         };
 
+        // 最後のAIメッセージに統計情報を追加
+        chat.addStatsToLastAIMessage = (stats) => {
+            if (!stats) return;
+            
+            let aiMsgs;
+            if (chat.messages && chat.messages.container) {
+                aiMsgs = chat.messages.container.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'chat-message-ai');
+            } else {
+                aiMsgs = chat.content.element.querySelectorAll('.' + this.CLASS_NAME_PREFIX + 'chat-message-ai');
+            }
+            
+            if (aiMsgs.length === 0) return;
+            const lastAiMsg = aiMsgs[aiMsgs.length - 1];
+            
+            // すでに統計情報が表示されていないかチェック
+            if (lastAiMsg.querySelector('.' + this.CLASS_NAME_PREFIX + 'chat-stats')) {
+                return;
+            }
+            
+            // 統計情報のHTML要素を作成
+            const statsDiv = document.createElement('div');
+            statsDiv.className = this.CLASS_NAME_PREFIX + 'chat-stats';
+            
+            // モデル名を表示
+            if (stats.model) {
+                const modelSpan = document.createElement('span');
+                modelSpan.className = this.CLASS_NAME_PREFIX + 'chat-stats-model';
+                modelSpan.textContent = '🤖 ' + stats.model;
+                statsDiv.appendChild(modelSpan);
+            }
+            
+            lastAiMsg.appendChild(statsDiv);
+        };
+
         // 送信処理
         chat.inputArea.sendBtn.addEventListener("click", () => {
             // 送信処理は外部（main.js等）で実装される

@@ -4432,6 +4432,51 @@ export class MEditor {
         chat.messages.container = document.createElement("div");
         chat.messages.container.classList.add(this.CLASS_NAME_PREFIX + "chat-messages-container");
         chat.content.element.appendChild(chat.messages.container);
+        
+        // localStorageへの保存（stats情報のみ）
+        chat.saveMessagesToStorage = () => {
+            // メッセージ履歴の保存はai-chat.jsのHistoryManagerに任せる
+            // ここではstats情報のみ保存
+            try {
+                if (!chat.statsCache) chat.statsCache = {};
+                const storageKey = this.CLASS_NAME_PREFIX + 'chat-stats';
+                localStorage.setItem(storageKey, JSON.stringify(chat.statsCache));
+            } catch (e) {
+                console.error('統計情報の保存に失敗しました:', e);
+            }
+        };
+        
+        // stats情報のキャッシュを初期化
+        chat.statsCache = {};
+        
+        // localStorageからの復元（stats情報のみ）
+        chat.loadMessagesFromStorage = () => {
+            // メッセージ履歴の復元はai-chat.jsのrestoreChatHistoryToUIに任せる
+            // ここではstats情報のみ復元
+            try {
+                const storageKey = this.CLASS_NAME_PREFIX + 'chat-stats';
+                const saved = localStorage.getItem(storageKey);
+                if (saved) {
+                    chat.statsCache = JSON.parse(saved);
+                }
+            } catch (e) {
+                console.error('統計情報の復元に失敗しました:', e);
+            }
+        };
+        
+        // チャット履歴のクリア
+        chat.clearMessages = () => {
+            chat.messages = [];
+            if (chat.messages.container) {
+                chat.messages.container.innerHTML = '';
+            }
+            chat.statsCache = {};
+            chat.saveMessagesToStorage();
+            // 背景メッセージを再表示
+            if (chat.backgroundMessage) {
+                chat.backgroundMessage.style.display = "flex";
+            }
+        };
 
         // ローディングコンテナを作成（chat-contentの外に配置）
         chat.loadingContainer = {};
@@ -4982,8 +5027,9 @@ export class MEditor {
         chat.autoScroll = true;
         
         // メッセージコンテナのスクロール判定（メッセージがコンテナ内に追加されるため）
-        chat.messages.container.addEventListener('scroll', function() {
+        chat.messages.container.addEventListener('scroll', () => {
             const el = chat.messages.container;
+            if (!el) return;
             // 2px以内なら最下部とみなす
             if (el.scrollHeight - el.scrollTop - el.clientHeight < 2) {
                 chat.autoScroll = true;
@@ -5105,7 +5151,7 @@ export class MEditor {
 
 
         // メッセージ追加メソッド
-        chat.addMessage = (text, from = "user", markdown = false) => {
+        chat.addMessage = (text, from = "user", markdown = false, stats = null) => {
             const msg = {};
             msg.element = document.createElement("div");
             msg.element.classList.add(this.CLASS_NAME_PREFIX + "chat-message");
@@ -5127,11 +5173,12 @@ export class MEditor {
             }
 
             // すべてのメッセージをメッセージコンテナに追加
-            if (chat.messages && chat.messages.container) {
-                chat.messages.container.appendChild(msg.element);
-            } else {
-                chat.content.element.appendChild(msg.element);
+            // chat.messages.containerが存在することを確認
+            if (!chat.messages.container) {
+                console.error('chat.messages.containerが存在しません');
+                return;
             }
+            chat.messages.container.appendChild(msg.element);
             
             // 背景メッセージを非表示にする（メッセージが1つ以上ある場合）
             if (chat.backgroundMessage && chat.messages && chat.messages.length > 0) {
@@ -5145,6 +5192,8 @@ export class MEditor {
                     chat.messages.container.scrollTop = chat.messages.container.scrollHeight;
                 }, 0);
             }
+            
+            // メッセージデータを保存
             chat.messages.push({ text, from });
         };
 
@@ -5227,6 +5276,12 @@ export class MEditor {
             }
             
             lastAiMsg.appendChild(statsDiv);
+            
+            // statsをキャッシュに保存（メッセージインデックスをキーに）
+            if (!chat.statsCache) chat.statsCache = {};
+            const messageIndex = chat.messages.length - 1;
+            chat.statsCache[messageIndex] = stats;
+            chat.saveMessagesToStorage();
         };
 
         // 送信処理
@@ -5285,6 +5340,9 @@ export class MEditor {
         let chat = this.chat(parentObj);
         chat.options = opt;
         // chat.messages は既に chat() メソッドで配列として初期化されている
+
+        // localStorage からメッセージを復元
+        chat.loadMessagesFromStorage();
 
         return chat;
     }

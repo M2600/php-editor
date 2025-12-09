@@ -803,6 +803,62 @@ export function restoreChatHistoryToUI(chatHistory, chat) {
         }
     });
     
+    // 全メッセージ追加後、stats情報を一括で追加
+    setTimeout(() => {
+        let aiMsgs;
+        if (chat.messages && chat.messages.container) {
+            aiMsgs = chat.messages.container.querySelectorAll('.meditor-chat-message-ai');
+        } else if (chat.content && chat.content.element) {
+            aiMsgs = chat.content.element.querySelectorAll('.meditor-chat-message-ai');
+        }
+        
+        if (aiMsgs) {
+            // assistant メッセージのみを抽出（tool_callsがないもの）
+            const assistantMessages = chatHistory.filter(msg => 
+                msg.role === 'assistant' && msg.content && typeof msg.content === 'string'
+            );
+            
+            console.log('AIメッセージ数:', aiMsgs.length, 'assistant履歴数:', assistantMessages.length);
+            console.log('全履歴:', chatHistory.map((m, i) => ({
+                index: i,
+                role: m.role,
+                hasContent: !!m.content,
+                hasStats: !!m._stats,
+                stats: m._stats
+            })));
+            
+            // 各AIメッセージに対応するstatsを追加
+            aiMsgs.forEach((aiMsg, index) => {
+                if (index < assistantMessages.length) {
+                    let stats = assistantMessages[index]._stats;
+                    
+                    // stats情報がない場合のフォールバック（古い履歴用）
+                    if (!stats) {
+                        // 現在選択されているモデルを使用
+                        const modelSelect = document.querySelector('.meditor-chat-model-selector');
+                        if (modelSelect && modelSelect.value) {
+                            stats = { model: modelSelect.value };
+                        }
+                    }
+                    
+                    console.log(`メッセージ${index}:`, stats);
+                    if (stats && stats.model) {
+                        // 既にstatsが表示されていないかチェック
+                        if (!aiMsg.querySelector('.meditor-chat-stats')) {
+                            const statsDiv = document.createElement('div');
+                            statsDiv.className = 'meditor-chat-stats';
+                            const modelSpan = document.createElement('span');
+                            modelSpan.className = 'meditor-chat-stats-model';
+                            modelSpan.textContent = '🤖 ' + stats.model;
+                            statsDiv.appendChild(modelSpan);
+                            aiMsg.appendChild(statsDiv);
+                        }
+                    }
+                }
+            });
+        }
+    }, 100);
+    
     // 自動スクロール状態を有効にリセット
     if (chat) {
         chat.autoScroll = true;
@@ -1174,6 +1230,23 @@ export async function sendAIMessage({
                     if (chat.addStatsToLastAIMessage) {
                         chat.addStatsToLastAIMessage(stats);
                     }
+                    // HistoryManagerの最後のassistantメッセージにstatsを追加
+                    // （tool_callsがないメッセージのみ）
+                    const history = historyManager.getHistory();
+                    for (let i = history.length - 1; i >= 0; i--) {
+                        if (history[i].role === 'assistant') {
+                            // tool_callsがあるメッセージはスキップ
+                            if (history[i].tool_calls && history[i].tool_calls.length > 0) {
+                                continue;
+                            }
+                            // contentがあるメッセージにのみstatsを保存
+                            if (history[i].content) {
+                                history[i]._stats = stats;
+                                historyManager.saveChatHistory();
+                                break;
+                            }
+                        }
+                    }
                 },
                 onDelta: async (delta, chunk, isSmooth, tool_calls) => {
                     // ツール呼び出しの処理
@@ -1410,6 +1483,23 @@ export async function sendAIMessage({
                                 // ツール実行後の応答でも統計情報を表示
                                 if (chat.addStatsToLastAIMessage) {
                                     chat.addStatsToLastAIMessage(stats);
+                                }
+                                // HistoryManagerの最後のassistantメッセージにstatsを追加
+                                // （tool_callsがないメッセージのみ）
+                                const history = historyManager.getHistory();
+                                for (let i = history.length - 1; i >= 0; i--) {
+                                    if (history[i].role === 'assistant') {
+                                        // tool_callsがあるメッセージはスキップ
+                                        if (history[i].tool_calls && history[i].tool_calls.length > 0) {
+                                            continue;
+                                        }
+                                        // contentがあるメッセージにのみstatsを保存
+                                        if (history[i].content) {
+                                            history[i]._stats = stats;
+                                            historyManager.saveChatHistory();
+                                            break;
+                                        }
+                                    }
                                 }
                             },
                             onDelta: (delta, chunk, isSmooth, tool_calls) => {

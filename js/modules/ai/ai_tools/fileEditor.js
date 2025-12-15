@@ -9,6 +9,7 @@ import { api } from '../../utils/api.js';
 import { loadExplorer } from '../../core/file-manager.js';
 import { AceWrapper } from '../../../../MEditor/MEditor.js';
 import { hideAllPreviewer } from '../../utils/helpers.js';
+import { CONFIG } from '../../core/config.js';
 
 /**
  * 相対パスをベースディレクトリと結合して絶対パスにする
@@ -407,13 +408,56 @@ export async function createFile(filename, content, options = {}) {
             content: content
         });
         
-        // デバッグ: APIレスポンスを確認
-        console.log('createFile API response:', result);
-        
         if (result.status === 'success') {
             // エクスプローラーをリロード
             if (editor && appState) {
                 await loadExplorer(editor.BASE_DIR, apiFunc, appState, editor);
+                
+                // 少し待ってからファイルを開く（リロード完了を待つ）
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // ファイルリストから作成したファイルを検索して開く
+                // FILE_LIST.files は配列なので、pathで検索
+                const createdFile = appState.FILE_LIST?.files?.find(f => f.path === fullPath);
+                
+                if (createdFile && createdFile.type === 'text') {
+                    // すべてのviewerを非表示にしてからファイルを開く
+                    hideAllPreviewer();
+                    
+                    // openFile関数をインポートして実行
+                    const { openFile } = await import('../../editor/ace-editor.js');
+                    const openedFile = await openFile(
+                        createdFile,
+                        appState.ACE_LIST,
+                        editor,
+                        editor.mConsole || mConsole,
+                        CONFIG.EXT_LANG,
+                        false, // DEBUG
+                        (aceEditor) => {}, // aceKeybinds
+                        apiFunc
+                    );
+                    
+                    // CURRENT_FILEを更新
+                    appState.CURRENT_FILE = openedFile || createdFile;
+                    
+                    // エディタ要素の表示状態を確認・修正
+                    if (openedFile && openedFile.aceObj) {
+                        const aceElement = openedFile.aceObj.element;
+                        
+                        // 明示的に表示
+                        if (aceElement) {
+                            aceElement.style.display = '';
+                            openedFile.aceObj.show();
+                            openedFile.aceObj.focus();
+                        }
+                    }
+                    
+                    // エクスプローラーのハイライトを更新
+                    if (editor.explorer && typeof editor.explorer.highlightFile === 'function') {
+                        console.log('[createFile] Highlighting file:', fullPath, 'Element exists:', !!document.getElementById(fullPath));
+                        editor.explorer.highlightFile(fullPath);
+                    }
+                }
             }
             
             await logToolExecution('createFile', { filename, content }, 'approved', result, approvalTime);
@@ -619,9 +663,9 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
         mConsole, 
         currentFile,
         api: apiFunc,
-        baseDir
+        baseDir,
+        appState
     } = toolOptions;
-    
     try {
         // APIが渡されていない場合はエラー
         if (!apiFunc) {
@@ -753,6 +797,60 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                     // カーソル位置が範囲外の場合は無視
                 }
                 currentFile.changed = false;
+                
+                // ファイルを表示
+                hideAllPreviewer();
+                if (currentFile.aceObj && currentFile.aceObj.show) {
+                    currentFile.aceObj.show();
+                    currentFile.aceObj.focus();
+                }
+                
+                // エクスプローラーのハイライトを更新
+                if (editor && editor.explorer && typeof editor.explorer.highlightFile === 'function') {
+                    console.log('[editFileByReplace] Highlighting file:', currentFile.path, 'Element exists:', !!document.getElementById(currentFile.path));
+                    editor.explorer.highlightFile(currentFile.path);
+                }
+            } else if (editor && appState) {
+                // ファイルが開かれていない場合は開く
+                // FILE_LIST.files は配列なので、pathで検索
+                const editedFile = appState.FILE_LIST?.files?.find(f => f.path === fullPath);
+                if (editedFile && editedFile.type === 'text') {
+                    // すべてのviewerを非表示にしてからファイルを開く
+                    hideAllPreviewer();
+                    
+                    const { openFile } = await import('../../editor/ace-editor.js');
+                    const openedFile = await openFile(
+                        editedFile,
+                        appState.ACE_LIST,
+                        editor,
+                        editor.mConsole || mConsole,
+                        CONFIG.EXT_LANG,
+                        false, // DEBUG
+                        (aceEditor) => {}, // aceKeybinds
+                        apiFunc
+                    );
+                    
+                    // CURRENT_FILEを更新
+                    appState.CURRENT_FILE = openedFile || editedFile;
+                    
+                    // エディタ要素の表示状態を確認・修正
+                    if (openedFile && openedFile.aceObj) {
+                        const aceElement = openedFile.aceObj.element;
+                        
+                        // 明示的に表示
+                        if (aceElement) {
+                            aceElement.style.display = '';
+                            openedFile.aceObj.show();
+                            openedFile.aceObj.focus();
+                        }
+                    }
+                    
+                    // エクスプローラーのハイライトを更新
+                    if (editor.explorer && typeof editor.explorer.highlightFile === 'function') {
+                        console.log('[editFileByReplace] Highlighting newly opened file:', fullPath, 'Element exists:', !!document.getElementById(fullPath));
+                        editor.explorer.highlightFile(fullPath);
+                    }
+                }
             }
             
             await logToolExecution('editFileByReplace', 
@@ -806,7 +904,8 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
         mConsole, 
         currentFile,
         api: apiFunc,
-        baseDir
+        baseDir,
+        appState
     } = options;
     
     try {
@@ -912,6 +1011,66 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
                     // カーソル位置が範囲外の場合は無視
                 }
                 currentFile.changed = false;
+                
+                // ファイルを表示
+                hideAllPreviewer();
+                if (currentFile.aceObj && currentFile.aceObj.show) {
+                    currentFile.aceObj.show();
+                    currentFile.aceObj.focus();
+                }
+                
+                // エクスプローラーのハイライトを更新
+                if (editor && editor.explorer && typeof editor.explorer.highlightFile === 'function') {
+                    console.log('[editFileByLines] Highlighting file:', currentFile.path, 'Element exists:', !!document.getElementById(currentFile.path));
+                    editor.explorer.highlightFile(currentFile.path);
+                }
+            } else if (editor && appState) {
+                // ファイルが開かれていない場合は開く
+                // エクスプローラーをリロードしてFILE_LISTを更新
+                await loadExplorer(editor.BASE_DIR, apiFunc, appState, editor);
+                
+                // 少し待ってからファイルを開く（リロード完了を待つ）
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // FILE_LIST.files は配列なので、pathで検索
+                const editedFile = appState.FILE_LIST?.files?.find(f => f.path === fullPath);
+                if (editedFile && editedFile.type === 'text') {
+                    // すべてのviewerを非表示にしてからファイルを開く
+                    hideAllPreviewer();
+                    
+                    const { openFile } = await import('../../editor/ace-editor.js');
+                    const openedFile = await openFile(
+                        editedFile,
+                        appState.ACE_LIST,
+                        editor,
+                        editor.mConsole || mConsole,
+                        CONFIG.EXT_LANG,
+                        false, // DEBUG
+                        (aceEditor) => {}, // aceKeybinds
+                        apiFunc
+                    );
+                    
+                    // CURRENT_FILEを更新
+                    appState.CURRENT_FILE = openedFile || editedFile;
+                    
+                    // エディタ要素の表示状態を確認・修正
+                    if (openedFile && openedFile.aceObj) {
+                        const aceElement = openedFile.aceObj.element;
+                        
+                        // 明示的に表示
+                        if (aceElement) {
+                            aceElement.style.display = '';
+                            openedFile.aceObj.show();
+                            openedFile.aceObj.focus();
+                        }
+                    }
+                    
+                    // エクスプローラーのハイライトを更新
+                    if (editor.explorer && typeof editor.explorer.highlightFile === 'function') {
+                        console.log('[editFileByLines] Highlighting newly opened file:', fullPath, 'Element exists:', !!document.getElementById(fullPath));
+                        editor.explorer.highlightFile(fullPath);
+                    }
+                }
             }
             
             await logToolExecution('editFileByLines', 
@@ -1014,6 +1173,11 @@ export async function deleteFile(filename, options = {}) {
         });
         
         if (result.status === 'success') {
+            // エクスプローラーをリロード
+            if (editor && options.appState) {
+                await loadExplorer(editor.BASE_DIR, apiFunc, options.appState, editor);
+            }
+            
             await logToolExecution('deleteFile', { filename }, 'approved', result, approvalTime);
             if (mConsole) {
                 mConsole.print(`🗑️ deleteFile: "${filename}" を削除`, 'success');

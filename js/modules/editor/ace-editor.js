@@ -74,6 +74,14 @@ export function aceKeybinds(ace, pushSaveButton, openInOtherWindow, focusExplore
 }
 
 export async function openFile(file, aceList, editor, mConsole, extLangMap, DEBUG, aceKeybinds, api) {
+    // AI編集確認ダイアログ表示中はファイルを開けない
+    const { APP_STATE } = await import('../core/config.js');
+    if (APP_STATE.IS_SHOWING_EDIT_CONFIRMATION) {
+        console.warn("編集確認ダイアログ表示中のため、ファイルを開けません");
+        mConsole.print("⚠️ 編集確認ダイアログが表示されています。先に承認または拒否してください。");
+        return;
+    }
+    
     DEBUG && console.log("fileInfo", file);
     const apiRet = await loadFile(file.path, api);
     if (!apiRet) {

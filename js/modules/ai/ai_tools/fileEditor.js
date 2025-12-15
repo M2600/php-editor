@@ -113,7 +113,11 @@ async function logToolExecution(tool, parameters, status, result, approvalTime =
  * @param {number} startTime - 確認開始時刻（承認時間計測用）
  * @returns {Promise<Object>} - {approved: boolean, approvalTime: number|null}
  */
-function showEditConfirmation(editor, file, newContent, startTime) {
+async function showEditConfirmation(editor, file, newContent, startTime) {
+    // 確認ダイアログ表示フラグを設定
+    const { APP_STATE } = await import('../../core/config.js');
+    APP_STATE.IS_SHOWING_EDIT_CONFIRMATION = true;
+    
     return new Promise((resolve) => {
         // 既存の全てのviewer（ace含む）を非表示にする
         hideAllPreviewer();
@@ -211,6 +215,7 @@ function showEditConfirmation(editor, file, newContent, startTime) {
                 file.isDiffView = false;
                 clearDiff();
                 cleanup();
+                APP_STATE.IS_SHOWING_EDIT_CONFIRMATION = false; // フラグをクリア
                 resolve({ approved: true, approvalTime });
             },
             // 拒否ボタン
@@ -218,6 +223,7 @@ function showEditConfirmation(editor, file, newContent, startTime) {
                 file.isDiffView = false;
                 clearDiff();
                 cleanup();
+                APP_STATE.IS_SHOWING_EDIT_CONFIRMATION = false; // フラグをクリア
                 resolve({ approved: false, approvalTime: null });
             }
         );
@@ -234,7 +240,11 @@ function showEditConfirmation(editor, file, newContent, startTime) {
  * @param {number} startTime - 確認開始時刻（承認時間計測用）
  * @returns {Promise<Object>} - {approved: boolean, approvalTime: number|null}
  */
-function showCreateFileConfirmation(editor, filename, proposedContent, startTime) {
+async function showCreateFileConfirmation(editor, filename, proposedContent, startTime) {
+    // 確認ダイアログ表示フラグを設定
+    const { APP_STATE } = await import('../../core/config.js');
+    APP_STATE.IS_SHOWING_EDIT_CONFIRMATION = true;
+    
     return new Promise((resolve) => {
         // 既存の全てのviewer（ace含む）を非表示にする
         hideAllPreviewer();
@@ -310,6 +320,7 @@ function showCreateFileConfirmation(editor, filename, proposedContent, startTime
                 tempFile.isDiffView = false;
                 clearDiff();
                 cleanup();
+                APP_STATE.IS_SHOWING_EDIT_CONFIRMATION = false; // フラグをクリア
                 resolve({ approved: true, approvalTime });
             },
             // 拒否ボタン
@@ -317,6 +328,7 @@ function showCreateFileConfirmation(editor, filename, proposedContent, startTime
                 tempFile.isDiffView = false;
                 clearDiff();
                 cleanup();
+                APP_STATE.IS_SHOWING_EDIT_CONFIRMATION = false; // フラグをクリア
                 resolve({ approved: false, approvalTime: null });
             }
         );

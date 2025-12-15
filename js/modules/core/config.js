@@ -129,4 +129,5 @@ export const APP_STATE = {
     AI_CONFIG: { baseUrl: "", apiKey: "" , userCustomApi: false },
     RUN_MODE: 'WEB_MODE',  // 'API_MODE': API開発モード(デバッグ実行), 'WEB_MODE': Webページモード(別タブ実行)
     ACE_KEYBOARD_HANDLER: "ace/keyboard/ace",
+    IS_SHOWING_EDIT_CONFIRMATION: false,  // AI編集確認ダイアログ表示中フラグ
 };

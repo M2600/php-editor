@@ -205,7 +205,7 @@ async function showEditConfirmation(editor, file, newContent, startTime) {
             }
         };
         
-        editor.diffApplyMenu(
+        const menu = editor.diffApplyMenu(
             menuContainer,
             fileForConfirmation,
             newContent,
@@ -228,6 +228,15 @@ async function showEditConfirmation(editor, file, newContent, startTime) {
                 resolve({ approved: false, approvalTime: null });
             }
         );
+        
+        // メッセージ要素を取得してファイル名を含むメッセージに書き換え
+        if (menu && menu.element) {
+            const msgElement = menu.element.querySelector('.' + editor.CLASS_NAME_PREFIX + 'diff-apply-menu-msg');
+            if (msgElement) {
+                const fileName = file?.name || file?.path || 'unnamed';
+                msgElement.textContent = `"${fileName}" への変更を適用しますか？`;
+            }
+        }
     });
 }
 
@@ -311,7 +320,7 @@ async function showCreateFileConfirmation(editor, filename, proposedContent, sta
             }
         };
         
-        editor.diffApplyMenu(
+        const menu = editor.diffApplyMenu(
             menuContainer,
             tempFile,
             proposedContent,
@@ -333,6 +342,14 @@ async function showCreateFileConfirmation(editor, filename, proposedContent, sta
                 resolve({ approved: false, approvalTime: null });
             }
         );
+        
+        // メッセージ要素を取得してファイル名を含むメッセージに書き換え
+        if (menu && menu.element) {
+            const msgElement = menu.element.querySelector('.' + editor.CLASS_NAME_PREFIX + 'diff-apply-menu-msg');
+            if (msgElement) {
+                msgElement.textContent = `"${filename}" を作成しますか？`;
+            }
+        }
     });
 }
 

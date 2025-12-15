@@ -438,24 +438,10 @@ export async function createFile(filename, content, options = {}) {
                 const createdFile = appState.FILE_LIST?.files?.find(f => f.path === fullPath);
                 
                 if (createdFile && createdFile.type === 'text') {
-                    // すべてのviewerを非表示にしてからファイルを開く
-                    hideAllPreviewer();
-                    
-                    // openFile関数をインポートして実行
-                    const { openFile } = await import('../../editor/ace-editor.js');
-                    const openedFile = await openFile(
-                        createdFile,
-                        appState.ACE_LIST,
-                        editor,
-                        editor.mConsole || mConsole,
-                        CONFIG.EXT_LANG,
-                        false, // DEBUG
-                        (aceEditor) => {}, // aceKeybinds
-                        apiFunc
-                    );
-                    
-                    // CURRENT_FILEを更新
-                    appState.CURRENT_FILE = openedFile || createdFile;
+                    // エクスプローラーのfileClickActionを使用して通常のファイル開く処理を実行
+                    if (editor.explorer && typeof editor.explorer.fileClickAction === 'function') {
+                        await editor.explorer.fileClickAction(createdFile);
+                    }
                     
                     // エディタ要素の表示状態を確認・修正
                     if (openedFile && openedFile.aceObj) {
@@ -835,37 +821,9 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                     // すべてのviewerを非表示にしてからファイルを開く
                     hideAllPreviewer();
                     
-                    const { openFile } = await import('../../editor/ace-editor.js');
-                    const openedFile = await openFile(
-                        editedFile,
-                        appState.ACE_LIST,
-                        editor,
-                        editor.mConsole || mConsole,
-                        CONFIG.EXT_LANG,
-                        false, // DEBUG
-                        (aceEditor) => {}, // aceKeybinds
-                        apiFunc
-                    );
-                    
-                    // CURRENT_FILEを更新
-                    appState.CURRENT_FILE = openedFile || editedFile;
-                    
-                    // エディタ要素の表示状態を確認・修正
-                    if (openedFile && openedFile.aceObj) {
-                        const aceElement = openedFile.aceObj.element;
-                        
-                        // 明示的に表示
-                        if (aceElement) {
-                            aceElement.style.display = '';
-                            openedFile.aceObj.show();
-                            openedFile.aceObj.focus();
-                        }
-                    }
-                    
-                    // エクスプローラーのハイライトを更新
-                    if (editor.explorer && typeof editor.explorer.highlightFile === 'function') {
-                        console.log('[editFileByReplace] Highlighting newly opened file:', fullPath, 'Element exists:', !!document.getElementById(fullPath));
-                        editor.explorer.highlightFile(fullPath);
+                    // エクスプローラーのfileClickActionを使用して通常のファイル開く処理を実行
+                    if (editor.explorer && typeof editor.explorer.fileClickAction === 'function') {
+                        await editor.explorer.fileClickAction(editedFile);
                     }
                 }
             }
@@ -1051,42 +1009,10 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
                 
                 // FILE_LIST.files は配列なので、pathで検索
                 const editedFile = appState.FILE_LIST?.files?.find(f => f.path === fullPath);
-                if (editedFile && editedFile.type === 'text') {
-                    // すべてのviewerを非表示にしてからファイルを開く
-                    hideAllPreviewer();
-                    
-                    const { openFile } = await import('../../editor/ace-editor.js');
-                    const openedFile = await openFile(
-                        editedFile,
-                        appState.ACE_LIST,
-                        editor,
-                        editor.mConsole || mConsole,
-                        CONFIG.EXT_LANG,
-                        false, // DEBUG
-                        (aceEditor) => {}, // aceKeybinds
-                        apiFunc
-                    );
-                    
-                    // CURRENT_FILEを更新
-                    appState.CURRENT_FILE = openedFile || editedFile;
-                    
-                    // エディタ要素の表示状態を確認・修正
-                    if (openedFile && openedFile.aceObj) {
-                        const aceElement = openedFile.aceObj.element;
-                        
-                        // 明示的に表示
-                        if (aceElement) {
-                            aceElement.style.display = '';
-                            openedFile.aceObj.show();
-                            openedFile.aceObj.focus();
-                        }
-                    }
-                    
-                    // エクスプローラーのハイライトを更新
-                    if (editor.explorer && typeof editor.explorer.highlightFile === 'function') {
-                        console.log('[editFileByLines] Highlighting newly opened file:', fullPath, 'Element exists:', !!document.getElementById(fullPath));
-                        editor.explorer.highlightFile(fullPath);
-                    }
+                console.log('[editFileByLines] Opening edited file:', fullPath, 'Found:', !!editedFile);
+                if (editedFile && editor.explorer && typeof editor.explorer.fileClickAction === 'function') {
+                    // エクスプローラーのファイルクリックアクションを使用して完全な初期化を行う
+                    await editor.explorer.fileClickAction(editedFile);
                 }
             }
             

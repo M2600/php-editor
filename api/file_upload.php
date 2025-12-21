@@ -18,7 +18,7 @@ $files = $_FILES;
 
 // PHP設定を確認
 $maxFileUploads = ini_get('max_file_uploads');
-error_log("PHP max_file_uploads: $maxFileUploads");
+//error_log("PHP max_file_uploads: $maxFileUploads");
 
 //error_log(print_r($_POST, true));
 //error_log(print_r($_FILES, true));
@@ -34,27 +34,27 @@ if($action == "upload"){
         $fileRenames = [];
         if(isset($_POST["fileRenames"])){
             $fileRenames = json_decode($_POST["fileRenames"], true);
-            error_log("File renames received: " . print_r($fileRenames, true));
+            //error_log("File renames received: " . print_r($fileRenames, true));
         }
         
         // 相対パスマップを取得（フォルダアップロード用）
         $relativePaths = [];
         if(isset($_POST["relativePaths"])){
             $relativePaths = json_decode($_POST["relativePaths"], true);
-            error_log("Relative paths received: " . print_r($relativePaths, true));
+            //error_log("Relative paths received: " . print_r($relativePaths, true));
         }
         
         // 複数ファイルアップロードの正しい処理
         if(isset($files['files'])){
             $fileCount = count($files['files']['name']);
-            error_log("Processing $fileCount files for upload to: $path");
+            //error_log("Processing $fileCount files for upload to: $path");
             
             for($i = 0; $i < $fileCount; $i++){
                 try {
                     // エラーチェック
                     if($files['files']['error'][$i] !== UPLOAD_ERR_OK){
                         $errorMsg = "Upload error code: " . $files['files']['error'][$i];
-                        error_log("File upload error for {$files['files']['name'][$i]}: $errorMsg");
+                        //error_log("File upload error for {$files['files']['name'][$i]}: $errorMsg");
                         $errorFiles[] = $files['files']['name'][$i] . " ($errorMsg)";
                         continue; // 次のファイルへ
                     }
@@ -67,7 +67,7 @@ if($action == "upload"){
                     // 相対パスがある場合（フォルダアップロード）は、それを使用
                     if(!empty($relativePaths) && isset($relativePaths[$i])){
                         $relativePath = $relativePaths[$i];
-                        error_log("Processing file $i: $relativePath");
+                        //error_log("Processing file $i: $relativePath");
                         
                         // 相対パスをそのまま使用（フォルダ構造を保持）
                         $fileName = $relativePath;
@@ -85,7 +85,7 @@ if($action == "upload"){
                                         // 最上位フォルダ名を置換
                                         $pathParts[0] = $rename['renamed'];
                                         $fileName = implode('/', $pathParts);
-                                        error_log("Renamed top-level folder: {$relativePath} -> {$fileName}");
+                                        //error_log("Renamed top-level folder: {$relativePath} -> {$fileName}");
                                         break;
                                     }
                                 }
@@ -94,12 +94,12 @@ if($action == "upload"){
                     }
                     // 個別ファイルアップロードの場合のリネーム処理
                     else if(!empty($fileRenames)){
-                        error_log("Processing individual file rename for: {$fileName}");
+                        //error_log("Processing individual file rename for: {$fileName}");
                         foreach($fileRenames as $rename){
-                            error_log("Checking rename: {$rename['original']} === {$fileName}");
+                            //error_log("Checking rename: {$rename['original']} === {$fileName}");
                             if($rename['original'] === $fileName){
                                 $fileName = $rename['renamed'];
-                                error_log("Renaming file: {$rename['original']} -> {$fileName}");
+                                //error_log("Renaming file: {$rename['original']} -> {$fileName}");
                                 break;
                             }
                         }
@@ -108,13 +108,13 @@ if($action == "upload"){
                     // convertUserPath() は内部でパストラバーサルチェックを行う
                     // 不正なパスの場合は例外がスローされる
                     $serverPath = convertUserPath($path . $fileName);
-                    error_log("Target server path: $serverPath (original: $originalFileName)");
+                    //error_log("Target server path: $serverPath (original: $originalFileName)");
                     
                     // ディレクトリが存在しない場合は作成
                     $directory = dirname($serverPath);
                     if (!is_dir($directory)) {
                         if(!mkdir($directory, 0755, true)){
-                            error_log("Failed to create directory: $directory");
+                            //error_log("Failed to create directory: $directory");
                             $errorFiles[] = $fileName . " (failed to create directory)";
                             continue;
                         }
@@ -130,11 +130,11 @@ if($action == "upload"){
                             'user_id' => $_SESSION["id"] ?? 'unknown'
                         ]);
                     } else {
-                        error_log("move_uploaded_file failed for: $fileName");
+                        //error_log("move_uploaded_file failed for: $fileName");
                         $errorFiles[] = $fileName . " (move failed)";
                     }
                 } catch (Exception $fileError) {
-                    error_log("Error processing file $i: " . $fileError->getMessage());
+                    //error_log("Error processing file $i: " . $fileError->getMessage());
                     $errorFiles[] = ($fileName ?? "unknown") . " (" . $fileError->getMessage() . ")";
                 }
             }
@@ -155,7 +155,7 @@ if($action == "upload"){
             $result["message"] = "$uploadedCount files uploaded, " . count($errorFiles) . " failed";
         }
         
-        error_log("Upload completed: $uploadedCount/{$fileCount} files uploaded");
+        //error_log("Upload completed: $uploadedCount/{$fileCount} files uploaded");
         echo(json_encode($result));
     }
     catch(Exception $e){

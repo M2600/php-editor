@@ -118,7 +118,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
 		}
 
 		// デバッグログ
-		error_log("Login successful. Redirect to: " . $redirect);
+		//error_log("Login successful. Redirect to: " . $redirect);
 
 		http_response_code(200);
 		echo json_encode(array(

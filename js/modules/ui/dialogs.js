@@ -459,12 +459,19 @@ export function newFileDialog(dir, editor, api, mConsole, currentFile, saveFile,
     }
 
     let create = async () => {
-        const newFilePath = currentDir + input.value;
+        let fileName = input.value.trim();
+        
+        // 拡張子がない場合は.phpを自動追加
+        if (fileName && !fileName.includes('.') && !fileName.startsWith('.')) {
+            fileName += '.php';
+        }
+        
+        const newFilePath = currentDir + fileName;
         console.log("Create: ", newFilePath);
         DEBUG && console.log("popup window: ", popupWindow);
         
         // ファイル名の妥当性をチェック
-        const validation = validateFileName(input.value);
+        const validation = validateFileName(fileName);
         if (!validation.valid) {
             mConsole.print("Error: " + validation.message, "error");
             return;

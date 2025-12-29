@@ -87,6 +87,12 @@ export function renameFileDialog(path, editor, api, mConsole, DEBUG) {
             return;
         }
         
+        // 同名のフォルダが既に存在するかチェック
+        if (path !== newPath && fileExistsInList(APP_STATE.FILE_LIST.files, newPath + "/")) {
+            mConsole.print("Error: A folder with the same name already exists: " + newPath, "error");
+            return;
+        }
+        
         popupWindow.remove();
         hideAllPreviewer();
         const renamedPath = await renameFile(path, newPath, api, mConsole);
@@ -129,25 +135,31 @@ export function renameFileDialog(path, editor, api, mConsole, DEBUG) {
     
     // 入力値の変更を監視
     input.addEventListener("input", () => {
-        const newPath = input.value.startsWith('/') ? input.value : '/' + input.value;
-        const fileName = input.value.startsWith('/') ? input.value.substring(1) : input.value;
+        const baseDir = path.substr(0, path.lastIndexOf("/")) || '/';
+        const newPath = input.value.startsWith('/') ? input.value : getFullPath(input.value, baseDir);
+        const fileName = input.value.startsWith('/') ? input.value.substring(input.value.lastIndexOf('/') + 1) : input.value;
         
         // ファイル名の妥当性をチェック
         const validation = validateFileName(fileName);
         if (!validation.valid) {
             statusMessage.style.display = "block";
-            statusMessage.innerHTML = "❌ " + validation.message;
+            statusMessage.innerHTML = validation.message;
             return;
         }
         
-        // 元のパスと同じか、ファイルが使用可能な場合
-        if (path === newPath || !fileExistsInList(APP_STATE.FILE_LIST.files, newPath)) {
+        // ファイルまたはフォルダの存在チェック
+        const fileExists = fileExistsInList(APP_STATE.FILE_LIST.files, newPath);
+        const folderExists = fileExistsInList(APP_STATE.FILE_LIST.files, newPath + "/");
+        
+        // 元のパスと同じか、使用可能な場合
+        if (path === newPath || (!fileExists && !folderExists)) {
             statusMessage.style.display = "none";
-        }
-        // 同名のファイルが存在する場合
-        else {
+        } else if (folderExists) {
             statusMessage.style.display = "block";
-            statusMessage.innerHTML = "⚠️ このファイル名は既に使用されています";
+            statusMessage.innerHTML = "このフォルダ名は既に使用されています";
+        } else {
+            statusMessage.style.display = "block";
+            statusMessage.innerHTML = "このファイル名は既に使用されています";
         }
     });
     
@@ -213,6 +225,12 @@ export function duplicateFileDialog(path, editor, api, mConsole, DEBUG) {
             return;
         }
         
+        // 同名のフォルダが既に存在するかチェック
+        if (fileExistsInList(APP_STATE.FILE_LIST.files, newPath + "/")) {
+            mConsole.print("Error: A folder with the same name already exists: " + newPath, "error");
+            return;
+        }
+        
         popupWindow.remove();
         const duplicatedPath = await duplicateFile(path, newPath, api, mConsole);
         await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
@@ -260,21 +278,27 @@ export function duplicateFileDialog(path, editor, api, mConsole, DEBUG) {
         const validation = validateFileName(fileName);
         if (!validation.valid) {
             statusMessage.style.display = "block";
-            statusMessage.innerHTML = "❌ " + validation.message;
+            statusMessage.innerHTML = validation.message;
             return;
         }
         
         // 元のファイルと同じ場合
         if (path === newPath) {
             statusMessage.style.display = "block";
-            statusMessage.innerHTML = "⚠️ 元のファイルと異なる名前を指定してください";
+            statusMessage.innerHTML = "元のファイルと異なる名前を指定してください";
             return;
         }
         
-        // 同名のファイルが存在する場合
-        if (fileExistsInList(APP_STATE.FILE_LIST.files, newPath)) {
+        // ファイルまたはフォルダの存在チェック
+        const fileExists = fileExistsInList(APP_STATE.FILE_LIST.files, newPath);
+        const folderExists = fileExistsInList(APP_STATE.FILE_LIST.files, newPath + "/");
+        
+        if (folderExists) {
             statusMessage.style.display = "block";
-            statusMessage.innerHTML = "⚠️ このファイル名は既に使用されています";
+            statusMessage.innerHTML = "このフォルダ名は既に使用されています";
+        } else if (fileExists) {
+            statusMessage.style.display = "block";
+            statusMessage.innerHTML = "このファイル名は既に使用されています";
         } else {
             statusMessage.style.display = "none";
         }
@@ -452,6 +476,12 @@ export function newFileDialog(dir, editor, api, mConsole, currentFile, saveFile,
             return;
         }
         
+        // 同名のフォルダが既に存在するかチェック
+        if (fileExistsInList(APP_STATE.FILE_LIST.files, newFilePath + "/")) {
+            mConsole.print("Error: A folder with the same name already exists: " + newFilePath, "error");
+            return;
+        }
+        
         popupWindow.remove();
         if(currentFile && !currentFile.readonly){
             await saveFile(currentFile.path, currentFile.aceObj.editor.getValue());
@@ -497,16 +527,22 @@ export function newFileDialog(dir, editor, api, mConsole, currentFile, saveFile,
         const validation = validateFileName(input.value);
         if (!validation.valid) {
             statusMessage.style.display = "block";
-            statusMessage.innerHTML = "❌ " + validation.message;
+            statusMessage.innerHTML = validation.message;
             return;
         }
         
         // 同名ファイルのチェック
-        if (input.value === "" || !fileExistsInList(APP_STATE.FILE_LIST.files, newFilePath)) {
+        const fileExists = fileExistsInList(APP_STATE.FILE_LIST.files, newFilePath);
+        const folderExists = fileExistsInList(APP_STATE.FILE_LIST.files, newFilePath + "/");
+        
+        if (input.value === "" || (!fileExists && !folderExists)) {
             statusMessage.style.display = "none";
+        } else if (folderExists) {
+            statusMessage.style.display = "block";
+            statusMessage.innerHTML = "このフォルダ名は既に使用されています";
         } else {
             statusMessage.style.display = "block";
-            statusMessage.innerHTML = "⚠️ このファイル名は既に使用されています";
+            statusMessage.innerHTML = "このファイル名は既に使用されています";
         }
     });
     
@@ -570,6 +606,12 @@ export function newDirDialog(dir, editor, api, mConsole, DEBUG) {
             return;
         }
         
+        // 同名のファイルが既に存在するかチェック
+        if (fileExistsInList(APP_STATE.FILE_LIST.files, newDirPath)) {
+            mConsole.print("Error: A file with the same name already exists: " + newDirPath, "error");
+            return;
+        }
+        
         popupWindow.remove();
         await createDir(newDirPath, api, mConsole);
         await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
@@ -600,16 +642,22 @@ export function newDirDialog(dir, editor, api, mConsole, DEBUG) {
         const validation = validateFileName(input.value);
         if (!validation.valid) {
             statusMessage.style.display = "block";
-            statusMessage.innerHTML = "❌ " + validation.message;
+            statusMessage.innerHTML = validation.message;
             return;
         }
         
-        // 同名フォルダのチェック
-        if (input.value === "" || !fileExistsInList(APP_STATE.FILE_LIST.files, newDirPath + "/")) {
+        // ファイルまたはフォルダの存在チェック
+        const folderExists = fileExistsInList(APP_STATE.FILE_LIST.files, newDirPath + "/");
+        const fileExists = fileExistsInList(APP_STATE.FILE_LIST.files, newDirPath);
+        
+        if (input.value === "" || (!folderExists && !fileExists)) {
             statusMessage.style.display = "none";
+        } else if (fileExists) {
+            statusMessage.style.display = "block";
+            statusMessage.innerHTML = "このファイル名は既に使用されています";
         } else {
             statusMessage.style.display = "block";
-            statusMessage.innerHTML = "⚠️ このフォルダ名は既に使用されています";
+            statusMessage.innerHTML = "このフォルダ名は既に使用されています";
         }
     });
     
@@ -642,26 +690,62 @@ export function renameDirDialog(path, editor, api, mConsole, DEBUG) {
     }
 
     let rename = async () => {
-        console.log("Rename: ", path);
+        let inputValue = input.value.trim();
+        // 末尾のスラッシュを除去
+        if (inputValue.endsWith('/')) {
+            inputValue = inputValue.slice(0, -1);
+        }
+        
+        // 絶対パスか相対パスかを判定
+        let newPath;
+        if (inputValue.startsWith('/')) {
+            // 絶対パス
+            newPath = inputValue;
+        } else {
+            // 相対パス：カレントディレクトリと結合
+            let currentDir = editor.BASE_DIR;
+            // カレントディレクトリの末尾スラッシュを除去
+            if (currentDir.endsWith('/') && currentDir !== '/') {
+                currentDir = currentDir.slice(0, -1);
+            }
+            newPath = currentDir === '/' ? '/' + inputValue : currentDir + '/' + inputValue;
+        }
+        
+        console.log("Rename: ", path, " -> ", newPath);
         DEBUG && console.log("popup window: ", popupWindow);
         
-        // ファイル名の妥当性をチェック
-        const validation = validateFileName(input.value);
+        // フォルダ名の妥当性をチェック（絶対パスの場合は最後の部分のみ、相対パスの場合は入力値全体）
+        const folderName = inputValue.startsWith('/') ? inputValue.substring(inputValue.lastIndexOf('/') + 1) : inputValue;
+        const validation = validateFileName(folderName);
         if (!validation.valid) {
             mConsole.print("Error: " + validation.message, "error");
             return;
         }
         
+        // 同名のフォルダが既に存在するかチェック（元のパスと異なる場合のみ）
+        if (path !== newPath && fileExistsInList(APP_STATE.FILE_LIST.files, newPath + "/")) {
+            mConsole.print("Error: A folder with the same name already exists: " + newPath, "error");
+            return;
+        }
+        
+        // 同名のファイルが既に存在するかチェック
+        if (path !== newPath && fileExistsInList(APP_STATE.FILE_LIST.files, newPath)) {
+            mConsole.print("Error: A file with the same name already exists: " + newPath, "error");
+            return;
+        }
+        
         popupWindow.remove();
-        await renameDir(path, input.value, api, mConsole);
+        await renameDir(path, newPath, api, mConsole);
         await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
     }
 
+    const folderName = path.substring(path.lastIndexOf('/') + 1);
+    
     let contents = document.createElement("div");
     let input = document.createElement("input");
     input.type = "text";
     input.placeholder = "Folder name";
-    input.value = path;
+    input.value = folderName;
     input.style.width = "100%";
     input.style.boxSizing = "border-box";
     
@@ -676,13 +760,49 @@ export function renameDirDialog(path, editor, api, mConsole, DEBUG) {
     
     // 入力値の変更を監視
     input.addEventListener("input", () => {
-        // ファイル名の妥当性をチェック
-        const validation = validateFileName(input.value);
+        let inputValue = input.value.trim();
+        // 末尾のスラッシュを除去
+        if (inputValue.endsWith('/')) {
+            inputValue = inputValue.slice(0, -1);
+        }
+        
+        // 絶対パスか相対パスかを判定
+        let newPath;
+        if (inputValue.startsWith('/')) {
+            // 絶対パス
+            newPath = inputValue;
+        } else {
+            // 相対パス：カレントディレクトリと結合
+            let currentDir = editor.BASE_DIR;
+            // カレントディレクトリの末尾スラッシュを除去
+            if (currentDir.endsWith('/') && currentDir !== '/') {
+                currentDir = currentDir.slice(0, -1);
+            }
+            newPath = currentDir === '/' ? '/' + inputValue : currentDir + '/' + inputValue;
+        }
+        
+        // フォルダ名の妥当性をチェック（絶対パスの場合は最後の部分のみ、相対パスの場合は入力値全体）
+        const folderName = inputValue.startsWith('/') ? inputValue.substring(inputValue.lastIndexOf('/') + 1) : inputValue;
+        const validation = validateFileName(folderName);
         if (!validation.valid) {
             statusMessage.style.display = "block";
-            statusMessage.innerHTML = "❌ " + validation.message;
-        } else {
+            statusMessage.innerHTML = validation.message;
+            return;
+        }
+        
+        // フォルダまたはファイルの存在チェック
+        const folderExists = fileExistsInList(APP_STATE.FILE_LIST.files, newPath + "/");
+        const fileExists = fileExistsInList(APP_STATE.FILE_LIST.files, newPath);
+        
+        // 元のパスと同じか、使用可能な場合
+        if (path === newPath || (!folderExists && !fileExists)) {
             statusMessage.style.display = "none";
+        } else if (fileExists) {
+            statusMessage.style.display = "block";
+            statusMessage.innerHTML = "このファイル名は既に使用されています";
+        } else {
+            statusMessage.style.display = "block";
+            statusMessage.innerHTML = "このフォルダ名は既に使用されています";
         }
     });
     

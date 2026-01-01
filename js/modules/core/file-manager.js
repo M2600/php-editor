@@ -527,7 +527,7 @@ export async function saveFile(path, content, api, currentFile, mConsole, DEBUG,
                 editor.removeFileIcon(currentFile.path, '*');
             }
             mConsole.print("File saved: " + currentFile.path, "success");
-            phpSyntaxCheck(currentFile.path, api, DEBUG);
+            phpSyntaxCheck(currentFile.path, api, DEBUG, mConsole);
             
             // クライアント側の更新時刻を記録
             updateClientMtime(currentFile.path);
@@ -1006,7 +1006,7 @@ export async function runPhpCgi(path, GETParams={}, api, currentFile, saveFile, 
     return ret;
 }
 
-export async function phpSyntaxCheck(path, api, DEBUG) {
+export async function phpSyntaxCheck(path, api, DEBUG, mConsole=null) {
     if (!path.endsWith('.php')) {
         return;
     }
@@ -1027,8 +1027,13 @@ export async function phpSyntaxCheck(path, api, DEBUG) {
             return;
         }
         // 構文チェック結果の処理
-        if (data.syntaxError) {
+        if (data.result) {
             DEBUG && console.log("PHP syntax error found:", data.message);
+            if (mConsole){
+                data.message.forEach(message => {
+                    mConsole.print(message.replaceAll("\n", "<br>"), "error");
+                });
+            }
         } else {
             DEBUG && console.log("PHP syntax OK");
         }

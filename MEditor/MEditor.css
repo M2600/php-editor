@@ -1329,6 +1329,7 @@ i {
     margin-top: 0.5em;
     font-size: 0.85em;
     font-family: 'Courier New', Courier, monospace;
+    overflow-x: auto;
 }
 
 

@@ -2,14 +2,16 @@
 <?php
 // 統一されたセッション初期化（ログインAPIでは認証チェックしない）
 require_once(__DIR__ . '/session_init.php');
+require_once(__DIR__ . '/includes/database.php');
 
 header('Content-Type: application/json');
 
 //$iniConf = parse_ini_file("../config.ini");
 
 $userRoot = posix_getpwuid(posix_getuid())["dir"];
-$DATA_PATH = $userRoot . "/data/php_editor/user.csv";
+$USER_DB_PATH = $userRoot . "/data/php_editor/user.sqlite3";
 
+$db = new Database($USER_DB_PATH);
 
 $comments = array(
 	"log in successful",
@@ -38,40 +40,17 @@ function starts_with_any($str, $prefixes){
 	return false;
 }
 
-function getUserData($id){
-	global $DATA_PATH, $IGNORE_LINE_HEADS;
-	if(!is_readable($DATA_PATH)){
-		return null;
-	}
-	$lines = file($DATA_PATH, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-	if($lines === false) return null;
-	foreach($lines as $line){
-		$line = trim($line);
-		if($line === '') continue;
-		if(starts_with_any($line, $IGNORE_LINE_HEADS)){
-			continue;
-		}
-		// parse CSV safely (handles quoted fields)
-		$cols = str_getcsv($line);
-		$userId = isset($cols[0]) ? trim($cols[0]) : null;
-		$userPw = isset($cols[1]) ? trim($cols[1]) : null;
-		$userRole = (isset($cols[2]) && $cols[2] !== '') ? trim($cols[2]) : 'user';
-		if($userId !== null && $userId === $id){
-			return array('id' => $userId, 'pw' => $userPw, 'role' => $userRole);
-		}
-	}
-	return null;
-}
 
-function checkPassword($id, $pw){
+function checkPassword($user_id, $class_admin_id, $class_id, $pw){
+	global $db;
 	// require string types and non-empty (allow "0")
-	if(!is_string($id) || !is_string($pw)) return false;
-	if($id === '' || $pw === '') return false;
+	if(!is_string($user_id) || !is_string($pw)) return false;
+	if($user_id === '' || $class_admin_id === '' || $class_id === '' || $pw === '') return false;
 
-	$userData = getUserData($id);
-	if (!$userData || !isset($userData['pw'])) return false;
+	$userData = $db->getUser($user_id, $class_admin_id, $class_id);
+	if (!$userData || !isset($userData['password'])) return false;
 
-	$stored = $userData['pw'];
+	$stored = $userData['password'];
 
 	// Currently we use plaintext comparison (user requested postponing hashing).
 	// Use hash_equals to mitigate timing attacks even for plaintext values.
@@ -93,24 +72,31 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
 		json_error('Invalid JSON', 400);
 	}
 
-	if(!array_key_exists('id', $params) || !array_key_exists('pw', $params)){
-		json_error('Missing id or pw', 400);
+	if(!array_key_exists('id', $params)) {
+		json_error('Missing id', 400);
 	}
+	if(!array_key_exists('pw', $params)) {
+		json_error('Missing pw', 400);
+	}
+	
 	$id = $params['id'];
+	$class_admin_id = $params['class_admin_id'] ?? '_system_';
+	$class_id = $params['class_id'] ?? '_system_';
 	$pw = $params['pw'];
 
-	$verified = checkPassword($id, $pw);
-
+	$verified = checkPassword($id, $class_admin_id, $class_id, $pw);
 	if($verified){
-		$userData = getUserData($id);
+		$userData = $db->getUser($id, $class_admin_id, $class_id);
 		
 		// リダイレクト先を取得（session_regenerate_id前に取得する必要がある）
 		$redirect = isset($_SESSION['redirect_after_login']) ? $_SESSION['redirect_after_login'] : '/index.php';
 		
 		// regenerate session id to prevent fixation
 		session_regenerate_id(true);
-		$_SESSION['id'] = $userData['id'];
+		$_SESSION['id'] = $userData['user_id'];
 		$_SESSION['role'] = $userData['role'];
+		$_SESSION['class_admin_id'] = $userData['class_admin_id'];
+		$_SESSION['class_id'] = $userData['class_id'];
 
 		// 使用後は削除
 		if(isset($_SESSION['redirect_after_login'])){

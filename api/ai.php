@@ -281,10 +281,25 @@ $primptText = '';
 if(file_exists(__DIR__ . '/ai_base_prompt.md')){
     $primptText = file_get_contents(__DIR__ . '/ai_base_prompt.md');
 }
+
+// ツールが有効な場合は、ツール用のプロンプトを追加
+$toolPromptText = '';
+if (isset($input['tools']) && is_array($input['tools']) && !empty($input['tools'])) {
+    if(file_exists(__DIR__ . '/ai_tool_prompt.md')){
+        $toolPromptText = file_get_contents(__DIR__ . '/ai_tool_prompt.md');
+    }
+}
+
+// ベースプロンプトとツールプロンプトを結合
+$combinedPromptText = $primptText;
+if (!empty($toolPromptText)) {
+    $combinedPromptText .= "\n\n" . $toolPromptText;
+}
+
 $basePrompt = [
     [
         'role' => 'system',
-        'content' => $primptText
+        'content' => $combinedPromptText
     ]
 ];
 

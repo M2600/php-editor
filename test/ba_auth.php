@@ -25,7 +25,7 @@ if ($code !== null) {
 
 // 初回アクセス時の処理
 $state = bin2hex(random_bytes(16));
-$callbackUrl = 'http://' . $_SERVER['HTTP_HOST'] . '/test/ba_auth.php?' . 'state=' . $state;
+$callbackUrl = (empty($_SERVER['HTTPS']) ? 'http://' : 'https://') . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] . '?' . 'state=' . $state;
 $_SESSION['oauth_state'] = $state;
 $authUrl = 'https://bitarrow3.eplang.jp/bitarrow/?Login/curStatus&otp=1&callback=' . urlencode($callbackUrl);
 header('Location: ' . $authUrl);

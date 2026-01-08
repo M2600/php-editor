@@ -15,6 +15,7 @@ if ($code !== null) {
 	$verifyUrl = 'https://bitarrow3.eplang.jp/bitarrow/?Login/bauth&status=' . urlencode($code);
 	$response = file_get_contents($verifyUrl);
 	if ($response === "OK") {
+		session_regenerate_id(true);
 		echo "Authentication successful!<br>";
 		echo 'Your identifier: ' . $code;
 	} else {

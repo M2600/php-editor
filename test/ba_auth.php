@@ -14,13 +14,27 @@ if ($code !== null) {
 
 	$verifyUrl = 'https://bitarrow3.eplang.jp/bitarrow/?Login/bauth&status=' . urlencode($code);
 	$response = file_get_contents($verifyUrl);
-	if ($response === "OK") {
-		session_regenerate_id(true);
-		echo "Authentication successful!<br>";
-		echo 'Your identifier: ' . $code;
-	} else {
+	if ($response === "NG") {
 		echo "Authentication failed: " . htmlspecialchars($response);
+		header('Location: ba_auth.php');
+		exit();
 	}
+
+	// verification成功の場合
+	$data = json_decode($code, true);
+	if (!$data['user'] || !$data['class']) {
+		echo "BitArrowのアカウント情報が取得できません。";
+
+		// BAでログインさせる処理k
+		$baLoginUrl = 'https://bitarrow3.eplang.jp/bitarrow/?Login/form';
+		echo '<br><a href="' . htmlspecialchars($baLoginUrl) . '">BitArrowでログイン</a>後に再度アクセスしてください。';
+		exit();
+	}
+	
+	session_regenerate_id(true);
+	echo "Authentication successful!<br>";
+	echo 'Your identifier: ' . $code;
+
 	exit();
 }
 
@@ -28,7 +42,7 @@ if ($code !== null) {
 $state = bin2hex(random_bytes(16));
 $callbackUrl = (empty($_SERVER['HTTPS']) ? 'http://' : 'https://') . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] . '?' . 'state=' . $state;
 $_SESSION['oauth_state'] = $state;
-$authUrl = 'https://bitarrow3.eplang.jp/bitarrow/?Login/curStatus&otp=1&callback=' . urlencode($callbackUrl);
+$authUrl = 'https://bitarrow3.eplang.jp/bitarrow/?Login/curStatus=&otp=1&callback=' . urlencode($callbackUrl);
 header('Location: ' . $authUrl);
 exit();
 ?>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>BitArrow Authentication Test</title>
+</head>
+<body>
+	<h1>BitArrow Authentication Test Page</h1>
+	<p>This page is used to test BitArrow authentication mechanisms.</p>
+	<button id="authButton">Authenticate with BitArrow</button>
+
+	<script type="module">
+		import { BAAuth } from './ba_auth.js';
+
+		const baAuth = new BAAuth();
+		
+		const params = new URLSearchParams(window.location.search);
+		if (params.has('state') && params.has('code')) {
+			// コールバックからのリダイレクトを処理
+			if (baAuth.validateState()) {
+				// stateが有効な場合APIにリクエストを送信
+				console.log('State is valid. Proceeding with authentication...');
+				baAuth.requestToken();
+			}
+			
+		} 
+
+		// 認証ボタンのクリックイベントリスナーを追加
+		document.getElementById('authButton').addEventListener('click', async () => {
+			baAuth.authenticate();
+		});
+	</script>
+</body>
+</html>

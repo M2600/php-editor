@@ -36,7 +36,8 @@ if ($code !== null) {
 		echo "学生として認証成功!<br>";
 	}
 	else {
-		echo "認証データが無効です。<br>";
+		echo "BitArrowにログインしていないようです。ログイン後に再度認証してください。<br>";
+		echo "<a href='bitarrow3.eplang.jp/bitarrow/?Login/form'>BitArrowログイン</a>";
 		exit();
 	}
 

@@ -37,7 +37,7 @@ if ($code !== null) {
 	}
 	else {
 		echo "BitArrowにログインしていないようです。ログイン後に再度認証してください。<br>";
-		echo "<a href='bitarrow3.eplang.jp/bitarrow/?Login/form'>BitArrowログイン</a>";
+		echo "<a href='https://bitarrow3.eplang.jp/bitarrow/?Login/form'>BitArrowログイン</a>";
 		exit();
 	}
 

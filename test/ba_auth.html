@@ -8,6 +8,7 @@
 <body>
 	<h1>BitArrow Authentication Test Page</h1>
 	<p>This page is used to test BitArrow authentication mechanisms.</p>
+	<p id="message"></p>
 	<button id="authButton">Authenticate with BitArrow</button>
 
 	<script type="module">
@@ -17,17 +18,22 @@
 		
 		const params = new URLSearchParams(window.location.search);
 		if (params.has('state') && params.has('code')) {
-			// コールバックからのリダイレクトを処理
-			if (baAuth.validateState()) {
-				// stateが有効な場合APIにリクエストを送信
-				console.log('State is valid. Proceeding with authentication...');
-				baAuth.requestToken();
+			// コールバックからのリダイレクトを処理	
+			console.log('Proceeding with authentication...');
+			const response = await baAuth.requestToken();
+			const messageElem = document.getElementById('message');
+			if (response.status === 'success') {
+				messageElem.textContent = 'Authentication successful! Access Identifier: ' + response.identifier;
+			} else {
+				messageElem.textContent = 'Authentication failed: ' + response.message;
 			}
-			
+
 		} 
 
 		// 認証ボタンのクリックイベントリスナーを追加
 		document.getElementById('authButton').addEventListener('click', async () => {
+			const messageElem = document.getElementById('message');
+			messageElem.textContent = '';
 			baAuth.authenticate();
 		});
 	</script>

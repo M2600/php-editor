@@ -24,7 +24,14 @@
 			const messageElem = document.getElementById('message');
 			if (response.status === 'success') {
 				messageElem.textContent = 'Authentication successful! Access Identifier: ' + response.identifier;
-			} else {
+			}
+			else if (response.status === 'not_logged_in') {
+				messageElem.textContent = 'Authentication failed: ' + response.message;
+				await baAuth.openBALogin();
+				console.log('BA login detected');
+				baAuth.authenticate();
+			} 
+			else {
 				messageElem.textContent = 'Authentication failed: ' + response.message;
 			}
 

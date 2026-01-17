@@ -37,6 +37,7 @@ else if($_SERVER['REQUEST_METHOD'] === 'POST'){
 	}
 	else if (!$baAuth->isLoggedIn($code)) {
 		$responseCode = 403;
+		$response['status'] = 'not_logged_in';
 		$response['message'] = "BitArrow account information could not be found.";
 	}
 

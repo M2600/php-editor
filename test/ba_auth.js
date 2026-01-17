@@ -1,8 +1,6 @@
 
 export class BAAuth {
 
-	BALoginURL = 'https://bitarrow3.eplang.jp/bitarrow/?Login/form';
-
 	constructor() {
 		
 	}
@@ -76,6 +74,59 @@ export class BAAuth {
 		});
 		
 		return response;
+	}
+
+	/**
+	 * BitArrowにログイン状態を問い合わせる
+	 * ログインチェックのみなのでotpを使った二段階認証は行わない
+	 * 必ず2段階認証を含む認証とセットで使うこと
+	 * @param {HTMLElement} iframe 
+	 */
+	async BALoginCheck() {
+		const baStatusURL = "https://bitarrow3.eplang.jp/bitarrow/?Login/curStatus";
+		const response = await fetch(baStatusURL, {
+			method: 'GET',
+			credentials: 'include'
+		});
+		const data = await response.json();
+		const isStudent = data.user && data.class;
+		const isTeacher = data.teacher;
+		return isStudent || isTeacher;
+	}
+
+	/**
+	 * 
+	 * @param {Number} timeout ms default 300000ms
+	 * @param {Number} interval ms default 2000ms
+	 * @returns 
+	 */
+	async waitUntilBALogin(timeout = 300000, interval = 2000) {
+		const startTime = Date.now();
+		return new Promise((resolve, reject) => {
+			const checkLogin = async () => {
+				const loggedIn = await this.BALoginCheck();
+				if (loggedIn) {
+					resolve(true);
+				} else if (Date.now() - startTime >= timeout) {
+					reject(new Error('Timeout waiting for BitArrow login'));
+				} else {
+					setTimeout(checkLogin, interval);
+				}
+			};
+			checkLogin();
+		});
+	}
+
+	async openBALogin() {
+		const BALoginURL = 'https://bitarrow3.eplang.jp/bitarrow/?Login/form';
+		const container = document.createElement('div');
+		const iframe = document.createElement('iframe');
+		iframe.src = BALoginURL;
+		iframe.width = '600';
+		iframe.height = '600';
+		container.appendChild(iframe);
+		document.body.appendChild(container);
+		await this.waitUntilBALogin();
 	}
 }
 

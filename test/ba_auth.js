@@ -95,12 +95,12 @@ export class BAAuth {
 	}
 
 	/**
-	 * 
+	 * This didn't work because of cross-origin restrictions.
 	 * @param {Number} timeout ms default 300000ms
 	 * @param {Number} interval ms default 2000ms
 	 * @returns 
 	 */
-	async waitUntilBALogin(timeout = 300000, interval = 2000) {
+	async __waitUntilBALogin(timeout = 300000, interval = 2000) {
 		const startTime = Date.now();
 		return new Promise((resolve, reject) => {
 			const checkLogin = async () => {
@@ -119,14 +119,29 @@ export class BAAuth {
 
 	async openBALogin() {
 		const BALoginURL = 'https://bitarrow3.eplang.jp/bitarrow/?Login/form';
-		const container = document.createElement('div');
-		const iframe = document.createElement('iframe');
-		iframe.src = BALoginURL;
-		iframe.width = '600';
-		iframe.height = '600';
-		container.appendChild(iframe);
-		document.body.appendChild(container);
-		await this.waitUntilBALogin();
+		const popup = window.open(BALoginURL, 'BitArrow Login', 'width=600,height=600');
+		if (!popup || popup === null) {
+			alert('Popup blocked. Please allow popups for this site.');
+			// ポップアップが開かれるまで待機
+			await new Promise((resolve) => {
+				const checkPopup = setInterval(() => {
+					if (popup && !popup.closed) {
+						console.log('Popup opened.');
+						clearInterval(checkPopup);
+						resolve();
+					}
+				}, 500);
+			});
+		}
+		await new Promise((resolve, reject) => {
+			const popupCheckInterval = setInterval(async () => {
+				if (popup.closed) {
+					console.log('Popup closed.');
+					clearInterval(popupCheckInterval);
+					resolve();
+				}
+			}, 1000);
+		});
 	}
 }
 

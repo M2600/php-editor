@@ -7,9 +7,9 @@
 </head>
 <body>
 	<h1>BitArrow Authentication Test Page</h1>
-	<p>This page is used to test BitArrow authentication mechanisms.</p>
 	<p id="message"></p>
-	<button id="authButton">Authenticate with BitArrow</button>
+	<button id="authButton">BitArrowで認証する</button>
+	<button id="bitarrowLoginButton" style="display:none;">BitArrowログイン</button>
 
 	<script type="module">
 		import { BAAuth } from './ba_auth.js';
@@ -23,16 +23,20 @@
 			const response = await baAuth.requestToken();
 			const messageElem = document.getElementById('message');
 			if (response.status === 'success') {
-				messageElem.textContent = 'Authentication successful! Access Identifier: ' + response.identifier;
+				messageElem.textContent = '認証成功！ID: ' + response.identifier;
+				document.getElementById('authButton').style.display = 'none';
+				document.getElementById('bitarrowLoginButton').style.display = 'none';
 			}
 			else if (response.status === 'not_logged_in') {
-				messageElem.textContent = 'Authentication failed: ' + response.message;
-				await baAuth.openBALogin();
-				console.log('BA login detected');
-				baAuth.authenticate();
+				//messageElem.textContent = 'BitArrow未ログイン: ' + response.message;
+				messageElem.innerHTML += 'BitArrow上でのログインが確認できませんした。<br>BitArrowにログインしてください。<br>ログインが完了したらポップアップウィンドウを閉じてください。';
+				document.getElementById('authButton').style.display = 'none';
+				document.getElementById('bitarrowLoginButton').style.display = 'inline';
 			} 
 			else {
-				messageElem.textContent = 'Authentication failed: ' + response.message;
+				messageElem.textContent = '認証失敗: ' + response.message;
+				document.getElementById('authButton').style.display = 'inline';
+				document.getElementById('bitarrowLoginButton').style.display = 'none';
 			}
 
 		} 
@@ -41,6 +45,11 @@
 		document.getElementById('authButton').addEventListener('click', async () => {
 			const messageElem = document.getElementById('message');
 			messageElem.textContent = '';
+			baAuth.authenticate();
+		});
+
+		document.getElementById('bitarrowLoginButton').addEventListener('click', async () => {
+			await baAuth.openBALogin();
 			baAuth.authenticate();
 		});
 	</script>

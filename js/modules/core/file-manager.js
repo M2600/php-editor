@@ -414,6 +414,12 @@ export async function loadExplorer(path, api, appState, editor) {
         action: "list-object",
         path: path,
     };
+
+    // URLのクエリパラメータを更新
+    let url = new URL(window.location.href);
+    url.searchParams.set("dir", path);
+    window.history.pushState({}, "", url);
+
     await api("/api/file_manager.php", body=body)
     .then(async data =>  {
         if (data.status === "session_error") {

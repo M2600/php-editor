@@ -44,7 +44,8 @@ import {
     duplicateFile,
     runPhp,
     runPhpCgi,
-    phpSyntaxCheck
+    phpSyntaxCheck,
+    findFileInList
 } from './modules/core/file-manager.js';
 import { saveAIConfig, loadAIConfig } from './modules/utils/cookie.js';
 import { getThemeByName, getEventTheme } from './modules/utils/themes.js';
@@ -349,6 +350,16 @@ async function executeCurrentFile() {
         );
     }
 }
+
+async function restoreDirFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    let dirPath = urlParams.get("dir");
+    if (!dirPath) {
+        dirPath = "/";
+    }
+    await loadExplorer(dirPath, api, APP_STATE, editor);
+}
+
 
 
 async function main(){
@@ -778,7 +789,7 @@ async function main(){
         loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
     });
 
-    await loadExplorer("/", api, APP_STATE, editor);
+    restoreDirFromURL();
 
     // エクスプローラー自動リロードの設定
     explorerAutoReload.setReloadFunction(async () => {

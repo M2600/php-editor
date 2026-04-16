@@ -1441,7 +1441,7 @@ export async function searchFiles(query, options = {}) {
         caseSensitive = false,
         filePattern = null,
         maxResults = 50,
-        contextLines = 2
+        contextLines = 0
     } = options;
     
     try {

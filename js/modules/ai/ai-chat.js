@@ -130,10 +130,9 @@ function escapeHtml(text) {
 /**
  * ツール実行結果を圧縮（大きな結果を要約）
  * @param {Object} toolResult - ツール実行結果（tool messageオブジェクト）
- * @param {Object} originalResult - 元の結果オブジェクト
  * @returns {Object} - 圧縮されたツール結果
  */
-function compressToolResult(toolResult, originalResult) {
+function compressToolResult(toolResult) {
     const MAX_CONTENT_LENGTH = 2000; // 2000文字以上は圧縮対象
     
     // contentをパース
@@ -148,6 +147,49 @@ function compressToolResult(toolResult, originalResult) {
     }
     
     const contentStr = JSON.stringify(parsedContent);
+
+    // searchFilesは結果自体が大きくなりやすいため、常に短い要約へ変換する
+    if (toolResult.name === 'searchFiles' && parsedContent.results) {
+        const summaryLines = [];
+        const query = parsedContent.query || '';
+        const resultsCount = parsedContent.resultsCount ?? (Array.isArray(parsedContent.results) ? parsedContent.results.length : 0);
+        const filesSearched = parsedContent.filesSearched ?? '-';
+
+        if (parsedContent.message && typeof parsedContent.message === 'string') {
+            summaryLines.push(parsedContent.message.trim());
+        } else if (query) {
+            summaryLines.push(`✅ searchFiles: "${query}"`);
+        } else {
+            summaryLines.push('✅ searchFiles: 検索結果');
+        }
+
+        summaryLines.push(`ヒット: ${resultsCount}件 / 検索ファイル数: ${filesSearched}件`);
+
+        const sampleResults = parsedContent.results.slice(0, 3);
+        if (sampleResults.length > 0) {
+            summaryLines.push('主な対象:');
+            for (const result of sampleResults) {
+                if (result.matchType === 'filename') {
+                    summaryLines.push(`- ${result.file} (ファイル名一致)`);
+                } else {
+                    const matchCount = result.matchCount ?? (Array.isArray(result.matches) ? result.matches.length : 0);
+                    summaryLines.push(`- ${result.file} (${matchCount}箇所)`);
+                }
+            }
+            if (parsedContent.results.length > sampleResults.length) {
+                summaryLines.push(`... 他${parsedContent.results.length - sampleResults.length}件`);
+            }
+        }
+
+        return {
+            ...toolResult,
+            content: summaryLines.join('\n'),
+            compressed: true,
+            summaryType: 'searchFiles',
+            originalResultsCount: resultsCount,
+            originalFilesSearched: filesSearched
+        };
+    }
     
     // 小さい結果はそのまま返す
     if (contentStr.length <= MAX_CONTENT_LENGTH) {
@@ -1212,6 +1254,7 @@ export async function sendAIMessage({
         
         // ツール呼び出しバッファ（ストリーム対応）
         let toolCallsBuffer = {};
+        let initialRequestStats = null;
         
         if (typeof fetchAIChat === 'function') {
             fetchAIChat({
@@ -1226,6 +1269,7 @@ export async function sendAIMessage({
                 customApiKey: customApiKey,
                 customPrompt: customPrompt,  // ベースプロンプトを渡す
                 onComplete: (stats) => {
+                    initialRequestStats = stats;
                     // MEditorの統計情報表示メソッドを呼び出し
                     if (chat.addStatsToLastAIMessage) {
                         chat.addStatsToLastAIMessage(stats);
@@ -1313,6 +1357,13 @@ export async function sendAIMessage({
 
                 }
             }).then(async () => {
+                if (initialRequestStats && initialRequestStats.wasEmptyResponse) {
+                    chat.updateLastAIMessage('<span style="color:red">AI応答が空でした。再試行しても応答が得られませんでした。</span>', true);
+                    historyManager.setStreaming(false);
+                    if (typeof chat.hideLoading === 'function') chat.hideLoading();
+                    return;
+                }
+
                 // ツール呼び出しを処理する関数（再帰的に呼び出し可能）
                 const processToolCalls = async (depth = 0) => {
                     // 1度の呼び出しでの最大深度を制限
@@ -1437,8 +1488,7 @@ export async function sendAIMessage({
                             tool_call_id: toolCall.id,
                             role: "tool",
                             name: toolName,
-                            content: JSON.stringify(result),
-                            _originalResult: result // 元の結果を保持（圧縮前）
+                            content: JSON.stringify(result)
                         });
                     }
                     
@@ -1456,7 +1506,7 @@ export async function sendAIMessage({
                         // ツール実行結果を履歴に追加（圧縮処理を適用）
                         for (const toolResult of toolResults) {
                             // ツール結果の圧縮処理
-                            const compressedResult = compressToolResult(toolResult, toolResult._originalResult);
+                            const compressedResult = compressToolResult(toolResult);
                             // ツールメッセージ全体をそのまま追加
                             historyManager.addMessage("tool", compressedResult);
                         }
@@ -1465,6 +1515,7 @@ export async function sendAIMessage({
                         historyManager.setStreaming(true);
                         aiMsgBuffer = "";
                         toolCallsBuffer = {};
+                            let toolRequestStats = null;
                         
                         chat.addMessage("", "ai", true);
                         
@@ -1480,6 +1531,7 @@ export async function sendAIMessage({
                             customApiKey: customApiKey,
                             customPrompt: customPrompt, // ベースプロンプトを渡す
                             onComplete: (stats) => {
+                                toolRequestStats = stats;
                                 // ツール実行後の応答でも統計情報を表示
                                 if (chat.addStatsToLastAIMessage) {
                                     chat.addStatsToLastAIMessage(stats);
@@ -1562,6 +1614,13 @@ export async function sendAIMessage({
                                 if (typeof chat.hideLoading === 'function') chat.hideLoading();
                             }
                         }).then(async () => {
+                            if (toolRequestStats && toolRequestStats.wasEmptyResponse) {
+                                chat.updateLastAIMessage('<span style="color:red">AI応答が空でした。再試行しても応答が得られませんでした。</span>', true);
+                                historyManager.setStreaming(false);
+                                if (typeof chat.hideLoading === 'function') chat.hideLoading();
+                                return;
+                            }
+
                             // 2回目以降のツール呼び出しを処理
                             await processToolCalls(depth + 1);
                             

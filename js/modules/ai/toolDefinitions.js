@@ -215,10 +215,10 @@ export const FILE_EDITOR_TOOLS = [
                     },
                     contextLines: {
                         type: "integer",
-                        description: "マッチ箇所の前後に表示する行数（デフォルト: 2）",
+                        description: "マッチ箇所の前後に表示する行数（デフォルト: 0）",
                         minimum: 0,
                         maximum: 10,
-                        default: 2
+                        default: 0
                     }
                 },
                 required: ["query"]

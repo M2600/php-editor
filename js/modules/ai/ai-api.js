@@ -67,7 +67,7 @@ class SmoothTextStreamer {
     }
 }
 
-export async function fetchAIChat({messages, model, fileContext, dirContext, tools, onDelta, onError, onComplete, signal, smoothOutput = true, customUrl = null, customApiKey = null, customPrompt = null}) {
+export async function fetchAIChat({messages, model, fileContext, dirContext, tools, onDelta, onError, onComplete, signal, smoothOutput = true, customUrl = null, customApiKey = null, customPrompt = null, __emptyResponseRetryCount = 0, __emptyResponseMaxRetries = 1}) {
     try {
         // 統計情報を収集
         const stats = {
@@ -137,6 +137,8 @@ export async function fetchAIChat({messages, model, fileContext, dirContext, too
         let done = false;
         let hasValidStream = false; // ストリーム開始を検出するフラグ
         let fullText = ""; // 完全なテキストを保持
+        let hasAssistantContent = false;
+        let hasToolCalls = false;
         
         while (!done) {
             const {done: doneRead, value} = await reader.read();
@@ -193,6 +195,9 @@ export async function fetchAIChat({messages, model, fileContext, dirContext, too
                         const delta = chunk.choices?.[0]?.delta;
                         if (delta && typeof delta.content === "string") {
                             fullText += delta.content;
+                            if (delta.content.length > 0) {
+                                hasAssistantContent = true;
+                            }
                             
                             if (smoothOutput && textStreamer) {
                                 // スムーズ出力の場合はストリーマーに追加
@@ -205,6 +210,7 @@ export async function fetchAIChat({messages, model, fileContext, dirContext, too
                         
                         // tool_callsがあれば処理
                         if (delta && delta.tool_calls) {
+                            hasToolCalls = true;
                             // ツール呼び出し情報をコールバックに渡す
                             onDelta && onDelta('', chunk, false, delta.tool_calls);
                         }
@@ -219,6 +225,33 @@ export async function fetchAIChat({messages, model, fileContext, dirContext, too
         if (textStreamer) {
             textStreamer.stop();
         }
+
+        const wasEmptyResponse = !hasAssistantContent && !hasToolCalls;
+        if (wasEmptyResponse && __emptyResponseRetryCount < __emptyResponseMaxRetries) {
+            const retryMessages = Array.isArray(messages) ? messages.slice() : [];
+            retryMessages.push({
+                role: 'system',
+                content: '前回の応答が空でした。現在の状態を短く要約し、次の1アクションだけ返してください。'
+            });
+
+            return fetchAIChat({
+                messages: retryMessages,
+                model,
+                fileContext,
+                dirContext,
+                tools,
+                onDelta,
+                onError,
+                onComplete,
+                signal,
+                smoothOutput,
+                customUrl,
+                customApiKey,
+                customPrompt,
+                __emptyResponseRetryCount: __emptyResponseRetryCount + 1,
+                __emptyResponseMaxRetries
+            });
+        }
         
         // ストリーム終了後、正常なレスポンスが一度も受信されていない場合
         if (!hasValidStream) {
@@ -229,7 +262,11 @@ export async function fetchAIChat({messages, model, fileContext, dirContext, too
         // 統計情報をコールバックで返す
         if (onComplete) {
             onComplete({
-                model: stats.modelFromResponse || stats.model
+                model: stats.modelFromResponse || stats.model,
+                hasContent: hasAssistantContent,
+                hasToolCalls: hasToolCalls,
+                wasEmptyResponse,
+                fullTextLength: fullText.length
             });
         }
     } catch(e) {

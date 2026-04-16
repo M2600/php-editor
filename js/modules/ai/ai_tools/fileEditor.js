@@ -558,6 +558,11 @@ export async function readFile(filename, options = {}) {
         }
         
         const fullContent = result.content;
+        if (typeof fullContent !== 'string') {
+            const errorMsg = 'ファイル内容の取得に失敗しました（contentが不正です）';
+            console.error('readFile invalid content:', result);
+            throw new Error(errorMsg);
+        }
         const lines = fullContent.split('\n');
         const totalLines = lines.length;
         
@@ -609,7 +614,6 @@ export async function readFile(filename, options = {}) {
             if (mConsole) {
                 mConsole.print(`✅ readFile: "${filename}" (${totalLines}) → 構造要約のみ (${structure.summary})`, 'info');
             }
-            
             return {
                 success: true,
                 compressed: true,
@@ -693,9 +697,20 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
         }
         
         // ファイル内容を取得（既に結合されたパスを使用）
-        const fileContent = await readFile(filename, { api: apiFunc, baseDir });
+        const fileContent = await readFile(filename, {
+            api: apiFunc,
+            baseDir,
+            // 置換はファイル全体が必要なため、構造要約への圧縮を無効化
+            maxLines: Number.MAX_SAFE_INTEGER
+        });
         if (!fileContent.success) {
             throw new Error(fileContent.message);
+        }
+        if (typeof fileContent.content !== 'string') {
+            if (fileContent.compressed || fileContent.structureOnly) {
+                throw new Error('対象ファイルが大きすぎるため置換できません。行範囲を指定して読み込み直してください');
+            }
+            throw new Error('ファイル内容の取得に失敗しました（contentが不正です）');
         }
         
         const currentContent = fileContent.content;
@@ -729,17 +744,41 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
         
         // 変更がない場合
         if (newContent === currentContent) {
+            const hints = [];
+            const containsCaseInsensitive = currentContent
+                .toLowerCase()
+                .includes(searchText.toLowerCase());
+            const containsRaw = currentContent.includes(searchText);
+            const containsNormalized = currentContent
+                .replace(/\r\n/g, '\n')
+                .includes(searchText.replace(/\r\n/g, '\n'));
+
+            if (caseSensitive && containsCaseInsensitive) {
+                hints.push('大文字小文字の違いの可能性があります。options.caseSensitive=false を試してください');
+            }
+            if (!containsRaw && containsNormalized) {
+                hints.push('改行コード差分の可能性があります（CRLF/LF）');
+            }
+            if (searchText.trim() !== searchText && currentContent.includes(searchText.trim())) {
+                hints.push('検索文字列の前後空白の可能性があります');
+            }
+            if (!regex) {
+                hints.push('完全一致検索です。属性差分がある場合は options.regex=true を検討してください');
+            }
+
             await logToolExecution('editFileByReplace', 
-                { filename, searchText, replaceText, options: editOptions }, 
+                { filename, searchText, replaceText, options: editOptions, hints }, 
                 'no_change', 
                 null
             );
+            const hintText = hints.length > 0 ? ` ヒント: ${hints.join(' / ')}` : '';
             if (mConsole) {
-                mConsole.print(`"${searchText}" が見つかりませんでした`, 'warning');
+                mConsole.print(`"${searchText}" が見つかりませんでした。${hintText}`.trim(), 'warning');
             }
             return {
                 success: false,
-                message: '該当するテキストが見つかりませんでした'
+                message: `該当するテキストが見つかりませんでした。${hintText}`.trim(),
+                hints
             };
         }
         
@@ -907,9 +946,20 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
         }
         
         // ファイル内容を取得（既に結合されたパスを使用）
-        const fileContent = await readFile(filename, { api: apiFunc, baseDir });
+        const fileContent = await readFile(filename, {
+            api: apiFunc,
+            baseDir,
+            // 行単位編集では全体行番号が必要なため、構造要約への圧縮を無効化
+            maxLines: Number.MAX_SAFE_INTEGER
+        });
         if (!fileContent.success) {
             throw new Error(fileContent.message);
+        }
+        if (typeof fileContent.content !== 'string') {
+            if (fileContent.compressed || fileContent.structureOnly) {
+                throw new Error('対象ファイルが大きすぎるため編集できません。行範囲を指定して読み込み直してください');
+            }
+            throw new Error('ファイル内容の取得に失敗しました（contentが不正です）');
         }
         
         const currentContent = fileContent.content;

@@ -48,7 +48,7 @@ lsコマンドでカレントディレクトリ内のファイル一覧を取得
 
 ## 2. 編集フェーズ（コード変更）
 - 必ず編集対象の現在の内容を `readFile` で確認
-- 小規模な変更: `editFileByReplace`
+- 小規模な変更: `editFileByReplace`（regex未指定時は完全一致。失敗時は caseSensitive=false または regex=true を検討）
 - 正確な行範囲指定: `editFileByLines`
 - 新規ファイル: `createFile`
 - 変更後は必ず `readFile` で確認

@@ -67,7 +67,7 @@ export const FILE_EDITOR_TOOLS = [
         type: "function",
         function: {
             name: "editFileByReplace",
-            description: "ファイル内のテキストを検索して置換します。正規表現も使用可能です。",
+            description: "ファイル内のテキストを検索して置換します。正規表現も使用可能です。regex=false の場合は完全一致検索です。見つからない場合は caseSensitive=false や regex=true を検討してください。",
             parameters: {
                 type: "object",
                 properties: {
@@ -85,7 +85,7 @@ export const FILE_EDITOR_TOOLS = [
                     },
                     options: {
                         type: "object",
-                        description: "置換オプション",
+                        description: "置換オプション（global: 全置換、regex: 正規表現、caseSensitive: 大文字小文字区別。未指定時は global=true, regex=false, caseSensitive=true）",
                         properties: {
                             global: {
                                 type: "boolean",

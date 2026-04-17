@@ -18,6 +18,10 @@ import { CONFIG } from '../../core/config.js';
  * @returns {string} - 結合された絶対パス
  */
 function resolveFilePath(filePath, baseDir) {
+    if (typeof filePath !== 'string' || filePath.trim() === '') {
+        throw new Error('ファイルパスが不正です。filename を確認してください');
+    }
+
     // 既に絶対パスの場合はそのまま返す
     if (filePath.startsWith('/')) {
         return filePath;
@@ -438,23 +442,35 @@ export async function createFile(filename, content, options = {}) {
                 const createdFile = appState.FILE_LIST?.files?.find(f => f.path === fullPath);
                 
                 if (createdFile && createdFile.type === 'text') {
+                    let openedCreatedFile = null;
+
                     // エクスプローラーのfileClickActionを使用して通常のファイル開く処理を実行
                     if (editor.explorer && typeof editor.explorer.fileClickAction === 'function') {
-                        await editor.explorer.fileClickAction(createdFile);
+                        openedCreatedFile = await editor.explorer.fileClickAction(createdFile);
                     }
-                    
+
+                    // fileClickAction の戻り値がない実装もあるため、作成ファイル/現在ファイルをフォールバックに使う
+                    const activeFile =
+                        (openedCreatedFile && openedCreatedFile.aceObj)
+                            ? openedCreatedFile
+                            : (createdFile && createdFile.aceObj)
+                                ? createdFile
+                                : (appState && appState.CURRENT_FILE && appState.CURRENT_FILE.path === fullPath)
+                                    ? appState.CURRENT_FILE
+                                    : null;
+
                     // エディタ要素の表示状態を確認・修正
-                    if (openedFile && openedFile.aceObj) {
-                        const aceElement = openedFile.aceObj.element;
-                        
+                    if (activeFile && activeFile.aceObj) {
+                        const aceElement = activeFile.aceObj.element;
+
                         // 明示的に表示
                         if (aceElement) {
                             aceElement.style.display = '';
-                            openedFile.aceObj.show();
-                            openedFile.aceObj.focus();
+                            activeFile.aceObj.show();
+                            activeFile.aceObj.focus();
                         }
                     }
-                    
+
                     // エクスプローラーのハイライトを更新
                     if (editor.explorer && typeof editor.explorer.highlightFile === 'function') {
                         console.log('[createFile] Highlighting file:', fullPath, 'Element exists:', !!document.getElementById(fullPath));
@@ -674,18 +690,42 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
         appState
     } = toolOptions;
     try {
+        if (typeof filename !== 'string' || filename.trim() === '') {
+            return {
+                success: false,
+                error: 'invalid_filename',
+                message: 'editFileByReplace: filename は必須です'
+            };
+        }
+        if (typeof searchText !== 'string' || searchText.length === 0) {
+            return {
+                success: false,
+                error: 'invalid_search_text',
+                message: 'editFileByReplace: searchText は空でない文字列を指定してください'
+            };
+        }
+        if (typeof replaceText !== 'string') {
+            return {
+                success: false,
+                error: 'invalid_replace_text',
+                message: 'editFileByReplace: replaceText は文字列を指定してください'
+            };
+        }
+
         // APIが渡されていない場合はエラー
         if (!apiFunc) {
             throw new Error('API関数が渡されていません');
         }
+
+        const normalizedFilename = filename.trim();
         
         // ファイルパスをベースディレクトリと結合
-        const fullPath = resolveFilePath(filename, baseDir);
+        const fullPath = resolveFilePath(normalizedFilename, baseDir);
         
         // ファイルパスの検証
         if (!validateFilePath(fullPath, baseDir)) {
-            const errorMsg = `アクセス拒否: ファイル "${filename}" は現在のディレクトリ配下にありません`;
-            await logToolExecution('editFileByReplace', { filename, searchText, replaceText }, 'rejected', { error: 'path_validation_failed' });
+            const errorMsg = `アクセス拒否: ファイル "${normalizedFilename}" は現在のディレクトリ配下にありません`;
+            await logToolExecution('editFileByReplace', { filename: normalizedFilename, searchText, replaceText }, 'rejected', { error: 'path_validation_failed' });
             if (mConsole) {
                 mConsole.print(errorMsg, 'error');
             }
@@ -697,7 +737,7 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
         }
         
         // ファイル内容を取得（既に結合されたパスを使用）
-        const fileContent = await readFile(filename, {
+        const fileContent = await readFile(normalizedFilename, {
             api: apiFunc,
             baseDir,
             // 置換はファイル全体が必要なため、構造要約への圧縮を無効化
@@ -716,29 +756,48 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
         const currentContent = fileContent.content;
         
         // 検索置換を実行
-        let newContent;
-        if (regex) {
-            const flags = (global ? 'g' : '') + (caseSensitive ? '' : 'i');
-            const regexPattern = new RegExp(searchText, flags);
-            newContent = currentContent.replace(regexPattern, replaceText);
-        } else {
+        const applyReplace = (sourceText, findText, replaceValue) => {
+            if (regex) {
+                const flags = (global ? 'g' : '') + (caseSensitive ? '' : 'i');
+                const regexPattern = new RegExp(findText, flags);
+                return sourceText.replace(regexPattern, replaceValue);
+            }
+
             if (global) {
                 const searchRegex = new RegExp(
-                    searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 
+                    findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
                     caseSensitive ? 'g' : 'gi'
                 );
-                newContent = currentContent.replace(searchRegex, replaceText);
-            } else {
-                const index = caseSensitive 
-                    ? currentContent.indexOf(searchText)
-                    : currentContent.toLowerCase().indexOf(searchText.toLowerCase());
-                if (index !== -1) {
-                    newContent = currentContent.substring(0, index) + 
-                                replaceText + 
-                                currentContent.substring(index + searchText.length);
-                } else {
-                    newContent = currentContent;
-                }
+                return sourceText.replace(searchRegex, replaceValue);
+            }
+
+            const index = caseSensitive
+                ? sourceText.indexOf(findText)
+                : sourceText.toLowerCase().indexOf(findText.toLowerCase());
+
+            if (index === -1) {
+                return sourceText;
+            }
+            return sourceText.substring(0, index) +
+                replaceValue +
+                sourceText.substring(index + findText.length);
+        };
+
+        let newContent = applyReplace(currentContent, searchText, replaceText);
+
+        // CRLF/LF 差分で一致しない場合のフォールバック（regex指定時は対象外）
+        if (newContent === currentContent && !regex) {
+            const normalizedCurrent = currentContent.replace(/\r\n/g, '\n');
+            const normalizedSearch = searchText.replace(/\r\n/g, '\n');
+            const normalizedReplace = replaceText.replace(/\r\n/g, '\n');
+            const normalizedReplaced = applyReplace(normalizedCurrent, normalizedSearch, normalizedReplace);
+
+            if (normalizedReplaced !== normalizedCurrent) {
+                const hasCRLF = /\r\n/.test(currentContent);
+                const hasLFOnly = /(^|[^\r])\n/.test(currentContent);
+                newContent = (hasCRLF && !hasLFOnly)
+                    ? normalizedReplaced.replace(/\n/g, '\r\n')
+                    : normalizedReplaced;
             }
         }
         

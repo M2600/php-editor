@@ -35,11 +35,29 @@ export class AITool {
                     maxLines: args.maxLines
                 });
             } else if (toolName === 'editFileByReplace') {
+                const replaceArgs = args || {};
+                const normalizedFilename =
+                    (typeof replaceArgs.filename === 'string' && replaceArgs.filename.trim() !== '')
+                        ? replaceArgs.filename
+                        : (typeof replaceArgs.filePath === 'string' && replaceArgs.filePath.trim() !== '')
+                            ? replaceArgs.filePath
+                            : (typeof replaceArgs.path === 'string' && replaceArgs.path.trim() !== '')
+                                ? replaceArgs.path
+                                : null;
+
+                if (!normalizedFilename) {
+                    return {
+                        success: false,
+                        error: 'invalid_arguments',
+                        message: 'editFileByReplace の引数が不正です。filename（または filePath/path）を指定してください'
+                    };
+                }
+
                 return await editFileByReplace(
-                    args.filename, 
-                    args.searchText, 
-                    args.replaceText, 
-                    args.options || {},
+                    normalizedFilename,
+                    replaceArgs.searchText, 
+                    replaceArgs.replaceText, 
+                    replaceArgs.options || {},
                     {
                         skipConfirmation: skipConfirmation,
                         ...context

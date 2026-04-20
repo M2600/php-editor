@@ -1191,6 +1191,18 @@ export async function sendAIMessage({
 
         // AIメッセージ表示用
         let aiMsgBuffer = "";
+        let hasFinalAssistantMessageSaved = false;
+        const finalizeAssistantResponse = () => {
+            if (hasFinalAssistantMessageSaved) {
+                return;
+            }
+            hasFinalAssistantMessageSaved = true;
+            console.log("Final AI message:", aiMsgBuffer);
+            historyManager.addMessage("assistant", aiMsgBuffer);
+            historyManager.setStreaming(false);
+            if (typeof chat.hideLoading === 'function') chat.hideLoading();
+            ensureLinksOpenInNewTab(chat?.content?.element);
+        };
         // まず空のAIメッセージを追加
         chat.addMessage("", "ai", true);
         setTimeout(() => {
@@ -1371,15 +1383,13 @@ export async function sendAIMessage({
                         console.warn("Maximum tool call depth reached");
                         chat.addMessage(`⚠️ 最大ツール実行回数（${AI_CONFIG.TOOLS_MAX_COUNT}回）に到達しました`, "system");
                         
-                        // 最大深度到達時も、現在のメッセージを履歴に追加
+                        // 最大深度到達時も、現在のメッセージを履歴に1回だけ追加
                         if (aiMsgBuffer) {
-                            console.log("Final AI message (max depth reached):", aiMsgBuffer);
-                            historyManager.addMessage("assistant", aiMsgBuffer);
+                            finalizeAssistantResponse();
+                        } else {
+                            historyManager.setStreaming(false);
+                            if (typeof chat.hideLoading === 'function') chat.hideLoading();
                         }
-                        
-                        // 終了処理を実行
-                        historyManager.setStreaming(false);
-                        if (typeof chat.hideLoading === 'function') chat.hideLoading();
                         return;
                     }
                     
@@ -1626,11 +1636,7 @@ export async function sendAIMessage({
                             
                             // すべてのツール実行が完了したら終了処理
                             if (Object.keys(toolCallsBuffer).length === 0) {
-                                console.log("Final AI message:", aiMsgBuffer);
-                                historyManager.addMessage("assistant", aiMsgBuffer);
-                                historyManager.setStreaming(false);
-                                if (typeof chat.hideLoading === 'function') chat.hideLoading();
-                                ensureLinksOpenInNewTab(chat?.content?.element);
+                                finalizeAssistantResponse();
                             }
                         });
                     }
@@ -1641,11 +1647,7 @@ export async function sendAIMessage({
                 
                 // ツール呼び出しがない場合は通常の終了処理
                 if (Object.keys(toolCallsBuffer).length === 0) {
-                    console.log("Final AI message:", aiMsgBuffer);
-                    historyManager.addMessage("assistant", aiMsgBuffer);
-                    historyManager.setStreaming(false);
-                    if (typeof chat.hideLoading === 'function') chat.hideLoading();
-                    ensureLinksOpenInNewTab(chat?.content?.element);
+                    finalizeAssistantResponse();
                 }
             });
         } else {

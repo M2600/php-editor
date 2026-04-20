@@ -287,6 +287,83 @@ function compressToolResult(toolResult) {
     return toolResult;
 }
 
+/**
+ * ツール履歴メタ情報を安全なサイズに整形
+ * ローカル表示向けのため、文字列長と配列長を制限する
+ */
+function sanitizeToolHistoryMeta(historyMeta, toolName) {
+    if (!historyMeta || typeof historyMeta !== 'object' || Array.isArray(historyMeta)) {
+        return null;
+    }
+
+    const MAX_STRING_LENGTH = 200;
+    const MAX_ARRAY_ITEMS = 20;
+    const MAX_DEPTH = 3;
+
+    const compactValue = (value, depth = 0) => {
+        if (depth > MAX_DEPTH) {
+            return '[truncated]';
+        }
+        if (value === null || value === undefined) {
+            return value;
+        }
+        if (typeof value === 'string') {
+            return value.length > MAX_STRING_LENGTH
+                ? `${value.substring(0, MAX_STRING_LENGTH)}...`
+                : value;
+        }
+        if (typeof value === 'number' || typeof value === 'boolean') {
+            return value;
+        }
+        if (Array.isArray(value)) {
+            return value.slice(0, MAX_ARRAY_ITEMS).map(item => compactValue(item, depth + 1));
+        }
+        if (typeof value === 'object') {
+            const compacted = {};
+            Object.entries(value).forEach(([key, val]) => {
+                compacted[key] = compactValue(val, depth + 1);
+            });
+            return compacted;
+        }
+        return String(value);
+    };
+
+    const compactedMeta = compactValue(historyMeta);
+    return {
+        version: 1,
+        tool: toolName,
+        ...compactedMeta
+    };
+}
+
+/**
+ * ツール履歴メタ情報をチャット表示向けの短文に変換
+ */
+function formatToolHistoryMetaSummary(toolName, historyMeta) {
+    if (!historyMeta || typeof historyMeta !== 'object') {
+        return '';
+    }
+
+    if ((toolName === 'ls' || historyMeta.operation === 'list') && historyMeta.directoryPath) {
+        const fileCount = historyMeta.fileCount ?? 0;
+        const directoryCount = historyMeta.directoryCount ?? 0;
+        const totalCount = historyMeta.totalCount ?? (fileCount + directoryCount);
+        return `${historyMeta.directoryPath} / ${totalCount}件 (dir:${directoryCount}, file:${fileCount})`;
+    }
+
+    if (historyMeta.targetPath) {
+        const base = [historyMeta.targetPath];
+        if (typeof historyMeta.addedLines === 'number' || typeof historyMeta.deletedLines === 'number') {
+            base.push(`+${historyMeta.addedLines ?? 0}/-${historyMeta.deletedLines ?? 0}`);
+        } else if (typeof historyMeta.linesRead === 'number') {
+            base.push(`read:${historyMeta.linesRead}行`);
+        }
+        return base.join(' / ');
+    }
+
+    return '';
+}
+
 // <think>ブロックを抽出・処理する関数（ストリーム対応）
 export function processThinkingBlocks(text) {
     const thinkingBlocks = [];
@@ -764,6 +841,20 @@ export class ChatHistoryManager {
         return this.chatHistory;
     }
 
+    getHistoryForAPI() {
+        // history_metaはローカル表示用のため、API送信時には除外する
+        return this.chatHistory.map(msg => {
+            if (!msg || typeof msg !== 'object') {
+                return msg;
+            }
+            if (Object.prototype.hasOwnProperty.call(msg, 'history_meta')) {
+                const { history_meta, ...rest } = msg;
+                return rest;
+            }
+            return msg;
+        });
+    }
+
     clear() {
         this.chatHistory = [];
         this.clearChatHistory();
@@ -841,7 +932,12 @@ export function restoreChatHistoryToUI(chatHistory, chat) {
             }
         } else if (msg.role === "tool") {
             // ツール実行結果を表示
-            chat.addMessage(`📋 ツール結果: ${msg.name}`, "system");
+            const summary = formatToolHistoryMetaSummary(msg.name, msg.history_meta);
+            if (summary) {
+                chat.addMessage(`📋 ツール結果: ${msg.name} (${summary})`, "system");
+            } else {
+                chat.addMessage(`📋 ツール結果: ${msg.name}`, "system");
+            }
         }
     });
     
@@ -1270,7 +1366,7 @@ export async function sendAIMessage({
         
         if (typeof fetchAIChat === 'function') {
             fetchAIChat({
-                messages: historyManager.getHistory(),
+                messages: historyManager.getHistoryForAPI(),
                 model: selectedModel,
                 fileContext: fileContext ?? null,
                 dirContext: dirContext ?? null,
@@ -1494,11 +1590,20 @@ export async function sendAIMessage({
                         }
                         
                         // ツール実行結果を履歴に追加
+                        const historyMeta = sanitizeToolHistoryMeta(result?.historyMeta, toolName);
+                        const toolContent = (result && typeof result === 'object' && !Array.isArray(result))
+                            ? (() => {
+                                const { historyMeta, ...resultForModel } = result;
+                                return JSON.stringify(resultForModel);
+                            })()
+                            : JSON.stringify(result);
+
                         toolResults.push({
                             tool_call_id: toolCall.id,
                             role: "tool",
                             name: toolName,
-                            content: JSON.stringify(result)
+                            content: toolContent,
+                            history_meta: historyMeta
                         });
                     }
                     
@@ -1530,7 +1635,7 @@ export async function sendAIMessage({
                         chat.addMessage("", "ai", true);
                         
                         await fetchAIChat({
-                            messages: historyManager.getHistory(),
+                            messages: historyManager.getHistoryForAPI(),
                             model: selectedModel,
                             fileContext: null,  // ツール実行後は常にnull
                             dirContext: null,   // ツール実行後は常にnull

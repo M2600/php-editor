@@ -90,6 +90,82 @@ function validateFilePath(filePath, baseDir) {
 }
 
 /**
+ * 文字列から行数を取得
+ */
+function getLineCount(text) {
+    if (typeof text !== 'string' || text.length === 0) {
+        return 0;
+    }
+    return text.split('\n').length;
+}
+
+/**
+ * 行単位の追加/削除数を計算（LCSベース）
+ */
+function calculateLineDiffStats(oldContent, newContent) {
+    const before = typeof oldContent === 'string' ? oldContent : '';
+    const after = typeof newContent === 'string' ? newContent : '';
+
+    const oldLines = before.length > 0 ? before.split('\n') : [];
+    const newLines = after.length > 0 ? after.split('\n') : [];
+    const oldCount = oldLines.length;
+    const newCount = newLines.length;
+
+    if (oldCount === 0 && newCount === 0) {
+        return {
+            addedLines: 0,
+            deletedLines: 0,
+            netLines: 0,
+            lineCountBefore: 0,
+            lineCountAfter: 0,
+            approximate: false
+        };
+    }
+
+    const MAX_CELLS = 4000000;
+    const totalCells = oldCount * newCount;
+    if (totalCells > MAX_CELLS) {
+        const netLines = newCount - oldCount;
+        return {
+            addedLines: Math.max(netLines, 0),
+            deletedLines: Math.max(-netLines, 0),
+            netLines,
+            lineCountBefore: oldCount,
+            lineCountAfter: newCount,
+            approximate: true
+        };
+    }
+
+    // メモリ削減のため1次元DPでLCS長を求める
+    const dp = new Array(newCount + 1).fill(0);
+    for (let i = 1; i <= oldCount; i++) {
+        let prev = 0;
+        for (let j = 1; j <= newCount; j++) {
+            const temp = dp[j];
+            if (oldLines[i - 1] === newLines[j - 1]) {
+                dp[j] = prev + 1;
+            } else {
+                dp[j] = Math.max(dp[j], dp[j - 1]);
+            }
+            prev = temp;
+        }
+    }
+
+    const lcsLength = dp[newCount];
+    const addedLines = newCount - lcsLength;
+    const deletedLines = oldCount - lcsLength;
+
+    return {
+        addedLines,
+        deletedLines,
+        netLines: newCount - oldCount,
+        lineCountBefore: oldCount,
+        lineCountAfter: newCount,
+        approximate: false
+    };
+}
+
+/**
  * ツール実行履歴をサーバーに記録
  */
 async function logToolExecution(tool, parameters, status, result, approvalTime = null) {
@@ -481,14 +557,22 @@ export async function createFile(filename, content, options = {}) {
             
             await logToolExecution('createFile', { filename, content }, 'approved', result, approvalTime);
             if (mConsole) {
-                const lines = content.split('\n').length;
+                const lines = getLineCount(content);
                 mConsole.print(`✅ createFile: "${filename}" を作成 (${lines}行, ${content.length}文字)`, 'success');
             }
-            const lines = content.split('\n').length;
+            const lines = getLineCount(content);
             return {
                 success: true,
                 message: `✅ ${filename}(${lines}行)`,
-                path: filename
+                path: filename,
+                historyMeta: {
+                    operation: 'create',
+                    targetPath: filename,
+                    addedLines: lines,
+                    deletedLines: 0,
+                    netLines: lines,
+                    lineCountAfter: lines
+                }
             };
         } else {
             // エラーメッセージを詳細に記録
@@ -612,7 +696,15 @@ export async function readFile(filename, options = {}) {
                 content: content,
                 path: filename,
                 lineRange: { start, end, total: totalLines },
-                message: `✅ ${filename} (${start}-${end}/${totalLines})`
+                message: `✅ ${filename} (${start}-${end}/${totalLines})`,
+                historyMeta: {
+                    operation: 'read',
+                    targetPath: filename,
+                    startLine: start,
+                    endLine: end,
+                    linesRead: selectedLines.length,
+                    totalLines: totalLines
+                }
             };
         }
         
@@ -638,7 +730,15 @@ export async function readFile(filename, options = {}) {
                 totalLines: totalLines,
                 path: filename,
                 message: `✅ ${filename} (${totalLines})`,
-                hint: `必要な部分は readFile(filename="${filename}", startLine=1, endLine=100)`
+                hint: `必要な部分は readFile(filename="${filename}", startLine=1, endLine=100)`,
+                historyMeta: {
+                    operation: 'read',
+                    targetPath: filename,
+                    linesRead: 0,
+                    totalLines: totalLines,
+                    compressed: true,
+                    structureOnly: true
+                }
             };
         }
         
@@ -654,7 +754,13 @@ export async function readFile(filename, options = {}) {
             content: fullContent,
             path: filename,
             totalLines: totalLines,
-            message: `✅ ${filename} (${totalLines})`
+            message: `✅ ${filename} (${totalLines})`,
+            historyMeta: {
+                operation: 'read',
+                targetPath: filename,
+                linesRead: totalLines,
+                totalLines: totalLines
+            }
         };
         
     } catch (error) {
@@ -1067,11 +1173,19 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
             // 置換箇所数をカウント
             const oldMatches = (currentContent.match(new RegExp(searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
             const replacements = oldMatches;
+            const lineDiffStats = calculateLineDiffStats(currentContent, newContent);
             
             return {
                 success: true,
                 message: `✅ ${filename}:${replacements}`,
-                path: filename
+                path: filename,
+                historyMeta: {
+                    operation: 'edit',
+                    editMode: 'replace',
+                    targetPath: filename,
+                    replacements: replacements,
+                    ...lineDiffStats
+                }
             };
         } else {
             throw new Error(saveResult.message || 'ファイル保存に失敗しました');
@@ -1274,12 +1388,23 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
             }
             
             const oldLineCount = lineEnd - lineStart + 1;
-            const newLineCount = newContent.split('\n').length;
+            const newLineCount = getLineCount(newContent);
+            const lineDiffStats = calculateLineDiffStats(currentContent, updatedContent);
             
             return {
                 success: true,
                 message: `✅ ${filename} (${lineStart}〜${lineEnd})`,
-                path: filename
+                path: filename,
+                historyMeta: {
+                    operation: 'edit',
+                    editMode: 'lineRange',
+                    targetPath: filename,
+                    rangeStart: lineStart,
+                    rangeEnd: lineEnd,
+                    replacedLineCount: oldLineCount,
+                    insertedLineCount: newLineCount,
+                    ...lineDiffStats
+                }
             };
         } else {
             throw new Error(saveResult.message || 'ファイル保存に失敗しました');
@@ -1372,7 +1497,11 @@ export async function deleteFile(filename, options = {}) {
             }
             return {
                 success: true,
-                message: `🗑️ **${filename}** を削除しました`
+                message: `🗑️ **${filename}** を削除しました`,
+                historyMeta: {
+                    operation: 'delete',
+                    targetPath: filename
+                }
             };
         } else {
             throw new Error(result.message || 'ファイル削除に失敗しました');
@@ -1496,7 +1625,14 @@ export async function ls(directory = "", options = {}) {
                 files: files,
                 directories: directories,
                 message: displayMessage,
-                path: fullPath
+                path: fullPath,
+                historyMeta: {
+                    operation: 'list',
+                    directoryPath: fullPath,
+                    fileCount: files.length,
+                    directoryCount: directories.length,
+                    totalCount: files.length + directories.length
+                }
             };
         } else {
             const errorMsg = result.message || result.error || 'ディレクトリリスト取得に失敗しました';
@@ -1850,7 +1986,16 @@ export async function searchFiles(query, options = {}) {
             filesSearched: filesSearched,
             resultsCount: results.length,
             results: results,
-            message: displayMessage
+            message: displayMessage,
+            historyMeta: {
+                operation: 'search',
+                query: query,
+                filesSearched: filesSearched,
+                resultsCount: results.length,
+                searchIn: searchIn,
+                regex: regex,
+                filePattern: filePattern || null
+            }
         };
         
     } catch (error) {

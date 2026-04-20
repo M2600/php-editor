@@ -13,7 +13,7 @@ export const FILE_EDITOR_TOOLS = [
         type: "function",
         function: {
             name: "createFile",
-            description: "新しいファイルを作成して内容を書き込みます。重要: ファイルが既に存在する場合はエラーを返すので、その場合は readFile で内容を確認してから editFileByReplace または editFileByLines を使用してください。",
+            description: "新しいファイルを作成して内容を書き込みます。既存ファイルには使わず、必要なら先に readFile で確認してください。",
             parameters: {
                 type: "object",
                 properties: {
@@ -34,7 +34,7 @@ export const FILE_EDITOR_TOOLS = [
         type: "function",
         function: {
             name: "readFile",
-            description: "ファイルの内容を読み込みます。大きなファイル（100行超）の場合、パラメータなしでは構造要約（関数/クラス名一覧）のみを返します。特定の行範囲が必要な場合はstartLineとendLineを指定してください。効率的な使い方: 1) まず構造を取得 2) 必要な部分のみ行範囲指定で読み込み。",
+            description: "ファイルの内容を読み込みます。大きいファイルは構造要約のみ返るので、必要な箇所は startLine と endLine で指定してください。",
             parameters: {
                 type: "object",
                 properties: {
@@ -67,7 +67,7 @@ export const FILE_EDITOR_TOOLS = [
         type: "function",
         function: {
             name: "editFileByReplace",
-            description: "ファイル内のテキストを検索して置換します。正規表現も使用可能です。regex=false の場合は完全一致検索です。見つからない場合は caseSensitive=false や regex=true を検討してください。",
+            description: "ファイル内の文字列を置換します。基本は完全一致です。まず readFile で前後を確認してから使ってください。",
             parameters: {
                 type: "object",
                 properties: {
@@ -85,7 +85,7 @@ export const FILE_EDITOR_TOOLS = [
                     },
                     options: {
                         type: "object",
-                        description: "置換オプション（global: 全置換、regex: 正規表現、caseSensitive: 大文字小文字区別。未指定時は global=true, regex=false, caseSensitive=true）",
+                        description: "置換オプション。必要なときだけ指定してください。",
                         properties: {
                             global: {
                                 type: "boolean",
@@ -113,7 +113,7 @@ export const FILE_EDITOR_TOOLS = [
         type: "function",
         function: {
             name: "editFileByLines",
-            description: "ファイルの指定した行範囲を新しい内容に置き換えます。正確な範囲指定が必要な場合に使用します。",
+            description: "指定した行範囲を新しい内容に置き換えます。行番号が確実な場合だけ使ってください。",
             parameters: {
                 type: "object",
                 properties: {
@@ -178,13 +178,13 @@ export const FILE_EDITOR_TOOLS = [
         type: "function",
         function: {
             name: "searchFiles",
-            description: "プロジェクト内のファイルをキーワードで検索します。ファイル名検索と内容検索の両方に対応。効率的な使い方: 1) まずsearchFilesで該当ファイル/行を特定 2) readFileで必要な行範囲のみ取得。大量のファイルを読み込む前に、この検索機能で対象を絞り込むことを推奨します。",
+            description: "プロジェクト内のファイルをキーワードで検索します。まず候補を絞り、次に readFile で必要な部分だけ読みます。",
             parameters: {
                 type: "object",
                 properties: {
                     query: {
                         type: "string",
-                        description: "検索キーワード（正規表現も使用可能）"
+                        description: "検索キーワード"
                     },
                     searchIn: {
                         type: "string",
@@ -194,12 +194,12 @@ export const FILE_EDITOR_TOOLS = [
                     },
                     regex: {
                         type: "boolean",
-                        description: "queryを正規表現として扱うか（デフォルト: false、部分一致検索）",
+                        description: "正規表現として扱うか",
                         default: false
                     },
                     caseSensitive: {
                         type: "boolean",
-                        description: "大文字小文字を区別するか（デフォルト: false）",
+                        description: "大文字小文字を区別するか",
                         default: false
                     },
                     filePattern: {
@@ -208,14 +208,14 @@ export const FILE_EDITOR_TOOLS = [
                     },
                     maxResults: {
                         type: "integer",
-                        description: "最大検索結果数（デフォルト: 50）",
+                        description: "最大検索結果数",
                         minimum: 1,
                         maximum: 200,
                         default: 50
                     },
                     contextLines: {
                         type: "integer",
-                        description: "マッチ箇所の前後に表示する行数（デフォルト: 0）",
+                        description: "マッチ箇所の前後に表示する行数",
                         minimum: 0,
                         maximum: 10,
                         default: 0

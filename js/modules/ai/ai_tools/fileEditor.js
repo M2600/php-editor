@@ -1009,7 +1009,37 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
             return updatedLines.join('\n');
         };
 
+        // 小型モデルが searchText 転記時に空白を落とすケース向けの最終フォールバック
+        // 安全性のため「一致箇所が1件のみ」の場合に限定する
+        const applyFuzzyWhitespaceReplace = (sourceText, findText, replaceValue, useCaseSensitive = true) => {
+            if (!findText || findText.length === 0) {
+                return sourceText;
+            }
+
+            try {
+                const escapedFind = findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const fuzzyPattern = escapedFind
+                    .replace(/[ \t]+/g, '[ \\t]+')
+                    .replace(/\n[ \t]*/g, '\\n[ \\t]*');
+
+                const testFlags = useCaseSensitive ? 'g' : 'gi';
+                const testRegex = new RegExp(fuzzyPattern, testFlags);
+                const matches = sourceText.match(testRegex);
+
+                if (!matches || matches.length !== 1) {
+                    return sourceText;
+                }
+
+                const replaceFlags = useCaseSensitive ? '' : 'i';
+                const replaceRegex = new RegExp(fuzzyPattern, replaceFlags);
+                return sourceText.replace(replaceRegex, replaceValue);
+            } catch (error) {
+                return sourceText;
+            }
+        };
+
         let newContent = applyReplace(currentContent, searchText, replaceText);
+        let fuzzyApplied = false;
 
         // CRLF/LF 差分で一致しない場合のフォールバック（regex指定時は対象外）
         if (newContent === currentContent && !regex) {
@@ -1056,6 +1086,25 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                         : caseInsensitiveReplaced;
                 }
             }
+
+            // 空白数・インデント差分のみで失敗したケースを救済
+            if (newContent === currentContent) {
+                const fuzzyReplaced = applyFuzzyWhitespaceReplace(
+                    normalizedCurrent,
+                    normalizedSearch,
+                    normalizedReplace,
+                    caseSensitive
+                );
+
+                if (fuzzyReplaced !== normalizedCurrent) {
+                    const hasCRLF = /\r\n/.test(currentContent);
+                    const hasLFOnly = /(^|[^\r])\n/.test(currentContent);
+                    newContent = (hasCRLF && !hasLFOnly)
+                        ? fuzzyReplaced.replace(/\n/g, '\r\n')
+                        : fuzzyReplaced;
+                    fuzzyApplied = true;
+                }
+            }
         }
         
         // 変更がない場合
@@ -1084,6 +1133,7 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
             if (searchText.includes('\n')) {
                 hints.push('複数行ブロックがずれている可能性があります。見出し単位で再検索するか editFileByLines も検討してください');
             }
+            hints.push('スペース・タブ差分で一致しない場合があります。必要なら editFileByLines の利用も検討してください');
             await logToolExecution('editFileByReplace', 
                 {
                     filename,
@@ -1091,6 +1141,7 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                     replaceText,
                     options: editOptions,
                     contentSource,
+                    fuzzyApplied,
                     hints,
                     beforeContent: currentContent,
                     afterContent: newContent
@@ -1141,6 +1192,7 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                     replaceText,
                     options: editOptions,
                     contentSource,
+                    fuzzyApplied,
                     beforeContent: currentContent,
                     afterContent: newContent
                 }, 
@@ -1209,6 +1261,7 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                     replaceText,
                     options: editOptions,
                     contentSource,
+                    fuzzyApplied,
                     beforeContent: currentContent,
                     afterContent: newContent
                 }, 
@@ -1235,6 +1288,7 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                     editMode: 'replace',
                     targetPath: filename,
                     replacements: replacements,
+                    fuzzyApplied,
                     ...lineDiffStats
                 }
             };

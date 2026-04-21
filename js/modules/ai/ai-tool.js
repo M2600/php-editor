@@ -64,11 +64,50 @@ export class AITool {
                     }
                 );
             } else if (toolName === 'editFileByLines') {
+                const lineArgs = args || {};
+                const normalizedFilename =
+                    (typeof lineArgs.filename === 'string' && lineArgs.filename.trim() !== '')
+                        ? lineArgs.filename
+                        : (typeof lineArgs.filePath === 'string' && lineArgs.filePath.trim() !== '')
+                            ? lineArgs.filePath
+                            : (typeof lineArgs.path === 'string' && lineArgs.path.trim() !== '')
+                                ? lineArgs.path
+                                : null;
+
+                if (!normalizedFilename) {
+                    return {
+                        success: false,
+                        error: 'invalid_arguments',
+                        message: 'editFileByLines の引数が不正です。filename（または filePath/path）を指定してください'
+                    };
+                }
+                if (lineArgs.lineStart === undefined || lineArgs.lineStart === null) {
+                    return {
+                        success: false,
+                        error: 'invalid_arguments',
+                        message: 'editFileByLines の引数が不正です。lineStart を指定してください'
+                    };
+                }
+                if (lineArgs.lineEnd === undefined || lineArgs.lineEnd === null) {
+                    return {
+                        success: false,
+                        error: 'invalid_arguments',
+                        message: 'editFileByLines の引数が不正です。lineEnd を指定してください'
+                    };
+                }
+                if (typeof lineArgs.newContent !== 'string') {
+                    return {
+                        success: false,
+                        error: 'invalid_arguments',
+                        message: 'editFileByLines の引数が不正です。newContent は文字列で指定してください'
+                    };
+                }
+
                 return await editFileByLines(
-                    args.filename, 
-                    args.lineStart, 
-                    args.lineEnd, 
-                    args.newContent,
+                    normalizedFilename,
+                    lineArgs.lineStart,
+                    lineArgs.lineEnd,
+                    lineArgs.newContent,
                     {
                         skipConfirmation: skipConfirmation,
                         ...context

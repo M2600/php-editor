@@ -166,6 +166,31 @@ function calculateLineDiffStats(oldContent, newContent) {
 }
 
 /**
+ * 編集対象の最新内容を取得
+ * 開いているファイルの場合はエディタ内容を優先し、未保存差分による古い内容の混入を防ぐ
+ */
+function resolveLatestContentForEdit(fullPath, diskContent, currentFile) {
+    let source = 'disk';
+    let content = typeof diskContent === 'string' ? diskContent : '';
+
+    if (
+        currentFile &&
+        currentFile.path === fullPath &&
+        currentFile.aceObj &&
+        currentFile.aceObj.editor &&
+        typeof currentFile.aceObj.editor.getValue === 'function'
+    ) {
+        const editorContent = currentFile.aceObj.editor.getValue();
+        if (typeof editorContent === 'string' && editorContent !== content) {
+            content = editorContent;
+            source = 'editor';
+        }
+    }
+
+    return { content, source };
+}
+
+/**
  * ツール実行履歴をサーバーに記録
  */
 async function logToolExecution(tool, parameters, status, result, approvalTime = null) {
@@ -847,7 +872,9 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
             throw new Error('ファイル内容の取得に失敗しました（contentが不正です）');
         }
         
-        const currentContent = fileContent.content;
+        const latestContent = resolveLatestContentForEdit(fullPath, fileContent.content, currentFile);
+        const currentContent = latestContent.content;
+        const contentSource = latestContent.source;
         
         // 検索置換を実行
         const applyReplace = (sourceText, findText, replaceValue) => {
@@ -1057,9 +1084,17 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
             if (searchText.includes('\n')) {
                 hints.push('複数行ブロックがずれている可能性があります。見出し単位で再検索するか editFileByLines も検討してください');
             }
-
             await logToolExecution('editFileByReplace', 
-                { filename, searchText, replaceText, options: editOptions, hints }, 
+                {
+                    filename,
+                    searchText,
+                    replaceText,
+                    options: editOptions,
+                    contentSource,
+                    hints,
+                    beforeContent: currentContent,
+                    afterContent: newContent
+                }, 
                 'no_change', 
                 null
             );
@@ -1100,7 +1135,15 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
         
         if (!approved) {
             await logToolExecution('editFileByReplace', 
-                { filename, searchText, replaceText, options: editOptions }, 
+                {
+                    filename,
+                    searchText,
+                    replaceText,
+                    options: editOptions,
+                    contentSource,
+                    beforeContent: currentContent,
+                    afterContent: newContent
+                }, 
                 'rejected', 
                 null, 
                 approvalTime
@@ -1160,7 +1203,15 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
             }
             
             await logToolExecution('editFileByReplace', 
-                { filename, searchText, replaceText, options: editOptions }, 
+                {
+                    filename,
+                    searchText,
+                    replaceText,
+                    options: editOptions,
+                    contentSource,
+                    beforeContent: currentContent,
+                    afterContent: newContent
+                }, 
                 'approved', 
                 saveResult, 
                 approvalTime
@@ -1227,14 +1278,47 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
         if (!apiFunc) {
             throw new Error('API関数が渡されていません');
         }
+
+        if (typeof filename !== 'string' || filename.trim() === '') {
+            return {
+                success: false,
+                error: 'invalid_filename',
+                message: 'editFileByLines: filename が必要です'
+            };
+        }
+        if (lineStart === undefined || lineStart === null || lineEnd === undefined || lineEnd === null) {
+            return {
+                success: false,
+                error: 'invalid_line_range',
+                message: 'editFileByLines: lineStart と lineEnd を指定してください'
+            };
+        }
+        if (typeof newContent !== 'string') {
+            return {
+                success: false,
+                error: 'invalid_new_content',
+                message: 'editFileByLines: newContent は文字列で指定してください'
+            };
+        }
+
+        const normalizedFilename = filename.trim();
+        const normalizedLineStart = Number(lineStart);
+        const normalizedLineEnd = Number(lineEnd);
+        if (!Number.isInteger(normalizedLineStart) || !Number.isInteger(normalizedLineEnd)) {
+            return {
+                success: false,
+                error: 'invalid_line_range',
+                message: 'editFileByLines: lineStart と lineEnd は整数で指定してください'
+            };
+        }
         
         // ファイルパスをベースディレクトリと結合
-        const fullPath = resolveFilePath(filename, baseDir);
+        const fullPath = resolveFilePath(normalizedFilename, baseDir);
         
         // ファイルパスの検証
         if (!validateFilePath(fullPath, baseDir)) {
-            const errorMsg = `アクセス拒否: "${filename}" は現在のディレクトリ配下にありません`;
-            await logToolExecution('editFileByLines', { filename, lineStart, lineEnd }, 'rejected', { error: 'path_validation_failed' });
+            const errorMsg = `アクセス拒否: "${normalizedFilename}" は現在のディレクトリ配下にありません`;
+            await logToolExecution('editFileByLines', { filename: normalizedFilename, lineStart: normalizedLineStart, lineEnd: normalizedLineEnd }, 'rejected', { error: 'path_validation_failed' });
             if (mConsole) {
                 mConsole.print(errorMsg, 'error');
             }
@@ -1246,7 +1330,7 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
         }
         
         // ファイル内容を取得（既に結合されたパスを使用）
-        const fileContent = await readFile(filename, {
+        const fileContent = await readFile(normalizedFilename, {
             api: apiFunc,
             baseDir,
             // 行単位編集では全体行番号が必要なため、構造要約への圧縮を無効化
@@ -1262,20 +1346,22 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
             throw new Error('ファイル内容の取得に失敗しました（contentが不正です）');
         }
         
-        const currentContent = fileContent.content;
+        const latestContent = resolveLatestContentForEdit(fullPath, fileContent.content, currentFile);
+        const currentContent = latestContent.content;
+        const contentSource = latestContent.source;
         const lines = currentContent.split('\n');
         
         // 行番号の検証
-        if (lineStart < 1 || lineEnd < lineStart || lineEnd > lines.length) {
-            throw new Error(`無効な行番号: ${lineStart}-${lineEnd} (全${lines.length}行)`);
+        if (normalizedLineStart < 1 || normalizedLineEnd < normalizedLineStart || normalizedLineEnd > lines.length) {
+            throw new Error(`無効な行番号: ${normalizedLineStart}-${normalizedLineEnd} (全${lines.length}行)`);
         }
         
         // 新しい内容を生成
         const newLines = newContent.split('\n');
 
         // モデルが前後コンテキスト行を含めてしまうと重複が起きるため、境界1行だけ安全に除去する
-        const lineBeforeRange = lineStart > 1 ? lines[lineStart - 2] : null;
-        const lineAfterRange = lineEnd < lines.length ? lines[lineEnd] : null;
+        const lineBeforeRange = normalizedLineStart > 1 ? lines[normalizedLineStart - 2] : null;
+        const lineAfterRange = normalizedLineEnd < lines.length ? lines[normalizedLineEnd] : null;
         if (lineBeforeRange !== null && newLines.length > 0 && newLines[0] === lineBeforeRange) {
             newLines.shift();
         }
@@ -1284,9 +1370,9 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
         }
 
         const updatedLines = [
-            ...lines.slice(0, lineStart - 1),
+            ...lines.slice(0, normalizedLineStart - 1),
             ...newLines,
-            ...lines.slice(lineEnd)
+            ...lines.slice(normalizedLineEnd)
         ];
         const updatedContent = updatedLines.join('\n');
         
@@ -1316,7 +1402,15 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
         
         if (!approved) {
             await logToolExecution('editFileByLines', 
-                { filename, lineStart, lineEnd, newContent }, 
+                {
+                    filename: normalizedFilename,
+                    lineStart: normalizedLineStart,
+                    lineEnd: normalizedLineEnd,
+                    newContent,
+                    contentSource,
+                    beforeContent: currentContent,
+                    afterContent: updatedContent
+                }, 
                 'rejected', 
                 null, 
                 approvalTime
@@ -1378,29 +1472,37 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
             }
             
             await logToolExecution('editFileByLines', 
-                { filename, lineStart, lineEnd, newContent }, 
+                {
+                    filename: normalizedFilename,
+                    lineStart: normalizedLineStart,
+                    lineEnd: normalizedLineEnd,
+                    newContent,
+                    contentSource,
+                    beforeContent: currentContent,
+                    afterContent: updatedContent
+                }, 
                 'approved', 
                 saveResult, 
                 approvalTime
             );
             if (mConsole) {
-                mConsole.print(`✅ editFileByLines: "${filename}" (${lineStart}-${lineEnd})`, 'success');
+                mConsole.print(`✅ editFileByLines: "${normalizedFilename}" (${normalizedLineStart}-${normalizedLineEnd})`, 'success');
             }
             
-            const oldLineCount = lineEnd - lineStart + 1;
+            const oldLineCount = normalizedLineEnd - normalizedLineStart + 1;
             const newLineCount = getLineCount(newContent);
             const lineDiffStats = calculateLineDiffStats(currentContent, updatedContent);
             
             return {
                 success: true,
-                message: `✅ ${filename} (${lineStart}〜${lineEnd})`,
-                path: filename,
+                message: `✅ ${normalizedFilename} (${normalizedLineStart}〜${normalizedLineEnd})`,
+                path: normalizedFilename,
                 historyMeta: {
                     operation: 'edit',
                     editMode: 'lineRange',
-                    targetPath: filename,
-                    rangeStart: lineStart,
-                    rangeEnd: lineEnd,
+                    targetPath: normalizedFilename,
+                    rangeStart: normalizedLineStart,
+                    rangeEnd: normalizedLineEnd,
                     replacedLineCount: oldLineCount,
                     insertedLineCount: newLineCount,
                     ...lineDiffStats

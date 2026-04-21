@@ -91,8 +91,30 @@ function removeCodeFromMessages($messages) {
 }
 
 /**
+ * 重要なツール結果かどうかを判定
+ * ファイル内容参照に必要なツール結果は削除しない
+ */
+function isImportantToolMessage($msg) {
+    if ($msg['role'] !== 'tool') {
+        return false;
+    }
+    
+    // 重要なツール（ファイル読み込み、検索結果）
+    $importantTools = [
+        'readFile',
+        'searchFiles',
+        'readDir',
+        'getFileInfo'
+    ];
+    
+    $name = $msg['name'] ?? '';
+    return in_array($name, $importantTools, true);
+}
+
+/**
  * 会話履歴を圧縮
  * トークン数制限内でできるだけ多くの履歴を保持する
+ * 重要なツール結果（readFileなど）は優先的に保護する
  */
 function compressMessages($messages, $maxTokens = 3000) {
     // 現在のトークン数を概算
@@ -102,26 +124,39 @@ function compressMessages($messages, $maxTokens = 3000) {
         return $messages; // 圧縮不要
     }
     
+    // ツールメッセージと通常メッセージを分離
+    $toolMessages = [];
+    $normalMessages = [];
+    
+    foreach ($messages as $msg) {
+        if (isImportantToolMessage($msg)) {
+            $toolMessages[] = $msg;
+        } else {
+            $normalMessages[] = $msg;
+        }
+    }
+    
     // 最新のメッセージから必須メッセージ数を決定
     // 最低でも最新3往復分（6件）は保護する
     $minProtectedCount = 6;
-    $protectedMessages = array_slice($messages, -$minProtectedCount);
-    $protectedTokens = estimateTokenCount($protectedMessages);
+    $protectedMessages = array_slice($normalMessages, -$minProtectedCount);
+    $protectedTokens = estimateTokenCount($protectedMessages) + estimateTokenCount($toolMessages);
     
     // 保護メッセージだけで既に上限を超えている場合は保護メッセージのみ返す
     if ($protectedTokens >= $maxTokens) {
         // AIの制約により、会話履歴は必ず'role': 'user'から始める必要がある
-        while (count($protectedMessages) > 0 && $protectedMessages[0]['role'] !== 'user') {
-            array_shift($protectedMessages);
+        $finalMessages = array_merge($toolMessages, $protectedMessages);
+        while (count($finalMessages) > 0 && $finalMessages[0]['role'] !== 'user') {
+            array_shift($finalMessages);
         }
-        return $protectedMessages;
+        return $finalMessages;
     }
     
     // 利用可能なトークン数
     $availableTokens = $maxTokens - $protectedTokens;
     
     // 古いメッセージから順に追加していく
-    $oldMessages = array_slice($messages, 0, -$minProtectedCount);
+    $oldMessages = array_slice($normalMessages, 0, -$minProtectedCount);
     $selectedMessages = [];
     $selectedTokens = 0;
     
@@ -169,7 +204,8 @@ function compressMessages($messages, $maxTokens = 3000) {
     }
     
     // 最終的なメッセージを構築
-    $finalMessages = array_merge($selectedMessages, $protectedMessages);
+    // ツールメッセージを最初に保持し、その後通常メッセージを続ける
+    $finalMessages = array_merge($toolMessages, $selectedMessages, $protectedMessages);
     
     // AIの制約により、会話履歴は必ず'role': 'user'から始める必要がある
     // 先頭がuserでない場合は、userになるまでメッセージをカット

@@ -1040,6 +1040,7 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
 
         let newContent = applyReplace(currentContent, searchText, replaceText);
         let fuzzyApplied = false;
+        let matchMethod = regex ? 'regex' : 'exact';
 
         // CRLF/LF 差分で一致しない場合のフォールバック（regex指定時は対象外）
         if (newContent === currentContent && !regex) {
@@ -1054,6 +1055,7 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                 newContent = (hasCRLF && !hasLFOnly)
                     ? normalizedReplaced.replace(/\n/g, '\r\n')
                     : normalizedReplaced;
+                matchMethod = 'normalized_newline';
             } else {
                 const looseReplaced = applyLooseMultilineReplace(
                     normalizedCurrent,
@@ -1067,6 +1069,7 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                     newContent = (hasCRLF && !hasLFOnly)
                         ? looseReplaced.replace(/\n/g, '\r\n')
                         : looseReplaced;
+                    matchMethod = 'loose_multiline';
                 }
             }
 
@@ -1084,6 +1087,7 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                     newContent = (hasCRLF && !hasLFOnly)
                         ? caseInsensitiveReplaced.replace(/\n/g, '\r\n')
                         : caseInsensitiveReplaced;
+                    matchMethod = 'case_insensitive_single';
                 }
             }
 
@@ -1103,6 +1107,7 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                         ? fuzzyReplaced.replace(/\n/g, '\r\n')
                         : fuzzyReplaced;
                     fuzzyApplied = true;
+                    matchMethod = 'fuzzy_whitespace';
                 }
             }
         }
@@ -1134,6 +1139,9 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                 hints.push('複数行ブロックがずれている可能性があります。見出し単位で再検索するか editFileByLines も検討してください');
             }
             hints.push('スペース・タブ差分で一致しない場合があります。必要なら editFileByLines の利用も検討してください');
+            const attemptedMethods = regex
+                ? ['regex']
+                : ['exact', 'normalized_newline', 'loose_multiline', 'case_insensitive_single', 'fuzzy_whitespace'];
             await logToolExecution('editFileByReplace', 
                 {
                     filename,
@@ -1141,6 +1149,8 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                     replaceText,
                     options: editOptions,
                     contentSource,
+                    matchMethod: 'not_found',
+                    attemptedMethods,
                     fuzzyApplied,
                     hints,
                     beforeContent: currentContent,
@@ -1192,6 +1202,7 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                     replaceText,
                     options: editOptions,
                     contentSource,
+                    matchMethod,
                     fuzzyApplied,
                     beforeContent: currentContent,
                     afterContent: newContent
@@ -1261,6 +1272,7 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                     replaceText,
                     options: editOptions,
                     contentSource,
+                    matchMethod,
                     fuzzyApplied,
                     beforeContent: currentContent,
                     afterContent: newContent
@@ -1288,6 +1300,7 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                     editMode: 'replace',
                     targetPath: filename,
                     replacements: replacements,
+                    matchMethod,
                     fuzzyApplied,
                     ...lineDiffStats
                 }

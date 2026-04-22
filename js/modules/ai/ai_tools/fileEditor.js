@@ -938,77 +938,6 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                 sourceText.substring(matchStart + findText.length);
         };
 
-        // 複数行の完全一致が外れた場合に、Markdownチェックボックス差分のみを許容して置換する
-        // 安全性のため「一致箇所が1件のみ」の場合に限定する
-        const applyLooseMultilineReplace = (sourceText, findText, replaceValue) => {
-            if (!findText.includes('\n')) {
-                return sourceText;
-            }
-
-            const sourceLines = sourceText.split('\n');
-            const findLines = findText.split('\n');
-            const replaceLines = replaceValue.split('\n');
-
-            if (findLines.length === 0 || sourceLines.length < findLines.length) {
-                return sourceText;
-            }
-
-            const normalizeTrailing = (line) => line.replace(/[ \t]+$/g, '');
-            const normalizeChecklist = (line) => normalizeTrailing(line)
-                .replace(/^(\s*[-*]\s+)\[(?:\s|x|X)\](\s+)/, '$1[ ]$2');
-
-            const firstNonEmptyIndex = findLines.findIndex(line => line.trim() !== '');
-            if (firstNonEmptyIndex === -1) {
-                return sourceText;
-            }
-
-            const matches = [];
-
-            for (let i = 0; i <= sourceLines.length - findLines.length; i++) {
-                let matched = true;
-
-                for (let j = 0; j < findLines.length; j++) {
-                    const sourceLine = sourceLines[i + j];
-                    const findLine = findLines[j];
-
-                    // 先頭の非空行は厳密一致（末尾空白のみ無視）でアンカーにする
-                    if (j === firstNonEmptyIndex) {
-                        if (normalizeTrailing(sourceLine) !== normalizeTrailing(findLine)) {
-                            matched = false;
-                            break;
-                        }
-                        continue;
-                    }
-
-                    // それ以外は末尾空白とチェックボックス状態差分のみ許容
-                    if (normalizeChecklist(sourceLine) !== normalizeChecklist(findLine)) {
-                        matched = false;
-                        break;
-                    }
-                }
-
-                if (matched) {
-                    matches.push(i);
-                    if (matches.length > 1) {
-                        // 複数候補は危険なので自動置換しない
-                        return sourceText;
-                    }
-                }
-            }
-
-            if (matches.length !== 1) {
-                return sourceText;
-            }
-
-            const matchStart = matches[0];
-            const updatedLines = [
-                ...sourceLines.slice(0, matchStart),
-                ...replaceLines,
-                ...sourceLines.slice(matchStart + findLines.length)
-            ];
-            return updatedLines.join('\n');
-        };
-
         // 小型モデルが searchText 転記時に空白を落とすケース向けの最終フォールバック
         // 安全性のため「一致箇所が1件のみ」の場合に限定する
         const applyFuzzyWhitespaceReplace = (sourceText, findText, replaceValue, useCaseSensitive = true) => {
@@ -1056,21 +985,6 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                     ? normalizedReplaced.replace(/\n/g, '\r\n')
                     : normalizedReplaced;
                 matchMethod = 'normalized_newline';
-            } else {
-                const looseReplaced = applyLooseMultilineReplace(
-                    normalizedCurrent,
-                    normalizedSearch,
-                    normalizedReplace
-                );
-
-                if (looseReplaced !== normalizedCurrent) {
-                    const hasCRLF = /\r\n/.test(currentContent);
-                    const hasLFOnly = /(^|[^\r])\n/.test(currentContent);
-                    newContent = (hasCRLF && !hasLFOnly)
-                        ? looseReplaced.replace(/\n/g, '\r\n')
-                        : looseReplaced;
-                    matchMethod = 'loose_multiline';
-                }
             }
 
             // 既定では caseSensitive=true のため、小文字/大文字差分だけの失敗を安全に吸収する
@@ -1141,7 +1055,7 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
             hints.push('スペース・タブ差分で一致しない場合があります。必要なら editFileByLines の利用も検討してください');
             const attemptedMethods = regex
                 ? ['regex']
-                : ['exact', 'normalized_newline', 'loose_multiline', 'case_insensitive_single', 'fuzzy_whitespace'];
+                : ['exact', 'normalized_newline', 'case_insensitive_single', 'fuzzy_whitespace'];
             await logToolExecution('editFileByReplace', 
                 {
                     filename,

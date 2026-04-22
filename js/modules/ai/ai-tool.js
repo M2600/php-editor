@@ -3,6 +3,28 @@
 // ai用のツールモジュール
 import { createFile, editFileByReplace, editFileByLines, readFile, deleteFile, ls, searchFiles } from './ai_tools/fileEditor.js';
 import { getAllTools, getToolByName } from './toolDefinitions.js';
+import { loadSelectedModel } from '../utils/cookie.js';
+
+async function logToolInvocationError(toolName, parameters, errorCode, message) {
+    try {
+        const model = loadSelectedModel() || 'unknown';
+        await api('/api/tool_history.php', {
+            action: 'logToolExecution',
+            tool: toolName,
+            parameters: parameters,
+            status: 'error',
+            result: {
+                error: errorCode,
+                message: message,
+                phase: 'invocation'
+            },
+            approvalTime: null,
+            model: model
+        });
+    } catch (error) {
+        console.error('ツール呼び出しエラーログ送信に失敗:', error);
+    }
+}
 
 
 export class AITool {
@@ -46,6 +68,12 @@ export class AITool {
                                 : null;
 
                 if (!normalizedFilename) {
+                    await logToolInvocationError(
+                        'editFileByReplace',
+                        replaceArgs,
+                        'invalid_arguments',
+                        'editFileByReplace の引数が不正です。filename（または filePath/path）を指定してください'
+                    );
                     return {
                         success: false,
                         error: 'invalid_arguments',
@@ -75,6 +103,12 @@ export class AITool {
                                 : null;
 
                 if (!normalizedFilename) {
+                    await logToolInvocationError(
+                        'editFileByLines',
+                        lineArgs,
+                        'invalid_arguments',
+                        'editFileByLines の引数が不正です。filename（または filePath/path）を指定してください'
+                    );
                     return {
                         success: false,
                         error: 'invalid_arguments',
@@ -82,6 +116,12 @@ export class AITool {
                     };
                 }
                 if (lineArgs.lineStart === undefined || lineArgs.lineStart === null) {
+                    await logToolInvocationError(
+                        'editFileByLines',
+                        lineArgs,
+                        'invalid_arguments',
+                        'editFileByLines の引数が不正です。lineStart を指定してください'
+                    );
                     return {
                         success: false,
                         error: 'invalid_arguments',
@@ -89,6 +129,12 @@ export class AITool {
                     };
                 }
                 if (lineArgs.lineEnd === undefined || lineArgs.lineEnd === null) {
+                    await logToolInvocationError(
+                        'editFileByLines',
+                        lineArgs,
+                        'invalid_arguments',
+                        'editFileByLines の引数が不正です。lineEnd を指定してください'
+                    );
                     return {
                         success: false,
                         error: 'invalid_arguments',
@@ -96,6 +142,12 @@ export class AITool {
                     };
                 }
                 if (typeof lineArgs.newContent !== 'string') {
+                    await logToolInvocationError(
+                        'editFileByLines',
+                        lineArgs,
+                        'invalid_arguments',
+                        'editFileByLines の引数が不正です。newContent は文字列で指定してください'
+                    );
                     return {
                         success: false,
                         error: 'invalid_arguments',
@@ -133,7 +185,13 @@ export class AITool {
                     contextLines: args.contextLines
                 });
             } else {
-                throw new Error('未対応のツール: ' + toolName);
+                await logToolInvocationError(
+                    toolName,
+                    args,
+                    'unsupported_tool',
+                    '未対応のツール: ' + toolName
+                );
+                return { success: false, error: 'unsupported_tool', message: '未対応のツールです: ' + toolName };
             }
         } catch (e) {
             console.error('ファイルツール実行エラー:', e);

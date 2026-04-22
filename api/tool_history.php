@@ -36,6 +36,7 @@ if ($action === 'logToolExecution') {
     $status = isset($input['status']) ? $input['status'] : 'unknown';
     $result = isset($input['result']) ? $input['result'] : null;
     $approvalTime = isset($input['approvalTime']) ? $input['approvalTime'] : null;
+    $model = isset($input['model']) ? $input['model'] : 'unknown';
     
     // ログメッセージの構築
     $logData = [
@@ -43,7 +44,8 @@ if ($action === 'logToolExecution') {
         'parameters' => $parameters,
         'status' => $status,
         'result' => $result,
-        'approvalTime' => $approvalTime
+        'approvalTime' => $approvalTime,
+        'model' => $model
     ];
     
     // Loggerクラスを使ってログに記録
@@ -90,7 +92,8 @@ if ($action === 'logToolExecution') {
                 'parameters' => $data['context']['parameters'] ?? null,
                 'status' => $data['context']['status'] ?? null,
                 'result' => $data['context']['result'] ?? null,
-                'approvalTime' => $data['context']['approvalTime'] ?? null
+                'approvalTime' => $data['context']['approvalTime'] ?? null,
+                'model' => $data['context']['model'] ?? 'unknown'
             ];
         }
         

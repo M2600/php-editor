@@ -1358,6 +1358,26 @@ export async function sendAIMessage({
         const controller = new AbortController();
         chat._abortController = controller;  // 生成停止用に保存
         const selectedModel = modelSelect.getValue() || undefined;
+        const logToolInvocationError = async ({ toolName, parameters, errorCode, message, toolCallId = null }) => {
+            try {
+                await api('/api/tool_history.php', {
+                    action: 'logToolExecution',
+                    tool: toolName || 'unknown',
+                    parameters: parameters || {},
+                    status: 'error',
+                    result: {
+                        error: errorCode,
+                        message,
+                        phase: 'invocation',
+                        toolCallId
+                    },
+                    approvalTime: null,
+                    model: selectedModel || 'unknown'
+                });
+            } catch (error) {
+                console.error('呼び出し時エラーログ送信に失敗:', error);
+            }
+        };
         aiMsgBuffer = "";
         
         // ツール呼び出しバッファ（ストリーム対応）
@@ -1508,11 +1528,37 @@ export async function sendAIMessage({
                             args = JSON.parse(toolCall.function.arguments);
                         } catch (e) {
                             console.error("Failed to parse tool arguments:", e);
+                            await logToolInvocationError({
+                                toolName,
+                                parameters: { rawArguments: toolCall.function.arguments },
+                                errorCode: 'tool_arguments_parse_failed',
+                                message: '引数のJSONパースに失敗しました',
+                                toolCallId: toolCall.id || null
+                            });
                             toolResults.push({
                                 tool_call_id: toolCall.id,
                                 role: "tool",
                                 name: toolName,
                                 content: JSON.stringify({ success: false, error: "引数のパースに失敗しました" })
+                            });
+                            continue;
+                        }
+
+                        try {
+                            aiTool.getToolDefinition(toolName);
+                        } catch (e) {
+                            await logToolInvocationError({
+                                toolName,
+                                parameters: args,
+                                errorCode: 'unsupported_tool',
+                                message: `未対応のツールです: ${toolName}`,
+                                toolCallId: toolCall.id || null
+                            });
+                            toolResults.push({
+                                tool_call_id: toolCall.id,
+                                role: "tool",
+                                name: toolName,
+                                content: JSON.stringify({ success: false, error: "未対応のツールです" })
                             });
                             continue;
                         }

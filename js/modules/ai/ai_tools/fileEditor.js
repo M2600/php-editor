@@ -10,6 +10,7 @@ import { loadExplorer } from '../../core/file-manager.js';
 import { AceWrapper } from '../../../../MEditor/MEditor.js';
 import { hideAllPreviewer } from '../../utils/helpers.js';
 import { CONFIG } from '../../core/config.js';
+import { loadSelectedModel } from '../../utils/cookie.js';
 
 /**
  * 相対パスをベースディレクトリと結合して絶対パスにする
@@ -195,13 +196,15 @@ function resolveLatestContentForEdit(fullPath, diskContent, currentFile) {
  */
 async function logToolExecution(tool, parameters, status, result, approvalTime = null) {
     try {
+        const model = loadSelectedModel() || 'unknown';
         await api('/api/tool_history.php', {
             action: 'logToolExecution',
             tool: tool,
             parameters: parameters,
             status: status,
             result: result,
-            approvalTime: approvalTime
+            approvalTime: approvalTime,
+            model: model
         });
     } catch (error) {
         console.error('Failed to log tool execution:', error);

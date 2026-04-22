@@ -1,0 +1,145 @@
+[2025-09-06 04:27:18] [INFO] [PID:28614] [User:dev] File creation started | Context: {"path":"\/test\/generate_file.php"}
+[2025-09-06 04:27:18] [INFO] [PID:28614] [User:dev] File Operation: create | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","server_path":"\/home\/m260\/data\/php_editor\/sandbox\/dev\/test\/generate_file.php"}
+[2025-09-06 04:27:19] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/generate_file.php"}
+[2025-09-06 04:27:19] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.04,"file_type":"text","file_size_bytes":0,"path":"\/test\/generate_file.php"}
+[2025-09-06 04:28:04] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":99,"content":"<?php\n\n$path = '.file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:28:04] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.23,"path":"\/test\/generate_file.php","write_time_ms":0.19,"file_size_bytes":99}
+[2025-09-06 04:28:04] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":99}
+[2025-09-06 04:28:16] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:28:16] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.09,"path":"\/test\/generate_file.php","write_time_ms":0.05,"file_size_bytes":98}
+[2025-09-06 04:28:16] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:28:25] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/file.txt"}
+[2025-09-06 04:28:25] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.06,"file_type":"text","file_size_bytes":7,"path":"\/test\/file.txt"}
+[2025-09-06 04:28:25] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/generate_file.php"}
+[2025-09-06 04:28:25] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.04,"file_type":"text","file_size_bytes":98,"path":"\/test\/generate_file.php"}
+[2025-09-06 04:28:28] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:28:28] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.09,"path":"\/test\/generate_file.php","write_time_ms":0.05,"file_size_bytes":98}
+[2025-09-06 04:28:28] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:28:29] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:28:29] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.29,"path":"\/test\/generate_file.php","write_time_ms":0.24,"file_size_bytes":98}
+[2025-09-06 04:28:29] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:28:29] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:28:29] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.15,"path":"\/test\/generate_file.php","write_time_ms":0.1,"file_size_bytes":98}
+[2025-09-06 04:28:29] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:28:29] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:28:29] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.11,"path":"\/test\/generate_file.php","write_time_ms":0.05,"file_size_bytes":98}
+[2025-09-06 04:28:29] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:28:30] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/file.txt"}
+[2025-09-06 04:28:30] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.05,"file_type":"text","file_size_bytes":14,"path":"\/test\/file.txt"}
+[2025-09-06 04:28:31] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/generate_file.php"}
+[2025-09-06 04:28:31] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.05,"file_type":"text","file_size_bytes":98,"path":"\/test\/generate_file.php"}
+[2025-09-06 04:28:32] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:28:32] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.1,"path":"\/test\/generate_file.php","write_time_ms":0.06,"file_size_bytes":98}
+[2025-09-06 04:28:32] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:28:32] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:28:32] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.28,"path":"\/test\/generate_file.php","write_time_ms":0.23,"file_size_bytes":98}
+[2025-09-06 04:28:32] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:28:33] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/file.txt"}
+[2025-09-06 04:28:33] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.04,"file_type":"text","file_size_bytes":14,"path":"\/test\/file.txt"}
+[2025-09-06 04:28:34] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/generate_file.php"}
+[2025-09-06 04:28:34] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.04,"file_type":"text","file_size_bytes":98,"path":"\/test\/generate_file.php"}
+[2025-09-06 04:28:36] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/file.txt"}
+[2025-09-06 04:28:36] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.07,"file_type":"text","file_size_bytes":42,"path":"\/file.txt"}
+[2025-09-06 04:28:41] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/generate_file.php"}
+[2025-09-06 04:28:41] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.05,"file_type":"text","file_size_bytes":98,"path":"\/test\/generate_file.php"}
+[2025-09-06 04:30:12] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/generate_file.php"}
+[2025-09-06 04:30:12] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.04,"file_type":"text","file_size_bytes":98,"path":"\/test\/generate_file.php"}
+[2025-09-06 04:30:14] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:30:14] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.09,"path":"\/test\/generate_file.php","write_time_ms":0.05,"file_size_bytes":98}
+[2025-09-06 04:30:14] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:30:14] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:30:14] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.1,"path":"\/test\/generate_file.php","write_time_ms":0.06,"file_size_bytes":98}
+[2025-09-06 04:30:14] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:30:15] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:30:15] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.32,"path":"\/test\/generate_file.php","write_time_ms":0.28,"file_size_bytes":98}
+[2025-09-06 04:30:15] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:30:15] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:30:15] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.09,"path":"\/test\/generate_file.php","write_time_ms":0.05,"file_size_bytes":98}
+[2025-09-06 04:30:15] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:30:15] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:30:15] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.08,"path":"\/test\/generate_file.php","write_time_ms":0.05,"file_size_bytes":98}
+[2025-09-06 04:30:15] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:30:16] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/file.txt"}
+[2025-09-06 04:30:16] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.04,"file_type":"text","file_size_bytes":49,"path":"\/test\/file.txt"}
+[2025-09-06 04:30:17] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/generate_file.php"}
+[2025-09-06 04:30:17] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.05,"file_type":"text","file_size_bytes":98,"path":"\/test\/generate_file.php"}
+[2025-09-06 04:30:18] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:30:18] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.12,"path":"\/test\/generate_file.php","write_time_ms":0.07,"file_size_bytes":98}
+[2025-09-06 04:30:18] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:30:18] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:30:18] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.11,"path":"\/test\/generate_file.php","write_time_ms":0.06,"file_size_bytes":98}
+[2025-09-06 04:30:18] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:30:18] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:30:18] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.08,"path":"\/test\/generate_file.php","write_time_ms":0.05,"file_size_bytes":98}
+[2025-09-06 04:30:18] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:30:19] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/file.txt"}
+[2025-09-06 04:30:19] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.04,"file_type":"text","file_size_bytes":70,"path":"\/test\/file.txt"}
+[2025-09-06 04:30:19] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/generate_file.php"}
+[2025-09-06 04:30:19] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.05,"file_type":"text","file_size_bytes":98,"path":"\/test\/generate_file.php"}
+[2025-09-06 04:30:36] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/file.txt"}
+[2025-09-06 04:30:36] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.04,"file_type":"text","file_size_bytes":70,"path":"\/test\/file.txt"}
+[2025-09-06 04:30:37] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/generate_file.php"}
+[2025-09-06 04:30:37] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.04,"file_type":"text","file_size_bytes":98,"path":"\/test\/generate_file.php"}
+[2025-09-06 04:30:38] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:30:38] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.09,"path":"\/test\/generate_file.php","write_time_ms":0.06,"file_size_bytes":98}
+[2025-09-06 04:30:38] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:30:38] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:30:38] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.08,"path":"\/test\/generate_file.php","write_time_ms":0.05,"file_size_bytes":98}
+[2025-09-06 04:30:38] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:30:38] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:30:38] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.12,"path":"\/test\/generate_file.php","write_time_ms":0.07,"file_size_bytes":98}
+[2025-09-06 04:30:38] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:30:39] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/file.txt"}
+[2025-09-06 04:30:39] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.04,"file_type":"text","file_size_bytes":91,"path":"\/test\/file.txt"}
+[2025-09-06 04:30:40] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/generate_file.php"}
+[2025-09-06 04:30:40] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.04,"file_type":"text","file_size_bytes":98,"path":"\/test\/generate_file.php"}
+[2025-09-06 04:30:40] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:30:40] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.1,"path":"\/test\/generate_file.php","write_time_ms":0.06,"file_size_bytes":98}
+[2025-09-06 04:30:40] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:30:41] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:30:41] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.2,"path":"\/test\/generate_file.php","write_time_ms":0.15,"file_size_bytes":98}
+[2025-09-06 04:30:41] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:30:41] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"\/test\/generate_file.php","file_size_bytes":98,"content":"<?php\n\n$path = 'file.txt';\n$content = \"hello!\\n\";\nfile_put_contents($path, $content, FILE_APPEND);"}
+[2025-09-06 04:30:41] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.1,"path":"\/test\/generate_file.php","write_time_ms":0.06,"file_size_bytes":98}
+[2025-09-06 04:30:41] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"\/test\/generate_file.php","status":"SUCCESS","file_size_bytes":98}
+[2025-09-06 04:30:41] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/file.txt"}
+[2025-09-06 04:30:41] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.04,"file_type":"text","file_size_bytes":112,"path":"\/test\/file.txt"}
+[2025-09-06 04:30:43] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"\/test\/generate_file.php"}
+[2025-09-06 04:30:43] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.06,"file_type":"text","file_size_bytes":98,"path":"\/test\/generate_file.php"}
+[2025-09-06 07:29:51] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"textFile_thatNotTextOnMime.txt"}
+[2025-09-06 07:29:51] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":1.09,"file_type":"text","file_size_bytes":1705,"path":"textFile_thatNotTextOnMime.txt"}
+[2025-09-06 07:29:57] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"style.css"}
+[2025-09-06 07:29:57] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.4,"file_type":"text","file_size_bytes":39,"path":"style.css"}
+[2025-09-06 07:29:58] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"symbol.png"}
+[2025-09-06 07:29:58] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.56,"file_type":"image","file_size_bytes":25336,"path":"symbol.png"}
+[2025-09-06 07:29:59] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"style.css"}
+[2025-09-06 07:29:59] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.04,"file_type":"text","file_size_bytes":39,"path":"style.css"}
+[2025-09-06 07:29:59] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"status.txt"}
+[2025-09-06 07:29:59] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.18,"file_type":"text","file_size_bytes":25,"path":"status.txt"}
+[2025-09-06 07:30:00] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"status.php"}
+[2025-09-06 07:30:00] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.21,"file_type":"text","file_size_bytes":62,"path":"status.php"}
+[2025-09-06 07:30:00] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"sample.webp"}
+[2025-09-06 07:30:00] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":2.12,"file_type":"image","file_size_bytes":139216,"path":"sample.webp"}
+[2025-09-06 07:30:00] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"sample.pdf"}
+[2025-09-06 07:30:00] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.54,"file_type":"other","file_size_bytes":0,"path":"sample.pdf"}
+[2025-09-06 07:30:01] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"map.jpg"}
+[2025-09-06 07:30:01] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":3.26,"file_type":"image","file_size_bytes":1642612,"path":"map.jpg"}
+[2025-09-06 07:30:01] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"long.php"}
+[2025-09-06 07:30:01] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.27,"file_type":"text","file_size_bytes":2549,"path":"long.php"}
+[2025-09-06 07:30:01] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"generate.php"}
+[2025-09-06 07:30:01] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.18,"file_type":"text","file_size_bytes":379,"path":"generate.php"}
+[2025-09-06 07:30:02] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"c.js"}
+[2025-09-06 07:30:02] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.23,"file_type":"text","file_size_bytes":107,"path":"c.js"}
+[2025-09-06 07:30:02] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"b.php"}
+[2025-09-06 07:30:02] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":0.97,"file_type":"text","file_size_bytes":158,"path":"b.php"}
+[2025-09-06 07:30:02] [INFO] [PID:28614] [User:dev] File read started | Context: {"path":"a.php"}
+[2025-09-06 07:30:02] [INFO] [PID:28614] [User:dev] Performance: getFile completed | Context: {"duration_ms":1.03,"file_type":"text","file_size_bytes":22,"path":"a.php"}
+[2025-09-06 07:30:04] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"a.php","file_size_bytes":22,"content":"<?php\n\necho \"\/a.php\";\n"}
+[2025-09-06 07:30:04] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.29,"path":"a.php","write_time_ms":0.25,"file_size_bytes":22}
+[2025-09-06 07:30:04] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"a.php","status":"SUCCESS","file_size_bytes":22}
+[2025-09-06 07:30:05] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"a.php","file_size_bytes":22,"content":"<?php\n\necho \"\/a.php\";\n"}
+[2025-09-06 07:30:05] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.11,"path":"a.php","write_time_ms":0.07,"file_size_bytes":22}
+[2025-09-06 07:30:05] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"a.php","status":"SUCCESS","file_size_bytes":22}
+[2025-09-06 07:30:05] [INFO] [PID:28614] [User:dev] File save started | Context: {"path":"a.php","file_size_bytes":22,"content":"<?php\n\necho \"\/a.php\";\n"}
+[2025-09-06 07:30:05] [INFO] [PID:28614] [User:dev] Performance: saveFile completed | Context: {"duration_ms":0.09,"path":"a.php","write_time_ms":0.06,"file_size_bytes":22}
+[2025-09-06 07:30:05] [INFO] [PID:28614] [User:dev] File Operation: save | Context: {"path":"a.php","status":"SUCCESS","file_size_bytes":22}

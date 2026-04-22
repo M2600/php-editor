@@ -1,0 +1,176 @@
+{
+    "generatedAt": "2026-04-22 00:31:42",
+    "targetUser": "dev",
+    "window": {
+        "start": "2026-04-15",
+        "end": "2026-04-21",
+        "days": 7
+    },
+    "source": {
+        "logDir": "\/home\/m260\/syncPcloud\/php-editor\/test\/log_analysis\/log",
+        "selectedLogFiles": [
+            "\/home\/m260\/syncPcloud\/php-editor\/test\/log_analysis\/log\/php_editor_2026-04-16.log",
+            "\/home\/m260\/syncPcloud\/php-editor\/test\/log_analysis\/log\/php_editor_2026-04-17.log",
+            "\/home\/m260\/syncPcloud\/php-editor\/test\/log_analysis\/log\/php_editor_2026-04-19.log",
+            "\/home\/m260\/syncPcloud\/php-editor\/test\/log_analysis\/log\/php_editor_2026-04-20.log"
+        ]
+    },
+    "summary": {
+        "totalEvents": 13024,
+        "successCount": 12834,
+        "failureCount": 142,
+        "noChangeCount": 48,
+        "otherStatusCount": 0,
+        "successRate": 0.9891,
+        "failureRate": 0.0109,
+        "noChangeRate": 0.0037
+    },
+    "byTool": {
+        "createFile": {
+            "total": 90,
+            "successCount": 47,
+            "failureCount": 43,
+            "noChangeCount": 0,
+            "otherStatusCount": 0,
+            "successRate": 0.5222,
+            "failureRate": 0.4778,
+            "noChangeRate": 0,
+            "approvalTime": {
+                "count": 68,
+                "avgSec": 72.23,
+                "medianSec": 3.3905,
+                "p95Sec": 489.3176
+            }
+        },
+        "deleteFile": {
+            "total": 1,
+            "successCount": 0,
+            "failureCount": 1,
+            "noChangeCount": 0,
+            "otherStatusCount": 0,
+            "successRate": 0,
+            "failureRate": 1,
+            "noChangeRate": 0,
+            "approvalTime": {
+                "count": 0,
+                "avgSec": null,
+                "medianSec": null,
+                "p95Sec": null
+            }
+        },
+        "editFileByLines": {
+            "total": 111,
+            "successCount": 77,
+            "failureCount": 34,
+            "noChangeCount": 0,
+            "otherStatusCount": 0,
+            "successRate": 0.6937,
+            "failureRate": 0.3063,
+            "noChangeRate": 0,
+            "approvalTime": {
+                "count": 77,
+                "avgSec": 61.4914,
+                "medianSec": 4.249,
+                "p95Sec": 28.7532
+            }
+        },
+        "editFileByReplace": {
+            "total": 131,
+            "successCount": 51,
+            "failureCount": 32,
+            "noChangeCount": 48,
+            "otherStatusCount": 0,
+            "successRate": 0.6145,
+            "failureRate": 0.3855,
+            "noChangeRate": 0.3664,
+            "approvalTime": {
+                "count": 51,
+                "avgSec": 100.0348,
+                "medianSec": 4.445,
+                "p95Sec": 133.165
+            }
+        },
+        "ls": {
+            "total": 85,
+            "successCount": 81,
+            "failureCount": 4,
+            "noChangeCount": 0,
+            "otherStatusCount": 0,
+            "successRate": 0.9529,
+            "failureRate": 0.0471,
+            "noChangeRate": 0,
+            "approvalTime": {
+                "count": 0,
+                "avgSec": null,
+                "medianSec": null,
+                "p95Sec": null
+            }
+        },
+        "readFile": {
+            "total": 12500,
+            "successCount": 12472,
+            "failureCount": 28,
+            "noChangeCount": 0,
+            "otherStatusCount": 0,
+            "successRate": 0.9978,
+            "failureRate": 0.0022,
+            "noChangeRate": 0,
+            "approvalTime": {
+                "count": 0,
+                "avgSec": null,
+                "medianSec": null,
+                "p95Sec": null
+            }
+        },
+        "searchFiles": {
+            "total": 106,
+            "successCount": 106,
+            "failureCount": 0,
+            "noChangeCount": 0,
+            "otherStatusCount": 0,
+            "successRate": 1,
+            "failureRate": 0,
+            "noChangeRate": 0,
+            "approvalTime": {
+                "count": 0,
+                "avgSec": null,
+                "medianSec": null,
+                "p95Sec": null
+            }
+        }
+    },
+    "byModel": {
+        "unknown": {
+            "total": 13024,
+            "successCount": 12834,
+            "failureCount": 142,
+            "noChangeCount": 48,
+            "otherStatusCount": 0,
+            "successRate": 0.9891,
+            "failureRate": 0.0109,
+            "noChangeRate": 0.0037
+        }
+    },
+    "errorCategories": {
+        "other": 78,
+        "not_found": 27,
+        "replace_miss": 26,
+        "path_validation": 7,
+        "unknown": 4
+    },
+    "readPerformance": {
+        "count": 13598,
+        "avgMs": 0.0507,
+        "medianMs": 0.05,
+        "p95Ms": 0.07,
+        "minMs": 0.03,
+        "maxMs": 4.16
+    },
+    "validation": {
+        "invalidJsonLines": 0,
+        "aiToolExecutionMissingStatus": 0,
+        "statusCoverageOk": true,
+        "classificationTotal": 13024,
+        "classificationMatchesTotalEvents": true
+    }
+}

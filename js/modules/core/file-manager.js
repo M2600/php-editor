@@ -419,6 +419,8 @@ export async function loadExplorer(path, api, appState, editor) {
     let url = new URL(window.location.href);
     url.searchParams.set("dir", path);
     window.history.pushState({}, "", url);
+    // ウィンドウタイトルにパスを反映
+    document.title = path + " - PHP Editor";
 
     await api("/api/file_manager.php", body=body)
     .then(async data =>  {

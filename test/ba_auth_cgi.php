@@ -11,7 +11,7 @@ if ($code !== null) {
 	// CSRF対策: stateパラメータの検証
 	if (!hash_equals($originalState, $returnedState)) {
 		echo "stateが一致しません。やり直してください。";
-		echo "<br><a href='ba_auth.php'>再試行</a>";
+		echo "<br><a href='ba_auth_cgi.php'>再試行</a>";
 		exit();
 	}
 

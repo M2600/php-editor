@@ -558,6 +558,7 @@ async function main(){
                 return;
             }
             console.log("QR Code: " + APP_STATE.CURRENT_FILE.path);
+            window.logInfo?.("show_qr_code", { source: "user_action", file: APP_STATE.CURRENT_FILE.path });
             // dictMenuからGETパラメータを取得
             const getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
             showQRCode(

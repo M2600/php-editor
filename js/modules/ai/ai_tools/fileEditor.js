@@ -278,10 +278,12 @@ async function showEditConfirmation(editor, file, newContent, startTime) {
         if (isTemporaryFile) {
             console.warn('ファイルがエディタで開かれていないため、一時的なAceエディタを作成します');
             
-            // 既存のファイルから現在の内容を取得（APIから読み込む必要がある場合もある）
-            const currentContent = (file && file.aceObj && file.aceObj.editor) 
-                ? file.aceObj.editor.getValue() 
-                : '';
+            // 既存のファイルから現在の内容を取得
+            // 未オープン時は呼び出し元が渡す編集前内容（file.content）を比較元にする
+            // （空文字列のままだと部分編集でも全文が新規追加としてdiff表示される）
+            const currentContent = (file && file.aceObj && file.aceObj.editor)
+                ? file.aceObj.editor.getValue()
+                : (file && typeof file.content === 'string' ? file.content : '');
             
             // 一時的なDOM要素を作成（エディタ領域に配置）
             tempAceDOM = document.createElement("div");
@@ -1195,10 +1197,11 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                 // エディタが利用可能な場合
                 // ファイルが開かれているかどうかに関わらず、showEditConfirmation を呼び出し
                 // ファイルが開かれていない場合は簡易確認が表示される
-                const fileForConfirmation = currentFile && currentFile.path === fullPath 
-                    ? currentFile 
-                    : { path: fullPath, aceObj: null };  // ファイルが開かれていない場合
-                
+                const fileForConfirmation = currentFile && currentFile.path === fullPath
+                    ? currentFile
+                    // ファイルが開かれていない場合: 編集前内容を渡してdiffの比較元にする
+                    : { path: fullPath, aceObj: null, content: currentContent };
+
                 const confirmation = await showEditConfirmation(editor, fileForConfirmation, newContent, startTime);
                 approved = confirmation.approved;
                 approvalTime = confirmation.approvalTime;
@@ -1473,10 +1476,11 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
                 // エディタが利用可能な場合
                 // ファイルが開かれているかどうかに関わらず、showEditConfirmation を呼び出し
                 // ファイルが開かれていない場合は簡易確認が表示される
-                const fileForConfirmation = currentFile && currentFile.path === fullPath 
-                    ? currentFile 
-                    : { path: fullPath, aceObj: null };  // ファイルが開かれていない場合
-                
+                const fileForConfirmation = currentFile && currentFile.path === fullPath
+                    ? currentFile
+                    // ファイルが開かれていない場合: 編集前内容を渡してdiffの比較元にする
+                    : { path: fullPath, aceObj: null, content: currentContent };
+
                 const confirmation = await showEditConfirmation(editor, fileForConfirmation, updatedContent, startTime);
                 approved = confirmation.approved;
                 approvalTime = confirmation.approvalTime;

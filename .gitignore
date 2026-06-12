@@ -5,6 +5,8 @@
 /user-programs
 /server_config
 
+/test
+
 # API設定ファイル（機密情報を含む）
 /api/ai_config.php
 /api/config.php

@@ -119,100 +119,105 @@ function isImportantToolMessage($msg) {
 function compressMessages($messages, $maxTokens = 3000) {
     // 現在のトークン数を概算
     $currentTokens = estimateTokenCount($messages);
-    
+
     if ($currentTokens <= $maxTokens) {
         return $messages; // 圧縮不要
     }
-    
-    // ツールメッセージと通常メッセージを分離
-    $toolMessages = [];
-    $normalMessages = [];
-    
-    foreach ($messages as $msg) {
-        if (isImportantToolMessage($msg)) {
-            $toolMessages[] = $msg;
-        } else {
-            $normalMessages[] = $msg;
-        }
-    }
-    
-    // 最新のメッセージから必須メッセージ数を決定
-    // 最低でも最新3往復分（6件）は保護する
+
+    // メッセージの順序を変えるとassistantのtool_callsとtool結果のペアが壊れるため、
+    // 元の順序を保ったまま「残すメッセージ」を選択する
+    $count = count($messages);
+    $keep = array_fill(0, $count, false);
+
+    // 最低でも最新3往復分（6件）と重要なツール結果は保護する
     $minProtectedCount = 6;
-    $protectedMessages = array_slice($normalMessages, -$minProtectedCount);
-    $protectedTokens = estimateTokenCount($protectedMessages) + estimateTokenCount($toolMessages);
-    
-    // 保護メッセージだけで既に上限を超えている場合は保護メッセージのみ返す
-    if ($protectedTokens >= $maxTokens) {
-        // AIの制約により、会話履歴は必ず'role': 'user'から始める必要がある
-        $finalMessages = array_merge($toolMessages, $protectedMessages);
-        while (count($finalMessages) > 0 && $finalMessages[0]['role'] !== 'user') {
-            array_shift($finalMessages);
+    $protectedStart = max(0, $count - $minProtectedCount);
+    for ($i = 0; $i < $count; $i++) {
+        if ($i >= $protectedStart || isImportantToolMessage($messages[$i])) {
+            $keep[$i] = true;
         }
-        return $finalMessages;
     }
-    
-    // 利用可能なトークン数
-    $availableTokens = $maxTokens - $protectedTokens;
-    
-    // 古いメッセージから順に追加していく
-    $oldMessages = array_slice($normalMessages, 0, -$minProtectedCount);
-    $selectedMessages = [];
-    $selectedTokens = 0;
-    
-    // 古いメッセージを逆順（新しい方から）で選別
-    for ($i = count($oldMessages) - 1; $i >= 0; $i--) {
-        $msg = $oldMessages[$i];
-        $msgTokens = estimateTokenCount([$msg]);
-        
-        // このメッセージを追加してもトークン数の制限内か確認
-        if ($selectedTokens + $msgTokens <= $availableTokens) {
-            array_unshift($selectedMessages, $msg);
-            $selectedTokens += $msgTokens;
+
+    // 保護メッセージのトークン数を差し引いた残り予算
+    $protectedMessages = [];
+    foreach ($messages as $i => $msg) {
+        if ($keep[$i]) {
+            $protectedMessages[] = $msg;
+        }
+    }
+    $availableTokens = $maxTokens - estimateTokenCount($protectedMessages);
+
+    // 新しい方から順に、予算内で残りのメッセージを保持する
+    $droppedUserContents = [];
+    for ($i = $count - 1; $i >= 0; $i--) {
+        if ($keep[$i]) {
+            continue;
+        }
+        $msgTokens = estimateTokenCount([$messages[$i]]);
+        if ($availableTokens >= $msgTokens) {
+            $keep[$i] = true;
+            $availableTokens -= $msgTokens;
         } else {
-            // トークン数の制限に達した場合は古いメッセージを要約
-            if (count($oldMessages) - $i - 1 > 0) {
-                // 選別されなかったメッセージを要約
-                $unselectedMessages = array_slice($oldMessages, 0, count($oldMessages) - $i - 1);
-                $summaryContent = "これまでの会話要約:\n";
-                
-                $topics = [];
-                foreach ($unselectedMessages as $msg) {
-                    if ($msg['role'] === 'user') {
-                        $content = $msg['content'];
-                        if (!is_string($content)) {
-                            continue;
-                        }
-                        if (mb_strlen($content) > 100) {
-                            $content = mb_substr($content, 0, 100) . '...';
-                        }
-                        $topics[] = "- " . $content;
+            // 予算切れ: これより古いメッセージは要約対象として収集
+            for ($j = $i; $j >= 0; $j--) {
+                if (!$keep[$j] && $messages[$j]['role'] === 'user' && is_string($messages[$j]['content'] ?? null)) {
+                    $content = $messages[$j]['content'];
+                    if (mb_strlen($content) > 100) {
+                        $content = mb_substr($content, 0, 100) . '...';
                     }
-                }
-                
-                if (count($topics) > 0) {
-                    $summaryContent .= implode("\n", $topics);
-                    $summaryMessage = [
-                        'role' => 'system',
-                        'content' => $summaryContent
-                    ];
-                    $selectedMessages = array_merge([$summaryMessage], $selectedMessages);
+                    array_unshift($droppedUserContents, "- " . $content);
                 }
             }
             break;
         }
     }
-    
-    // 最終的なメッセージを構築
-    // ツールメッセージを最初に保持し、その後通常メッセージを続ける
-    $finalMessages = array_merge($toolMessages, $selectedMessages, $protectedMessages);
-    
-    // AIの制約により、会話履歴は必ず'role': 'user'から始める必要がある
-    // 先頭がuserでない場合は、userになるまでメッセージをカット
-    while (count($finalMessages) > 0 && $finalMessages[0]['role'] !== 'user') {
-        array_shift($finalMessages);
+
+    $finalMessages = [];
+    if (count($droppedUserContents) > 0) {
+        // 要約自体が予算を圧迫しないよう直近5件に制限する
+        $omittedCount = count($droppedUserContents) - 5;
+        $droppedUserContents = array_slice($droppedUserContents, -5);
+        $summaryContent = "これまでの会話要約:\n" . implode("\n", $droppedUserContents);
+        if ($omittedCount > 0) {
+            $summaryContent .= "\n（他{$omittedCount}件の古い質問は省略）";
+        }
+        $finalMessages[] = [
+            'role' => 'system',
+            'content' => $summaryContent
+        ];
     }
-    
+    foreach ($messages as $i => $msg) {
+        if ($keep[$i]) {
+            $finalMessages[] = $msg;
+        }
+    }
+
+    // tool_callsを持つassistantメッセージが削除された場合、対応するtool結果は孤児になり
+    // APIエラーの原因になるため除去する
+    $validToolCallIds = [];
+    foreach ($finalMessages as $msg) {
+        if (($msg['role'] ?? '') === 'assistant' && isset($msg['tool_calls']) && is_array($msg['tool_calls'])) {
+            foreach ($msg['tool_calls'] as $toolCall) {
+                if (isset($toolCall['id'])) {
+                    $validToolCallIds[$toolCall['id']] = true;
+                }
+            }
+        }
+    }
+    $finalMessages = array_values(array_filter($finalMessages, function ($msg) use ($validToolCallIds) {
+        if (($msg['role'] ?? '') !== 'tool') {
+            return true;
+        }
+        return isset($msg['tool_call_id']) && isset($validToolCallIds[$msg['tool_call_id']]);
+    }));
+
+    // AIの制約により、会話履歴は必ず'role': 'user'から始める必要がある
+    // 先頭がuserでない場合は、userになるまでメッセージをカット（先頭の要約systemメッセージは除く）
+    $offset = (count($finalMessages) > 0 && ($finalMessages[0]['role'] ?? '') === 'system') ? 1 : 0;
+    while (count($finalMessages) > $offset && ($finalMessages[$offset]['role'] ?? '') !== 'user') {
+        array_splice($finalMessages, $offset, 1);
+    }
+
     return $finalMessages;
 }
 

@@ -100,6 +100,43 @@ function getLineCount(text) {
     return text.split('\n').length;
 }
 
+// readFile出力でモデルに提示する行番号プレフィックス（例: "00042| "）
+const LINE_NUMBER_PREFIX_REGEX = /^\s*\d{1,6}\| ?/;
+
+/**
+ * モデル提示用に行番号プレフィックス付きのプレーンテキストを生成
+ * 二重JSONエンコードを避けるため、ツール結果の content にはこの文字列をそのまま使う
+ */
+function formatContentForLLM(content, startLineNumber, header) {
+    const MAX_LLM_CONTENT_LENGTH = 50000;
+    const numbered = content.split('\n').map((line, i) =>
+        String(startLineNumber + i).padStart(5, '0') + '| ' + line
+    );
+    let body = numbered.join('\n');
+    if (body.length > MAX_LLM_CONTENT_LENGTH) {
+        body = body.substring(0, MAX_LLM_CONTENT_LENGTH) +
+            '\n[出力が長いため以降を省略しました。続きは startLine/endLine を指定して readFile で再取得してください]';
+    }
+    return header + '\n' + body;
+}
+
+/**
+ * 全行に行番号プレフィックスが付いたテキストからプレフィックスを除去
+ * モデルが readFile 出力をそのまま転記したケースの救済用
+ * 該当しない場合は null を返す
+ */
+function stripLineNumberPrefixes(text) {
+    if (typeof text !== 'string' || text.length === 0) {
+        return null;
+    }
+    const lines = text.split('\n');
+    const prefixedCount = lines.filter(l => LINE_NUMBER_PREFIX_REGEX.test(l)).length;
+    if (prefixedCount === 0 || !lines.every(l => l.trim() === '' || LINE_NUMBER_PREFIX_REGEX.test(l))) {
+        return null;
+    }
+    return lines.map(l => l.replace(LINE_NUMBER_PREFIX_REGEX, '')).join('\n');
+}
+
 /**
  * 行単位の追加/削除数を計算（LCSベース）
  */
@@ -641,13 +678,15 @@ export async function createFile(filename, content, options = {}) {
  * ファイルを読み込み（行範囲制限対応）
  */
 export async function readFile(filename, options = {}) {
-    const { 
-        api: apiFunc, 
-        mConsole, 
+    const {
+        api: apiFunc,
+        mConsole,
         baseDir,
         startLine = null,
         endLine = null,
-        maxLines = 100
+        maxLines = 100,
+        // 編集ツール内部からの読み込みでは行番号整形をスキップする
+        numberLines = true
     } = options;
     
     try {
@@ -722,6 +761,7 @@ export async function readFile(filename, options = {}) {
             return {
                 success: true,
                 content: content,
+                ...(numberLines ? { llmContent: formatContentForLLM(content, start, `✅ ${filename} (${start}-${end}行目 / 全${totalLines}行)`) } : {}),
                 path: filename,
                 lineRange: { start, end, total: totalLines },
                 message: `✅ ${filename} (${start}-${end}/${totalLines})`,
@@ -780,6 +820,7 @@ export async function readFile(filename, options = {}) {
         return {
             success: true,
             content: fullContent,
+            ...(numberLines ? { llmContent: formatContentForLLM(fullContent, 1, `✅ ${filename} (全${totalLines}行)`) } : {}),
             path: filename,
             totalLines: totalLines,
             message: `✅ ${filename} (${totalLines})`,
@@ -863,7 +904,8 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
             api: apiFunc,
             baseDir,
             // 置換はファイル全体が必要なため、構造要約への圧縮を無効化
-            maxLines: Number.MAX_SAFE_INTEGER
+            maxLines: Number.MAX_SAFE_INTEGER,
+            numberLines: false
         });
         if (!fileContent.success) {
             throw new Error(fileContent.message);
@@ -939,6 +981,24 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
             return sourceText.substring(0, matchStart) +
                 replaceValue +
                 sourceText.substring(matchStart + findText.length);
+        };
+
+        // 一致箇所が1件のみの場合に限り完全一致で置換する（フォールバック用）
+        const applySingleExactReplace = (sourceText, findText, replaceValue) => {
+            if (!findText || findText.length === 0) {
+                return sourceText;
+            }
+            const first = sourceText.indexOf(findText);
+            if (first === -1) {
+                return sourceText;
+            }
+            if (sourceText.indexOf(findText, first + findText.length) !== -1) {
+                // 複数一致は危険なので自動置換しない
+                return sourceText;
+            }
+            return sourceText.substring(0, first) +
+                replaceValue +
+                sourceText.substring(first + findText.length);
         };
 
         // 小型モデルが searchText 転記時に空白を落とすケース向けの最終フォールバック
@@ -1027,6 +1087,43 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                     matchMethod = 'fuzzy_whitespace';
                 }
             }
+
+            // readFile出力の行番号プレフィックス（00042| ）を転記してしまったケースを救済
+            if (newContent === currentContent) {
+                const strippedSearch = stripLineNumberPrefixes(normalizedSearch);
+                if (strippedSearch !== null) {
+                    const strippedReplace = stripLineNumberPrefixes(normalizedReplace) ?? normalizedReplace;
+                    const strippedReplaced = applySingleExactReplace(normalizedCurrent, strippedSearch, strippedReplace);
+
+                    if (strippedReplaced !== normalizedCurrent) {
+                        const hasCRLF = /\r\n/.test(currentContent);
+                        const hasLFOnly = /(^|[^\r])\n/.test(currentContent);
+                        newContent = (hasCRLF && !hasLFOnly)
+                            ? strippedReplaced.replace(/\n/g, '\r\n')
+                            : strippedReplaced;
+                        matchMethod = 'line_prefix_stripped';
+                    }
+                }
+            }
+
+            // JSONエスケープ風の転記（\" や \|）を戻して救済
+            if (newContent === currentContent && /\\["|]/.test(normalizedSearch)) {
+                const unescapeArtifacts = (s) => s.replace(/\\(["|])/g, '$1');
+                const unescapedReplaced = applySingleExactReplace(
+                    normalizedCurrent,
+                    unescapeArtifacts(normalizedSearch),
+                    unescapeArtifacts(normalizedReplace)
+                );
+
+                if (unescapedReplaced !== normalizedCurrent) {
+                    const hasCRLF = /\r\n/.test(currentContent);
+                    const hasLFOnly = /(^|[^\r])\n/.test(currentContent);
+                    newContent = (hasCRLF && !hasLFOnly)
+                        ? unescapedReplaced.replace(/\n/g, '\r\n')
+                        : unescapedReplaced;
+                    matchMethod = 'unescaped';
+                }
+            }
         }
         
         // 変更がない場合
@@ -1056,9 +1153,10 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                 hints.push('複数行ブロックがずれている可能性があります。見出し単位で再検索するか editFileByLines も検討してください');
             }
             hints.push('スペース・タブ差分で一致しない場合があります。必要なら editFileByLines の利用も検討してください');
+            hints.push('searchTextにはファイルの生テキストをそのまま指定してください。readFile出力の行番号プレフィックス（00042| ）やエスケープ（\\" など）は含めないでください');
             const attemptedMethods = regex
                 ? ['regex']
-                : ['exact', 'normalized_newline', 'case_insensitive_single', 'fuzzy_whitespace'];
+                : ['exact', 'normalized_newline', 'case_insensitive_single', 'fuzzy_whitespace', 'line_prefix_stripped', 'unescaped'];
             await logToolExecution('editFileByReplace', 
                 {
                     filename,
@@ -1318,7 +1416,8 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
             api: apiFunc,
             baseDir,
             // 行単位編集では全体行番号が必要なため、構造要約への圧縮を無効化
-            maxLines: Number.MAX_SAFE_INTEGER
+            maxLines: Number.MAX_SAFE_INTEGER,
+            numberLines: false
         });
         if (!fileContent.success) {
             throw new Error(fileContent.message);
@@ -1340,8 +1439,12 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
             throw new Error(`無効な行番号: ${normalizedLineStart}-${normalizedLineEnd} (全${lines.length}行)`);
         }
         
+        // モデルが readFile 出力の行番号プレフィックス（00042| ）ごと転記した場合は除去する
+        const strippedNewContent = stripLineNumberPrefixes(newContent);
+        const effectiveNewContent = strippedNewContent !== null ? strippedNewContent : newContent;
+
         // 新しい内容を生成
-        const newLines = newContent.split('\n');
+        const newLines = effectiveNewContent.split('\n');
 
         // モデルが前後コンテキスト行を含めてしまうと重複が起きるため、境界1行だけ安全に除去する
         const lineBeforeRange = normalizedLineStart > 1 ? lines[normalizedLineStart - 2] : null;
@@ -2065,13 +2168,38 @@ export async function searchFiles(query, options = {}) {
                 displayMessage += `\n... 他${results.length - 3}件`;
             }
         }
-        
+
+        // モデル提示用のgrep形式テキスト（file:line: 内容）
+        // 行番号と実テキストをそのまま渡し、editFileByReplace/editFileByLinesの精度を上げる
+        const truncateLine = (s) => (s.length > 200 ? s.substring(0, 200) + '…' : s);
+        const llmLines = [`✅ "${query}"${regexInfo} の検索結果: ${results.length}件ヒット (${filesSearched}ファイル検索${patternInfo})`];
+        if (results.length === 0) {
+            llmLines.push('一致はありませんでした。');
+        }
+        for (const result of results) {
+            if (result.matchType === 'filename') {
+                llmLines.push(`${result.file} (ファイル名一致)`);
+                continue;
+            }
+            for (const match of result.matches) {
+                if (Array.isArray(match.context) && match.context.length > 1) {
+                    for (const ctx of match.context) {
+                        llmLines.push(`${result.file}:${ctx.lineNum}${ctx.isMatch ? ':' : '-'} ${truncateLine(ctx.content)}`);
+                    }
+                    llmLines.push('--');
+                } else {
+                    llmLines.push(`${result.file}:${match.line}: ${truncateLine(match.content)}`);
+                }
+            }
+        }
+
         return {
             success: true,
             query: query,
             filesSearched: filesSearched,
             resultsCount: results.length,
             results: results,
+            llmContent: llmLines.join('\n'),
             message: displayMessage,
             historyMeta: {
                 operation: 'search',

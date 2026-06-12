@@ -136,95 +136,31 @@ function compressToolResult(toolResult) {
     const MAX_CONTENT_LENGTH = 2000; // 2000文字以上は圧縮対象
     
     // contentをパース
+    // readFile / searchFiles はプレーンテキスト（llmContent）で渡されるため、
+    // ここではJSONパースに失敗してそのまま素通りする（圧縮しない）
     let parsedContent;
     try {
-        parsedContent = typeof toolResult.content === 'string' 
-            ? JSON.parse(toolResult.content) 
+        parsedContent = typeof toolResult.content === 'string'
+            ? JSON.parse(toolResult.content)
             : toolResult.content;
     } catch (e) {
         // パースできない場合はそのまま返す
         return toolResult;
     }
-    
+
     const contentStr = JSON.stringify(parsedContent);
 
-    // searchFilesは結果自体が大きくなりやすいため、常に短い要約へ変換する
-    if (toolResult.name === 'searchFiles' && parsedContent.results) {
-        const summaryLines = [];
-        const query = parsedContent.query || '';
-        const resultsCount = parsedContent.resultsCount ?? (Array.isArray(parsedContent.results) ? parsedContent.results.length : 0);
-        const filesSearched = parsedContent.filesSearched ?? '-';
-
-        if (parsedContent.message && typeof parsedContent.message === 'string') {
-            summaryLines.push(parsedContent.message.trim());
-        } else if (query) {
-            summaryLines.push(`✅ searchFiles: "${query}"`);
-        } else {
-            summaryLines.push('✅ searchFiles: 検索結果');
-        }
-
-        summaryLines.push(`ヒット: ${resultsCount}件 / 検索ファイル数: ${filesSearched}件`);
-
-        const sampleResults = parsedContent.results.slice(0, 3);
-        if (sampleResults.length > 0) {
-            summaryLines.push('主な対象:');
-            for (const result of sampleResults) {
-                if (result.matchType === 'filename') {
-                    summaryLines.push(`- ${result.file} (ファイル名一致)`);
-                } else {
-                    const matchCount = result.matchCount ?? (Array.isArray(result.matches) ? result.matches.length : 0);
-                    summaryLines.push(`- ${result.file} (${matchCount}箇所)`);
-                }
-            }
-            if (parsedContent.results.length > sampleResults.length) {
-                summaryLines.push(`... 他${parsedContent.results.length - sampleResults.length}件`);
-            }
-        }
-
-        return {
-            ...toolResult,
-            content: summaryLines.join('\n'),
-            compressed: true,
-            summaryType: 'searchFiles',
-            originalResultsCount: resultsCount,
-            originalFilesSearched: filesSearched
-        };
-    }
-    
     // 小さい結果はそのまま返す
     if (contentStr.length <= MAX_CONTENT_LENGTH) {
         return toolResult;
     }
-    
+
     // 圧縮処理
     const compressed = { ...parsedContent };
     let compressionApplied = false;
-    
-    // readFileの結果圧縮
-    if (toolResult.name === 'readFile' && parsedContent.content) {
-        const contentLength = parsedContent.content.length;
-        if (contentLength > MAX_CONTENT_LENGTH) {
-            // 構造情報がある場合はそれを優先
-            if (parsedContent.structure) {
-                compressed.content = `[圧縮済み: ${contentLength}文字]\n\n構造情報:\n${JSON.stringify(parsedContent.structure, null, 2)}`;
-                compressed.compressed = true;
-                compressed.originalLength = contentLength;
-                compressionApplied = true;
-            } else {
-                // 構造情報がない場合は冒頭と末尾のみ保持
-                const head = parsedContent.content.substring(0, 500);
-                const tail = parsedContent.content.substring(contentLength - 500);
-                compressed.content = `[圧縮済み: ${contentLength}文字]\n\n=== 冒頭500文字 ===\n${head}\n\n=== 末尾500文字 ===\n${tail}`;
-                compressed.compressed = true;
-                compressed.originalLength = contentLength;
-                compressed.hint = "完全な内容が必要な場合は、startLineとendLineを指定して再度readFileを実行してください";
-                compressionApplied = true;
-            }
-        }
-    }
-    
-    // searchFilesの結果圧縮
-    else if (toolResult.name === 'searchFiles' && parsedContent.results) {
+
+    // searchFilesの結果圧縮（llmContent非対応の旧形式向けフォールバック）
+    if (toolResult.name === 'searchFiles' && parsedContent.results) {
         const resultsCount = parsedContent.results.length;
         if (resultsCount > 20) {
             // 結果が多すぎる場合は最初の20件のみ保持
@@ -1637,11 +1573,15 @@ export async function sendAIMessage({
                         
                         // ツール実行結果を履歴に追加
                         const historyMeta = sanitizeToolHistoryMeta(result?.historyMeta, toolName);
+                        // llmContent があればプレーンテキストのまま渡す
+                        // （JSON二重エンコードを避け、小型モデルがエスケープ文字を転記する事故を防ぐ）
                         const toolContent = (result && typeof result === 'object' && !Array.isArray(result))
-                            ? (() => {
-                                const { historyMeta, ...resultForModel } = result;
-                                return JSON.stringify(resultForModel);
-                            })()
+                            ? (typeof result.llmContent === 'string'
+                                ? result.llmContent
+                                : (() => {
+                                    const { historyMeta, llmContent, ...resultForModel } = result;
+                                    return JSON.stringify(resultForModel);
+                                })())
                             : JSON.stringify(result);
 
                         toolResults.push({

@@ -34,7 +34,7 @@ export const FILE_EDITOR_TOOLS = [
         type: "function",
         function: {
             name: "readFile",
-            description: "ファイルの内容を読み込みます。大きいファイルは構造要約のみ返るので、必要な箇所は startLine と endLine で指定してください。",
+            description: "ファイルの内容を読み込みます。大きいファイルは構造要約のみ返るので、必要な箇所は startLine と endLine で指定してください。出力の各行には「00042| 」形式の行番号プレフィックスが付きます。行番号はファイル内容ではないため、editFileByReplace の searchText や editFileByLines の newContent には含めないでください。行番号は editFileByLines の lineStart/lineEnd にそのまま使えます。",
             parameters: {
                 type: "object",
                 properties: {
@@ -77,7 +77,7 @@ export const FILE_EDITOR_TOOLS = [
                     },
                     searchText: {
                         type: "string",
-                        description: "検索する文字列または正規表現パターン"
+                        description: "ファイルに実際に存在するテキストをそのまま指定（完全一致）。エスケープや正規表現は不要です（options.regex=true のときのみ正規表現として解釈）。readFile出力の行番号プレフィックス（00042| ）は含めないでください"
                     },
                     replaceText: {
                         type: "string",
@@ -133,7 +133,7 @@ export const FILE_EDITOR_TOOLS = [
                     },
                     newContent: {
                         type: "string",
-                        description: "置き換える新しい内容"
+                        description: "lineStart〜lineEnd の範囲を置き換える内容のみを指定。範囲外の前後コンテキスト行や行番号プレフィックス（00042| ）は含めないでください"
                     }
                 },
                 required: ["filename", "lineStart", "lineEnd", "newContent"]

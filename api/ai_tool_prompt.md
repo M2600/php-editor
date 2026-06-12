@@ -48,8 +48,13 @@ lsコマンドでカレントディレクトリ内のファイル一覧を取得
 
 ## 2. 編集フェーズ（コード変更）
 - 必ず編集対象の現在の内容を `readFile` で確認
-- 小規模な変更: `editFileByReplace`（regex未指定時は完全一致。失敗時は caseSensitive=false または regex=true を検討）
-- 正確な行範囲指定: `editFileByLines`
+- `readFile` の出力は各行に「00042| 」形式の行番号プレフィックスが付く。**これはファイル内容ではない**
+  - searchText / newContent に行番号プレフィックスを含めない
+  - 行番号は `editFileByLines` の lineStart / lineEnd にそのまま使える
+- 小規模な変更: `editFileByReplace`
+  - searchText は readFile で確認したファイルの生テキストを**そのままコピー**する（完全一致）
+  - `\"` や `\|` のようなエスケープは不要。正規表現も不要（options.regex=true 指定時のみ）
+- 正確な行範囲指定: `editFileByLines`（newContent は指定範囲を置き換える内容のみ。前後のコンテキスト行を含めない）
 - 新規ファイル: `createFile`
 - 変更後は必ず `readFile` で確認
 

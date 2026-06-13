@@ -10,6 +10,7 @@ import { loadExplorer } from '../../core/file-manager.js';
 import { AceWrapper } from '../../../../MEditor/MEditor.js';
 import { hideAllPreviewer } from '../../utils/helpers.js';
 import { CONFIG } from '../../core/config.js';
+import { loadSelectedModel } from '../../utils/cookie.js';
 
 /**
  * 相対パスをベースディレクトリと結合して絶対パスにする
@@ -18,6 +19,10 @@ import { CONFIG } from '../../core/config.js';
  * @returns {string} - 結合された絶対パス
  */
 function resolveFilePath(filePath, baseDir) {
+    if (typeof filePath !== 'string' || filePath.trim() === '') {
+        throw new Error('ファイルパスが不正です。filename を確認してください');
+    }
+
     // 既に絶対パスの場合はそのまま返す
     if (filePath.startsWith('/')) {
         return filePath;
@@ -86,17 +91,157 @@ function validateFilePath(filePath, baseDir) {
 }
 
 /**
+ * 文字列から行数を取得
+ */
+function getLineCount(text) {
+    if (typeof text !== 'string' || text.length === 0) {
+        return 0;
+    }
+    return text.split('\n').length;
+}
+
+// readFile出力でモデルに提示する行番号プレフィックス（例: "00042| "）
+const LINE_NUMBER_PREFIX_REGEX = /^\s*\d{1,6}\| ?/;
+
+/**
+ * モデル提示用に行番号プレフィックス付きのプレーンテキストを生成
+ * 二重JSONエンコードを避けるため、ツール結果の content にはこの文字列をそのまま使う
+ */
+function formatContentForLLM(content, startLineNumber, header) {
+    const MAX_LLM_CONTENT_LENGTH = 50000;
+    const numbered = content.split('\n').map((line, i) =>
+        String(startLineNumber + i).padStart(5, '0') + '| ' + line
+    );
+    let body = numbered.join('\n');
+    if (body.length > MAX_LLM_CONTENT_LENGTH) {
+        body = body.substring(0, MAX_LLM_CONTENT_LENGTH) +
+            '\n[出力が長いため以降を省略しました。続きは startLine/endLine を指定して readFile で再取得してください]';
+    }
+    return header + '\n' + body;
+}
+
+/**
+ * 全行に行番号プレフィックスが付いたテキストからプレフィックスを除去
+ * モデルが readFile 出力をそのまま転記したケースの救済用
+ * 該当しない場合は null を返す
+ */
+function stripLineNumberPrefixes(text) {
+    if (typeof text !== 'string' || text.length === 0) {
+        return null;
+    }
+    const lines = text.split('\n');
+    const prefixedCount = lines.filter(l => LINE_NUMBER_PREFIX_REGEX.test(l)).length;
+    if (prefixedCount === 0 || !lines.every(l => l.trim() === '' || LINE_NUMBER_PREFIX_REGEX.test(l))) {
+        return null;
+    }
+    return lines.map(l => l.replace(LINE_NUMBER_PREFIX_REGEX, '')).join('\n');
+}
+
+/**
+ * 行単位の追加/削除数を計算（LCSベース）
+ */
+function calculateLineDiffStats(oldContent, newContent) {
+    const before = typeof oldContent === 'string' ? oldContent : '';
+    const after = typeof newContent === 'string' ? newContent : '';
+
+    const oldLines = before.length > 0 ? before.split('\n') : [];
+    const newLines = after.length > 0 ? after.split('\n') : [];
+    const oldCount = oldLines.length;
+    const newCount = newLines.length;
+
+    if (oldCount === 0 && newCount === 0) {
+        return {
+            addedLines: 0,
+            deletedLines: 0,
+            netLines: 0,
+            lineCountBefore: 0,
+            lineCountAfter: 0,
+            approximate: false
+        };
+    }
+
+    const MAX_CELLS = 4000000;
+    const totalCells = oldCount * newCount;
+    if (totalCells > MAX_CELLS) {
+        const netLines = newCount - oldCount;
+        return {
+            addedLines: Math.max(netLines, 0),
+            deletedLines: Math.max(-netLines, 0),
+            netLines,
+            lineCountBefore: oldCount,
+            lineCountAfter: newCount,
+            approximate: true
+        };
+    }
+
+    // メモリ削減のため1次元DPでLCS長を求める
+    const dp = new Array(newCount + 1).fill(0);
+    for (let i = 1; i <= oldCount; i++) {
+        let prev = 0;
+        for (let j = 1; j <= newCount; j++) {
+            const temp = dp[j];
+            if (oldLines[i - 1] === newLines[j - 1]) {
+                dp[j] = prev + 1;
+            } else {
+                dp[j] = Math.max(dp[j], dp[j - 1]);
+            }
+            prev = temp;
+        }
+    }
+
+    const lcsLength = dp[newCount];
+    const addedLines = newCount - lcsLength;
+    const deletedLines = oldCount - lcsLength;
+
+    return {
+        addedLines,
+        deletedLines,
+        netLines: newCount - oldCount,
+        lineCountBefore: oldCount,
+        lineCountAfter: newCount,
+        approximate: false
+    };
+}
+
+/**
+ * 編集対象の最新内容を取得
+ * 開いているファイルの場合はエディタ内容を優先し、未保存差分による古い内容の混入を防ぐ
+ */
+function resolveLatestContentForEdit(fullPath, diskContent, currentFile) {
+    let source = 'disk';
+    let content = typeof diskContent === 'string' ? diskContent : '';
+
+    if (
+        currentFile &&
+        currentFile.path === fullPath &&
+        currentFile.aceObj &&
+        currentFile.aceObj.editor &&
+        typeof currentFile.aceObj.editor.getValue === 'function'
+    ) {
+        const editorContent = currentFile.aceObj.editor.getValue();
+        if (typeof editorContent === 'string' && editorContent !== content) {
+            content = editorContent;
+            source = 'editor';
+        }
+    }
+
+    return { content, source };
+}
+
+/**
  * ツール実行履歴をサーバーに記録
  */
 async function logToolExecution(tool, parameters, status, result, approvalTime = null) {
     try {
+        const model = loadSelectedModel() || 'unknown';
         await api('/api/tool_history.php', {
             action: 'logToolExecution',
             tool: tool,
             parameters: parameters,
             status: status,
             result: result,
-            approvalTime: approvalTime
+            approvalTime: approvalTime,
+            model: model
         });
     } catch (error) {
         console.error('Failed to log tool execution:', error);
@@ -133,10 +278,12 @@ async function showEditConfirmation(editor, file, newContent, startTime) {
         if (isTemporaryFile) {
             console.warn('ファイルがエディタで開かれていないため、一時的なAceエディタを作成します');
             
-            // 既存のファイルから現在の内容を取得（APIから読み込む必要がある場合もある）
-            const currentContent = (file && file.aceObj && file.aceObj.editor) 
-                ? file.aceObj.editor.getValue() 
-                : '';
+            // 既存のファイルから現在の内容を取得
+            // 未オープン時は呼び出し元が渡す編集前内容（file.content）を比較元にする
+            // （空文字列のままだと部分編集でも全文が新規追加としてdiff表示される）
+            const currentContent = (file && file.aceObj && file.aceObj.editor)
+                ? file.aceObj.editor.getValue()
+                : (file && typeof file.content === 'string' ? file.content : '');
             
             // 一時的なDOM要素を作成（エディタ領域に配置）
             tempAceDOM = document.createElement("div");
@@ -383,7 +530,7 @@ export async function createFile(filename, content, options = {}) {
         
         // ファイルパスの検証
         if (!validateFilePath(fullPath, baseDir)) {
-            const errorMsg = `アクセス拒否: ファイル "${filename}" は現在のディレクトリ配下にありません`;
+            const errorMsg = `アクセス拒否: "${filename}" は現在のディレクトリ配下にありません`;
             await logToolExecution('createFile', { filename, content }, 'rejected', { error: 'path_validation_failed' });
             if (mConsole) {
                 mConsole.print(errorMsg, 'error');
@@ -438,23 +585,35 @@ export async function createFile(filename, content, options = {}) {
                 const createdFile = appState.FILE_LIST?.files?.find(f => f.path === fullPath);
                 
                 if (createdFile && createdFile.type === 'text') {
+                    let openedCreatedFile = null;
+
                     // エクスプローラーのfileClickActionを使用して通常のファイル開く処理を実行
                     if (editor.explorer && typeof editor.explorer.fileClickAction === 'function') {
-                        await editor.explorer.fileClickAction(createdFile);
+                        openedCreatedFile = await editor.explorer.fileClickAction(createdFile);
                     }
-                    
+
+                    // fileClickAction の戻り値がない実装もあるため、作成ファイル/現在ファイルをフォールバックに使う
+                    const activeFile =
+                        (openedCreatedFile && openedCreatedFile.aceObj)
+                            ? openedCreatedFile
+                            : (createdFile && createdFile.aceObj)
+                                ? createdFile
+                                : (appState && appState.CURRENT_FILE && appState.CURRENT_FILE.path === fullPath)
+                                    ? appState.CURRENT_FILE
+                                    : null;
+
                     // エディタ要素の表示状態を確認・修正
-                    if (openedFile && openedFile.aceObj) {
-                        const aceElement = openedFile.aceObj.element;
-                        
+                    if (activeFile && activeFile.aceObj) {
+                        const aceElement = activeFile.aceObj.element;
+
                         // 明示的に表示
                         if (aceElement) {
                             aceElement.style.display = '';
-                            openedFile.aceObj.show();
-                            openedFile.aceObj.focus();
+                            activeFile.aceObj.show();
+                            activeFile.aceObj.focus();
                         }
                     }
-                    
+
                     // エクスプローラーのハイライトを更新
                     if (editor.explorer && typeof editor.explorer.highlightFile === 'function') {
                         console.log('[createFile] Highlighting file:', fullPath, 'Element exists:', !!document.getElementById(fullPath));
@@ -465,14 +624,22 @@ export async function createFile(filename, content, options = {}) {
             
             await logToolExecution('createFile', { filename, content }, 'approved', result, approvalTime);
             if (mConsole) {
-                const lines = content.split('\n').length;
+                const lines = getLineCount(content);
                 mConsole.print(`✅ createFile: "${filename}" を作成 (${lines}行, ${content.length}文字)`, 'success');
             }
-            const lines = content.split('\n').length;
+            const lines = getLineCount(content);
             return {
                 success: true,
                 message: `✅ ${filename}(${lines}行)`,
-                path: filename
+                path: filename,
+                historyMeta: {
+                    operation: 'create',
+                    targetPath: filename,
+                    addedLines: lines,
+                    deletedLines: 0,
+                    netLines: lines,
+                    lineCountAfter: lines
+                }
             };
         } else {
             // エラーメッセージを詳細に記録
@@ -513,13 +680,15 @@ export async function createFile(filename, content, options = {}) {
  * ファイルを読み込み（行範囲制限対応）
  */
 export async function readFile(filename, options = {}) {
-    const { 
-        api: apiFunc, 
-        mConsole, 
+    const {
+        api: apiFunc,
+        mConsole,
         baseDir,
         startLine = null,
         endLine = null,
-        maxLines = 100
+        maxLines = 100,
+        // 編集ツール内部からの読み込みでは行番号整形をスキップする
+        numberLines = true
     } = options;
     
     try {
@@ -558,6 +727,11 @@ export async function readFile(filename, options = {}) {
         }
         
         const fullContent = result.content;
+        if (typeof fullContent !== 'string') {
+            const errorMsg = 'ファイル内容の取得に失敗しました（contentが不正です）';
+            console.error('readFile invalid content:', result);
+            throw new Error(errorMsg);
+        }
         const lines = fullContent.split('\n');
         const totalLines = lines.length;
         
@@ -583,15 +757,24 @@ export async function readFile(filename, options = {}) {
             });
             
             if (mConsole) {
-                mConsole.print(`✅ readFile: "${filename}" (${start}〜${end} / ${totalLines})`, 'info');
+                mConsole.print(`✅ readFile: "${filename}" (${start}-${end}/${totalLines})`, 'info');
             }
             
             return {
                 success: true,
                 content: content,
+                ...(numberLines ? { llmContent: formatContentForLLM(content, start, `✅ ${filename} (${start}-${end}行目 / 全${totalLines}行)`) } : {}),
                 path: filename,
                 lineRange: { start, end, total: totalLines },
-                message: `✅ ${filename} (${start}〜${end} / ${totalLines})`
+                message: `✅ ${filename} (${start}-${end}/${totalLines})`,
+                historyMeta: {
+                    operation: 'read',
+                    targetPath: filename,
+                    startLine: start,
+                    endLine: end,
+                    linesRead: selectedLines.length,
+                    totalLines: totalLines
+                }
             };
         }
         
@@ -607,9 +790,8 @@ export async function readFile(filename, options = {}) {
             });
             
             if (mConsole) {
-                mConsole.print(`✅ readFile: "${filename}" (${totalLines}) → 構造要約のみ (${structure.summary})`, 'info');
+                mConsole.print(`✅ readFile: "${filename}" (${totalLines}) → 構造要約`, 'info');
             }
-            
             return {
                 success: true,
                 compressed: true,
@@ -618,7 +800,15 @@ export async function readFile(filename, options = {}) {
                 totalLines: totalLines,
                 path: filename,
                 message: `✅ ${filename} (${totalLines})`,
-                hint: `特定の部分を読むには: readFile(filename="${filename}", startLine=1, endLine=100)`
+                hint: `必要な部分は readFile(filename="${filename}", startLine=1, endLine=100)`,
+                historyMeta: {
+                    operation: 'read',
+                    targetPath: filename,
+                    linesRead: 0,
+                    totalLines: totalLines,
+                    compressed: true,
+                    structureOnly: true
+                }
             };
         }
         
@@ -626,15 +816,22 @@ export async function readFile(filename, options = {}) {
         await logToolExecution('readFile', { filename }, 'success', { length: fullContent.length });
         
         if (mConsole) {
-            mConsole.print(`✅ readFile: "${filename}" (${totalLines}`, 'info');
+            mConsole.print(`✅ readFile: "${filename}" (${totalLines})`, 'info');
         }
         
         return {
             success: true,
             content: fullContent,
+            ...(numberLines ? { llmContent: formatContentForLLM(fullContent, 1, `✅ ${filename} (全${totalLines}行)`) } : {}),
             path: filename,
             totalLines: totalLines,
-            message: `✅ ${filename} (${totalLines})`
+            message: `✅ ${filename} (${totalLines})`,
+            historyMeta: {
+                operation: 'read',
+                targetPath: filename,
+                linesRead: totalLines,
+                totalLines: totalLines
+            }
         };
         
     } catch (error) {
@@ -670,18 +867,30 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
         appState
     } = toolOptions;
     try {
+        if (typeof filename !== 'string' || filename.trim() === '') {
+            return { success: false, error: 'invalid_filename', message: 'editFileByReplace: filename が必要です' };
+        }
+        if (typeof searchText !== 'string' || searchText.length === 0) {
+            return { success: false, error: 'invalid_search_text', message: 'editFileByReplace: searchText が必要です' };
+        }
+        if (typeof replaceText !== 'string') {
+            return { success: false, error: 'invalid_replace_text', message: 'editFileByReplace: replaceText が必要です' };
+        }
+
         // APIが渡されていない場合はエラー
         if (!apiFunc) {
             throw new Error('API関数が渡されていません');
         }
+
+        const normalizedFilename = filename.trim();
         
         // ファイルパスをベースディレクトリと結合
-        const fullPath = resolveFilePath(filename, baseDir);
+        const fullPath = resolveFilePath(normalizedFilename, baseDir);
         
         // ファイルパスの検証
         if (!validateFilePath(fullPath, baseDir)) {
-            const errorMsg = `アクセス拒否: ファイル "${filename}" は現在のディレクトリ配下にありません`;
-            await logToolExecution('editFileByReplace', { filename, searchText, replaceText }, 'rejected', { error: 'path_validation_failed' });
+            const errorMsg = `アクセス拒否: "${normalizedFilename}" は現在のディレクトリ配下にありません`;
+            await logToolExecution('editFileByReplace', { filename: normalizedFilename, searchText, replaceText }, 'rejected', { error: 'path_validation_failed' });
             if (mConsole) {
                 mConsole.print(errorMsg, 'error');
             }
@@ -693,53 +902,288 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
         }
         
         // ファイル内容を取得（既に結合されたパスを使用）
-        const fileContent = await readFile(filename, { api: apiFunc, baseDir });
+        const fileContent = await readFile(normalizedFilename, {
+            api: apiFunc,
+            baseDir,
+            // 置換はファイル全体が必要なため、構造要約への圧縮を無効化
+            maxLines: Number.MAX_SAFE_INTEGER,
+            numberLines: false
+        });
         if (!fileContent.success) {
             throw new Error(fileContent.message);
         }
+        if (typeof fileContent.content !== 'string') {
+            if (fileContent.compressed || fileContent.structureOnly) {
+                throw new Error('対象ファイルが大きすぎるため置換できません。行範囲を指定して読み込み直してください');
+            }
+            throw new Error('ファイル内容の取得に失敗しました（contentが不正です）');
+        }
         
-        const currentContent = fileContent.content;
+        const latestContent = resolveLatestContentForEdit(fullPath, fileContent.content, currentFile);
+        const currentContent = latestContent.content;
+        const contentSource = latestContent.source;
         
         // 検索置換を実行
-        let newContent;
-        if (regex) {
-            const flags = (global ? 'g' : '') + (caseSensitive ? '' : 'i');
-            const regexPattern = new RegExp(searchText, flags);
-            newContent = currentContent.replace(regexPattern, replaceText);
-        } else {
+        const applyReplace = (sourceText, findText, replaceValue) => {
+            if (regex) {
+                const flags = (global ? 'g' : '') + (caseSensitive ? '' : 'i');
+                const regexPattern = new RegExp(findText, flags);
+                return sourceText.replace(regexPattern, replaceValue);
+            }
+
             if (global) {
                 const searchRegex = new RegExp(
-                    searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 
+                    findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
                     caseSensitive ? 'g' : 'gi'
                 );
-                newContent = currentContent.replace(searchRegex, replaceText);
-            } else {
-                const index = caseSensitive 
-                    ? currentContent.indexOf(searchText)
-                    : currentContent.toLowerCase().indexOf(searchText.toLowerCase());
-                if (index !== -1) {
-                    newContent = currentContent.substring(0, index) + 
-                                replaceText + 
-                                currentContent.substring(index + searchText.length);
-                } else {
-                    newContent = currentContent;
+                return sourceText.replace(searchRegex, replaceValue);
+            }
+
+            const index = caseSensitive
+                ? sourceText.indexOf(findText)
+                : sourceText.toLowerCase().indexOf(findText.toLowerCase());
+
+            if (index === -1) {
+                return sourceText;
+            }
+            return sourceText.substring(0, index) +
+                replaceValue +
+                sourceText.substring(index + findText.length);
+        };
+
+        // 完全一致（caseSensitive=true）で失敗した場合、大小文字差分のみを許容して1件一致なら置換する
+        const applySingleCaseInsensitiveReplace = (sourceText, findText, replaceValue) => {
+            if (!findText || findText.length === 0) {
+                return sourceText;
+            }
+
+            const sourceLower = sourceText.toLowerCase();
+            const findLower = findText.toLowerCase();
+            const matchIndexes = [];
+            let startAt = 0;
+
+            while (startAt <= sourceLower.length - findLower.length) {
+                const idx = sourceLower.indexOf(findLower, startAt);
+                if (idx === -1) {
+                    break;
+                }
+                matchIndexes.push(idx);
+                if (matchIndexes.length > 1) {
+                    // 複数一致は危険なので自動置換しない
+                    return sourceText;
+                }
+                startAt = idx + findLower.length;
+            }
+
+            if (matchIndexes.length !== 1) {
+                return sourceText;
+            }
+
+            const matchStart = matchIndexes[0];
+            return sourceText.substring(0, matchStart) +
+                replaceValue +
+                sourceText.substring(matchStart + findText.length);
+        };
+
+        // 一致箇所が1件のみの場合に限り完全一致で置換する（フォールバック用）
+        const applySingleExactReplace = (sourceText, findText, replaceValue) => {
+            if (!findText || findText.length === 0) {
+                return sourceText;
+            }
+            const first = sourceText.indexOf(findText);
+            if (first === -1) {
+                return sourceText;
+            }
+            if (sourceText.indexOf(findText, first + findText.length) !== -1) {
+                // 複数一致は危険なので自動置換しない
+                return sourceText;
+            }
+            return sourceText.substring(0, first) +
+                replaceValue +
+                sourceText.substring(first + findText.length);
+        };
+
+        // 小型モデルが searchText 転記時に空白を落とすケース向けの最終フォールバック
+        // 安全性のため「一致箇所が1件のみ」の場合に限定する
+        const applyFuzzyWhitespaceReplace = (sourceText, findText, replaceValue, useCaseSensitive = true) => {
+            if (!findText || findText.length === 0) {
+                return sourceText;
+            }
+
+            try {
+                const escapedFind = findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const fuzzyPattern = escapedFind
+                    .replace(/[ \t]+/g, '[ \\t]+')
+                    .replace(/\n[ \t]*/g, '\\n[ \\t]*');
+
+                const testFlags = useCaseSensitive ? 'g' : 'gi';
+                const testRegex = new RegExp(fuzzyPattern, testFlags);
+                const matches = sourceText.match(testRegex);
+
+                if (!matches || matches.length !== 1) {
+                    return sourceText;
+                }
+
+                const replaceFlags = useCaseSensitive ? '' : 'i';
+                const replaceRegex = new RegExp(fuzzyPattern, replaceFlags);
+                return sourceText.replace(replaceRegex, replaceValue);
+            } catch (error) {
+                return sourceText;
+            }
+        };
+
+        let newContent = applyReplace(currentContent, searchText, replaceText);
+        let fuzzyApplied = false;
+        let matchMethod = regex ? 'regex' : 'exact';
+
+        // CRLF/LF 差分で一致しない場合のフォールバック（regex指定時は対象外）
+        if (newContent === currentContent && !regex) {
+            const normalizedCurrent = currentContent.replace(/\r\n/g, '\n');
+            const normalizedSearch = searchText.replace(/\r\n/g, '\n');
+            const normalizedReplace = replaceText.replace(/\r\n/g, '\n');
+            const normalizedReplaced = applyReplace(normalizedCurrent, normalizedSearch, normalizedReplace);
+
+            if (normalizedReplaced !== normalizedCurrent) {
+                const hasCRLF = /\r\n/.test(currentContent);
+                const hasLFOnly = /(^|[^\r])\n/.test(currentContent);
+                newContent = (hasCRLF && !hasLFOnly)
+                    ? normalizedReplaced.replace(/\n/g, '\r\n')
+                    : normalizedReplaced;
+                matchMethod = 'normalized_newline';
+            }
+
+            // 既定では caseSensitive=true のため、小文字/大文字差分だけの失敗を安全に吸収する
+            if (newContent === currentContent && caseSensitive) {
+                const caseInsensitiveReplaced = applySingleCaseInsensitiveReplace(
+                    normalizedCurrent,
+                    normalizedSearch,
+                    normalizedReplace
+                );
+
+                if (caseInsensitiveReplaced !== normalizedCurrent) {
+                    const hasCRLF = /\r\n/.test(currentContent);
+                    const hasLFOnly = /(^|[^\r])\n/.test(currentContent);
+                    newContent = (hasCRLF && !hasLFOnly)
+                        ? caseInsensitiveReplaced.replace(/\n/g, '\r\n')
+                        : caseInsensitiveReplaced;
+                    matchMethod = 'case_insensitive_single';
+                }
+            }
+
+            // 空白数・インデント差分のみで失敗したケースを救済
+            if (newContent === currentContent) {
+                const fuzzyReplaced = applyFuzzyWhitespaceReplace(
+                    normalizedCurrent,
+                    normalizedSearch,
+                    normalizedReplace,
+                    caseSensitive
+                );
+
+                if (fuzzyReplaced !== normalizedCurrent) {
+                    const hasCRLF = /\r\n/.test(currentContent);
+                    const hasLFOnly = /(^|[^\r])\n/.test(currentContent);
+                    newContent = (hasCRLF && !hasLFOnly)
+                        ? fuzzyReplaced.replace(/\n/g, '\r\n')
+                        : fuzzyReplaced;
+                    fuzzyApplied = true;
+                    matchMethod = 'fuzzy_whitespace';
+                }
+            }
+
+            // readFile出力の行番号プレフィックス（00042| ）を転記してしまったケースを救済
+            if (newContent === currentContent) {
+                const strippedSearch = stripLineNumberPrefixes(normalizedSearch);
+                if (strippedSearch !== null) {
+                    const strippedReplace = stripLineNumberPrefixes(normalizedReplace) ?? normalizedReplace;
+                    const strippedReplaced = applySingleExactReplace(normalizedCurrent, strippedSearch, strippedReplace);
+
+                    if (strippedReplaced !== normalizedCurrent) {
+                        const hasCRLF = /\r\n/.test(currentContent);
+                        const hasLFOnly = /(^|[^\r])\n/.test(currentContent);
+                        newContent = (hasCRLF && !hasLFOnly)
+                            ? strippedReplaced.replace(/\n/g, '\r\n')
+                            : strippedReplaced;
+                        matchMethod = 'line_prefix_stripped';
+                    }
+                }
+            }
+
+            // JSONエスケープ風の転記（\" や \|）を戻して救済
+            if (newContent === currentContent && /\\["|]/.test(normalizedSearch)) {
+                const unescapeArtifacts = (s) => s.replace(/\\(["|])/g, '$1');
+                const unescapedReplaced = applySingleExactReplace(
+                    normalizedCurrent,
+                    unescapeArtifacts(normalizedSearch),
+                    unescapeArtifacts(normalizedReplace)
+                );
+
+                if (unescapedReplaced !== normalizedCurrent) {
+                    const hasCRLF = /\r\n/.test(currentContent);
+                    const hasLFOnly = /(^|[^\r])\n/.test(currentContent);
+                    newContent = (hasCRLF && !hasLFOnly)
+                        ? unescapedReplaced.replace(/\n/g, '\r\n')
+                        : unescapedReplaced;
+                    matchMethod = 'unescaped';
                 }
             }
         }
         
         // 変更がない場合
         if (newContent === currentContent) {
+            const hints = [];
+            const containsCaseInsensitive = currentContent
+                .toLowerCase()
+                .includes(searchText.toLowerCase());
+            const containsRaw = currentContent.includes(searchText);
+            const containsNormalized = currentContent
+                .replace(/\r\n/g, '\n')
+                .includes(searchText.replace(/\r\n/g, '\n'));
+
+            if (caseSensitive && containsCaseInsensitive) {
+                hints.push('大文字小文字の違いの可能性があります。options.caseSensitive=false を試してください');
+            }
+            if (!containsRaw && containsNormalized) {
+                hints.push('改行コード差分の可能性があります（CRLF/LF）');
+            }
+            if (searchText.trim() !== searchText && currentContent.includes(searchText.trim())) {
+                hints.push('検索文字列の前後空白の可能性があります');
+            }
+            if (!regex) {
+                hints.push('完全一致検索です。属性差分がある場合は options.regex=true を検討してください');
+            }
+            if (searchText.includes('\n')) {
+                hints.push('複数行ブロックがずれている可能性があります。見出し単位で再検索するか editFileByLines も検討してください');
+            }
+            hints.push('スペース・タブ差分で一致しない場合があります。必要なら editFileByLines の利用も検討してください');
+            hints.push('searchTextにはファイルの生テキストをそのまま指定してください。readFile出力の行番号プレフィックス（00042| ）やエスケープ（\\" など）は含めないでください');
+            const attemptedMethods = regex
+                ? ['regex']
+                : ['exact', 'normalized_newline', 'case_insensitive_single', 'fuzzy_whitespace', 'line_prefix_stripped', 'unescaped'];
             await logToolExecution('editFileByReplace', 
-                { filename, searchText, replaceText, options: editOptions }, 
+                {
+                    filename,
+                    searchText,
+                    replaceText,
+                    options: editOptions,
+                    contentSource,
+                    matchMethod: 'not_found',
+                    attemptedMethods,
+                    fuzzyApplied,
+                    hints,
+                    beforeContent: currentContent,
+                    afterContent: newContent
+                }, 
                 'no_change', 
                 null
             );
+            const hintText = hints.length > 0 ? ` ヒント: ${hints.join(' / ')}` : '';
             if (mConsole) {
-                mConsole.print(`"${searchText}" が見つかりませんでした`, 'warning');
+                mConsole.print(`"${searchText}" が見つかりませんでした。${hintText}`.trim(), 'warning');
             }
             return {
                 success: false,
-                message: '該当するテキストが見つかりませんでした'
+                message: `該当するテキストが見つかりませんでした。${hintText}`.trim(),
+                hints
             };
         }
         
@@ -753,10 +1197,11 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
                 // エディタが利用可能な場合
                 // ファイルが開かれているかどうかに関わらず、showEditConfirmation を呼び出し
                 // ファイルが開かれていない場合は簡易確認が表示される
-                const fileForConfirmation = currentFile && currentFile.path === fullPath 
-                    ? currentFile 
-                    : { path: fullPath, aceObj: null };  // ファイルが開かれていない場合
-                
+                const fileForConfirmation = currentFile && currentFile.path === fullPath
+                    ? currentFile
+                    // ファイルが開かれていない場合: 編集前内容を渡してdiffの比較元にする
+                    : { path: fullPath, aceObj: null, content: currentContent };
+
                 const confirmation = await showEditConfirmation(editor, fileForConfirmation, newContent, startTime);
                 approved = confirmation.approved;
                 approvalTime = confirmation.approvalTime;
@@ -769,7 +1214,17 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
         
         if (!approved) {
             await logToolExecution('editFileByReplace', 
-                { filename, searchText, replaceText, options: editOptions }, 
+                {
+                    filename,
+                    searchText,
+                    replaceText,
+                    options: editOptions,
+                    contentSource,
+                    matchMethod,
+                    fuzzyApplied,
+                    beforeContent: currentContent,
+                    afterContent: newContent
+                }, 
                 'rejected', 
                 null, 
                 approvalTime
@@ -829,7 +1284,17 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
             }
             
             await logToolExecution('editFileByReplace', 
-                { filename, searchText, replaceText, options: editOptions }, 
+                {
+                    filename,
+                    searchText,
+                    replaceText,
+                    options: editOptions,
+                    contentSource,
+                    matchMethod,
+                    fuzzyApplied,
+                    beforeContent: currentContent,
+                    afterContent: newContent
+                }, 
                 'approved', 
                 saveResult, 
                 approvalTime
@@ -842,11 +1307,21 @@ export async function editFileByReplace(filename, searchText, replaceText, editO
             // 置換箇所数をカウント
             const oldMatches = (currentContent.match(new RegExp(searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
             const replacements = oldMatches;
+            const lineDiffStats = calculateLineDiffStats(currentContent, newContent);
             
             return {
                 success: true,
                 message: `✅ ${filename}:${replacements}`,
-                path: filename
+                path: filename,
+                historyMeta: {
+                    operation: 'edit',
+                    editMode: 'replace',
+                    targetPath: filename,
+                    replacements: replacements,
+                    matchMethod,
+                    fuzzyApplied,
+                    ...lineDiffStats
+                }
             };
         } else {
             throw new Error(saveResult.message || 'ファイル保存に失敗しました');
@@ -888,14 +1363,47 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
         if (!apiFunc) {
             throw new Error('API関数が渡されていません');
         }
+
+        if (typeof filename !== 'string' || filename.trim() === '') {
+            return {
+                success: false,
+                error: 'invalid_filename',
+                message: 'editFileByLines: filename が必要です'
+            };
+        }
+        if (lineStart === undefined || lineStart === null || lineEnd === undefined || lineEnd === null) {
+            return {
+                success: false,
+                error: 'invalid_line_range',
+                message: 'editFileByLines: lineStart と lineEnd を指定してください'
+            };
+        }
+        if (typeof newContent !== 'string') {
+            return {
+                success: false,
+                error: 'invalid_new_content',
+                message: 'editFileByLines: newContent は文字列で指定してください'
+            };
+        }
+
+        const normalizedFilename = filename.trim();
+        const normalizedLineStart = Number(lineStart);
+        const normalizedLineEnd = Number(lineEnd);
+        if (!Number.isInteger(normalizedLineStart) || !Number.isInteger(normalizedLineEnd)) {
+            return {
+                success: false,
+                error: 'invalid_line_range',
+                message: 'editFileByLines: lineStart と lineEnd は整数で指定してください'
+            };
+        }
         
         // ファイルパスをベースディレクトリと結合
-        const fullPath = resolveFilePath(filename, baseDir);
+        const fullPath = resolveFilePath(normalizedFilename, baseDir);
         
         // ファイルパスの検証
         if (!validateFilePath(fullPath, baseDir)) {
-            const errorMsg = `アクセス拒否: ファイル "${filename}" は現在のディレクトリ配下にありません`;
-            await logToolExecution('editFileByLines', { filename, lineStart, lineEnd }, 'rejected', { error: 'path_validation_failed' });
+            const errorMsg = `アクセス拒否: "${normalizedFilename}" は現在のディレクトリ配下にありません`;
+            await logToolExecution('editFileByLines', { filename: normalizedFilename, lineStart: normalizedLineStart, lineEnd: normalizedLineEnd }, 'rejected', { error: 'path_validation_failed' });
             if (mConsole) {
                 mConsole.print(errorMsg, 'error');
             }
@@ -907,25 +1415,54 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
         }
         
         // ファイル内容を取得（既に結合されたパスを使用）
-        const fileContent = await readFile(filename, { api: apiFunc, baseDir });
+        const fileContent = await readFile(normalizedFilename, {
+            api: apiFunc,
+            baseDir,
+            // 行単位編集では全体行番号が必要なため、構造要約への圧縮を無効化
+            maxLines: Number.MAX_SAFE_INTEGER,
+            numberLines: false
+        });
         if (!fileContent.success) {
             throw new Error(fileContent.message);
         }
+        if (typeof fileContent.content !== 'string') {
+            if (fileContent.compressed || fileContent.structureOnly) {
+                throw new Error('対象ファイルが大きすぎるため編集できません。行範囲を指定して読み込み直してください');
+            }
+            throw new Error('ファイル内容の取得に失敗しました（contentが不正です）');
+        }
         
-        const currentContent = fileContent.content;
+        const latestContent = resolveLatestContentForEdit(fullPath, fileContent.content, currentFile);
+        const currentContent = latestContent.content;
+        const contentSource = latestContent.source;
         const lines = currentContent.split('\n');
         
         // 行番号の検証
-        if (lineStart < 1 || lineEnd < lineStart || lineEnd > lines.length) {
-            throw new Error(`無効な行番号: ${lineStart}-${lineEnd} (ファイルは${lines.length}行)`);
+        if (normalizedLineStart < 1 || normalizedLineEnd < normalizedLineStart || normalizedLineEnd > lines.length) {
+            throw new Error(`無効な行番号: ${normalizedLineStart}-${normalizedLineEnd} (全${lines.length}行)`);
         }
         
+        // モデルが readFile 出力の行番号プレフィックス（00042| ）ごと転記した場合は除去する
+        const strippedNewContent = stripLineNumberPrefixes(newContent);
+        const effectiveNewContent = strippedNewContent !== null ? strippedNewContent : newContent;
+
         // 新しい内容を生成
-        const newLines = newContent.split('\n');
+        const newLines = effectiveNewContent.split('\n');
+
+        // モデルが前後コンテキスト行を含めてしまうと重複が起きるため、境界1行だけ安全に除去する
+        const lineBeforeRange = normalizedLineStart > 1 ? lines[normalizedLineStart - 2] : null;
+        const lineAfterRange = normalizedLineEnd < lines.length ? lines[normalizedLineEnd] : null;
+        if (lineBeforeRange !== null && newLines.length > 0 && newLines[0] === lineBeforeRange) {
+            newLines.shift();
+        }
+        if (lineAfterRange !== null && newLines.length > 0 && newLines[newLines.length - 1] === lineAfterRange) {
+            newLines.pop();
+        }
+
         const updatedLines = [
-            ...lines.slice(0, lineStart - 1),
+            ...lines.slice(0, normalizedLineStart - 1),
             ...newLines,
-            ...lines.slice(lineEnd)
+            ...lines.slice(normalizedLineEnd)
         ];
         const updatedContent = updatedLines.join('\n');
         
@@ -939,10 +1476,11 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
                 // エディタが利用可能な場合
                 // ファイルが開かれているかどうかに関わらず、showEditConfirmation を呼び出し
                 // ファイルが開かれていない場合は簡易確認が表示される
-                const fileForConfirmation = currentFile && currentFile.path === fullPath 
-                    ? currentFile 
-                    : { path: fullPath, aceObj: null };  // ファイルが開かれていない場合
-                
+                const fileForConfirmation = currentFile && currentFile.path === fullPath
+                    ? currentFile
+                    // ファイルが開かれていない場合: 編集前内容を渡してdiffの比較元にする
+                    : { path: fullPath, aceObj: null, content: currentContent };
+
                 const confirmation = await showEditConfirmation(editor, fileForConfirmation, updatedContent, startTime);
                 approved = confirmation.approved;
                 approvalTime = confirmation.approvalTime;
@@ -955,7 +1493,15 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
         
         if (!approved) {
             await logToolExecution('editFileByLines', 
-                { filename, lineStart, lineEnd, newContent }, 
+                {
+                    filename: normalizedFilename,
+                    lineStart: normalizedLineStart,
+                    lineEnd: normalizedLineEnd,
+                    newContent,
+                    contentSource,
+                    beforeContent: currentContent,
+                    afterContent: updatedContent
+                }, 
                 'rejected', 
                 null, 
                 approvalTime
@@ -1017,24 +1563,41 @@ export async function editFileByLines(filename, lineStart, lineEnd, newContent, 
             }
             
             await logToolExecution('editFileByLines', 
-                { filename, lineStart, lineEnd, newContent }, 
+                {
+                    filename: normalizedFilename,
+                    lineStart: normalizedLineStart,
+                    lineEnd: normalizedLineEnd,
+                    newContent,
+                    contentSource,
+                    beforeContent: currentContent,
+                    afterContent: updatedContent
+                }, 
                 'approved', 
                 saveResult, 
                 approvalTime
             );
             if (mConsole) {
-                const oldLineCount = lineEnd - lineStart + 1;
-                const newLineCount = newContent.split('\n').length;
-                mConsole.print(`✅ editFileByLines: "${filename}" (${lineStart}〜${lineEnd}行目) ${oldLineCount}行 → ${newLineCount}行`, 'success');
+                mConsole.print(`✅ editFileByLines: "${normalizedFilename}" (${normalizedLineStart}-${normalizedLineEnd})`, 'success');
             }
             
-            const oldLineCount = lineEnd - lineStart + 1;
-            const newLineCount = newContent.split('\n').length;
+            const oldLineCount = normalizedLineEnd - normalizedLineStart + 1;
+            const newLineCount = getLineCount(newContent);
+            const lineDiffStats = calculateLineDiffStats(currentContent, updatedContent);
             
             return {
                 success: true,
-                message: `✅ ${filename} (${lineStart}〜${lineEnd})`,
-                path: filename
+                message: `✅ ${normalizedFilename} (${normalizedLineStart}〜${normalizedLineEnd})`,
+                path: normalizedFilename,
+                historyMeta: {
+                    operation: 'edit',
+                    editMode: 'lineRange',
+                    targetPath: normalizedFilename,
+                    rangeStart: normalizedLineStart,
+                    rangeEnd: normalizedLineEnd,
+                    replacedLineCount: oldLineCount,
+                    insertedLineCount: newLineCount,
+                    ...lineDiffStats
+                }
             };
         } else {
             throw new Error(saveResult.message || 'ファイル保存に失敗しました');
@@ -1127,7 +1690,11 @@ export async function deleteFile(filename, options = {}) {
             }
             return {
                 success: true,
-                message: `🗑️ **${filename}** を削除しました`
+                message: `🗑️ **${filename}** を削除しました`,
+                historyMeta: {
+                    operation: 'delete',
+                    targetPath: filename
+                }
             };
         } else {
             throw new Error(result.message || 'ファイル削除に失敗しました');
@@ -1251,7 +1818,14 @@ export async function ls(directory = "", options = {}) {
                 files: files,
                 directories: directories,
                 message: displayMessage,
-                path: fullPath
+                path: fullPath,
+                historyMeta: {
+                    operation: 'list',
+                    directoryPath: fullPath,
+                    fileCount: files.length,
+                    directoryCount: directories.length,
+                    totalCount: files.length + directories.length
+                }
             };
         } else {
             const errorMsg = result.message || result.error || 'ディレクトリリスト取得に失敗しました';
@@ -1441,7 +2015,7 @@ export async function searchFiles(query, options = {}) {
         caseSensitive = false,
         filePattern = null,
         maxResults = 50,
-        contextLines = 2
+        contextLines = 0
     } = options;
     
     try {
@@ -1598,14 +2172,48 @@ export async function searchFiles(query, options = {}) {
                 displayMessage += `\n... 他${results.length - 3}件`;
             }
         }
-        
+
+        // モデル提示用のgrep形式テキスト（file:line: 内容）
+        // 行番号と実テキストをそのまま渡し、editFileByReplace/editFileByLinesの精度を上げる
+        const truncateLine = (s) => (s.length > 200 ? s.substring(0, 200) + '…' : s);
+        const llmLines = [`✅ "${query}"${regexInfo} の検索結果: ${results.length}件ヒット (${filesSearched}ファイル検索${patternInfo})`];
+        if (results.length === 0) {
+            llmLines.push('一致はありませんでした。');
+        }
+        for (const result of results) {
+            if (result.matchType === 'filename') {
+                llmLines.push(`${result.file} (ファイル名一致)`);
+                continue;
+            }
+            for (const match of result.matches) {
+                if (Array.isArray(match.context) && match.context.length > 1) {
+                    for (const ctx of match.context) {
+                        llmLines.push(`${result.file}:${ctx.lineNum}${ctx.isMatch ? ':' : '-'} ${truncateLine(ctx.content)}`);
+                    }
+                    llmLines.push('--');
+                } else {
+                    llmLines.push(`${result.file}:${match.line}: ${truncateLine(match.content)}`);
+                }
+            }
+        }
+
         return {
             success: true,
             query: query,
             filesSearched: filesSearched,
             resultsCount: results.length,
             results: results,
-            message: displayMessage
+            llmContent: llmLines.join('\n'),
+            message: displayMessage,
+            historyMeta: {
+                operation: 'search',
+                query: query,
+                filesSearched: filesSearched,
+                resultsCount: results.length,
+                searchIn: searchIn,
+                regex: regex,
+                filePattern: filePattern || null
+            }
         };
         
     } catch (error) {

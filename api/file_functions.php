@@ -254,10 +254,21 @@ function getFile($userPath){
 
         $fileType = getFileType($serverPath);
         if($fileType === "text"){
-            $file = file_get_contents($serverPath);
+            $file = @file_get_contents($serverPath);
+            if($file === false){
+                $lastError = error_get_last();
+                $message = $lastError && isset($lastError['message']) ? $lastError['message'] : 'unknown read error';
+                throw new Exception("File read failed: " . $message);
+            }
         }
         else if($fileType === "image"){
-            $file = base64_encode(file_get_contents($serverPath));
+            $binaryFile = @file_get_contents($serverPath);
+            if($binaryFile === false){
+                $lastError = error_get_last();
+                $message = $lastError && isset($lastError['message']) ? $lastError['message'] : 'unknown read error';
+                throw new Exception("Image read failed: " . $message);
+            }
+            $file = base64_encode($binaryFile);
         }
         else{
             $file = "";

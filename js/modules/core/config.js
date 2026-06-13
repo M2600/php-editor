@@ -97,7 +97,7 @@ export const CONFIG = {
 
 // AI Chat
 export const AI_CONFIG = {
-    TOOLS_MAX_COUNT: 20,
+    TOOLS_MAX_COUNT: 100,
 }
 
 // 非公開ファイルのパターン（実行時にアクセス不可にするファイル）

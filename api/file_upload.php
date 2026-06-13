@@ -122,6 +122,9 @@ if($action == "upload"){
                     
                     // ファイルを移動
                     if(move_uploaded_file($tmpName, $serverPath)){
+                        // ファイル権限を明示的に設定（セキュリティ強化）
+                        chmod($serverPath, 0644);
+                        
                         $filePaths[] = str_replace(getUserRoot(), "", $serverPath);
                         $uploadedCount++;
                         logInfo("File uploaded successfully", [

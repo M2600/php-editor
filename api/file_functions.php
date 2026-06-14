@@ -935,6 +935,16 @@ function gitDiff(string $userDir, string $userId, string $hash1, string $hash2 =
     return implode("\n", $out);
 }
 
+function gitCommitDiff(string $userDir, string $userId, string $hash, ?string $filterPath = null): string {
+    if (!preg_match('/^[0-9a-f]{40}$/i', $hash)) return '';
+    if (!is_dir($userDir . '.git')) return '';
+    $base    = gitCmd($userDir, $userId);
+    $fileArg = ($filterPath !== null) ? '-- ' . escapeshellarg(ltrim($filterPath, '/')) : '';
+    exec("$base show " . escapeshellarg($hash) . " --format='' -p $fileArg 2>&1", $out, $code);
+    while (count($out) > 0 && trim($out[0]) === '') array_shift($out);
+    return ($code === 0) ? implode("\n", $out) : '';
+}
+
 function gitShowFile(string $userDir, string $userId, string $hash, string $file): array {
     if (!preg_match('/^[0-9a-f]{40}$/i', $hash)) {
         return ['found' => false, 'content' => '', 'error' => 'invalid commit hash'];

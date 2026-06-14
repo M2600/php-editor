@@ -64,6 +64,17 @@ switch ($action) {
         echo json_encode(['status' => 'success', 'diff' => $diff]);
         break;
 
+    case 'commit_diff':
+        $hash       = isset($params['hash']) ? (string)$params['hash'] : '';
+        $filterPath = isset($params['file']) ? (string)$params['file'] : null;
+        if (!preg_match('/^[0-9a-f]{40}$/i', $hash)) {
+            echo json_encode(['status' => 'error', 'error' => 'invalid hash']);
+            exit();
+        }
+        $diff = gitCommitDiff($userDir, $userId, $hash, $filterPath);
+        echo json_encode(['status' => 'success', 'diff' => $diff]);
+        break;
+
     case 'show':
         $hash = isset($params['hash']) ? (string)$params['hash'] : '';
         $file = isset($params['file']) ? (string)$params['file'] : '';

@@ -56,18 +56,18 @@ function showConfirmDialog(editor, files) {
         restoreBtn.addEventListener('click', () => { popup.remove(); resolve(true); });
         controls.appendChild(restoreBtn);
 
-        const popup = editor.popupWindow('restore-confirm', contents);
+        const popup = editor.popupWindow('復元の確認', contents);
         const closeBtn = popup.element.querySelector('.meditor-popup-window-close-button');
         if (closeBtn) closeBtn.addEventListener('click', () => resolve(false));
     });
 }
 
 /**
- * @param {object} editor     - MEditor インスタンス
- * @param {function} api      - api(url, body) 関数
- * @param {object} appState   - APP_STATE（CURRENT_FILE.path を参照）
+ * @param {object} editor      - MEditor インスタンス
+ * @param {function} api       - api(url, body) 関数
+ * @param {object} appState    - APP_STATE（CURRENT_FILE.path を参照）
  * @param {function} onRestore - 復元成功後に呼ぶコールバック（エクスプローラー更新用）
- * @returns {{ element: HTMLElement, refresh: () => void }}
+ * @returns {{ element: HTMLElement, refresh: () => void, updateFilter: () => void }}
  */
 export function createHistoryPanel(editor, api, appState, onRestore) {
     const container = document.createElement('div');
@@ -157,12 +157,62 @@ export function createHistoryPanel(editor, api, appState, onRestore) {
         }
     }
 
+    function makeOutlineBtn(label, borderColor, textColor) {
+        const btn = document.createElement('button');
+        btn.textContent = label;
+        btn.style.cssText = [
+            'flex-shrink:0', 'cursor:pointer',
+            'font-size:.85em', 'padding:2px 8px',
+            `border:1px solid ${borderColor}`, 'border-radius:3px',
+            'background:transparent', `color:${textColor}`,
+            'transition:background .15s,color .15s'
+        ].join(';');
+        btn.addEventListener('mouseenter', () => {
+            btn.style.background = borderColor;
+            btn.style.color = '#fff';
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.background = 'transparent';
+            btn.style.color = textColor;
+        });
+        return btn;
+    }
+
+    function createDiffAce(diffText) {
+        const aceDiv = document.createElement('div');
+        // maxLines で内容に応じた自動高さ（最大 30 行）
+        aceDiv.style.cssText = 'width:100%;font-size:.85em';
+        const aceEditor = ace.edit(aceDiv);
+        aceEditor.setOptions({
+            readOnly: true,
+            maxLines: 30,
+            minLines: 2,
+            showGutter: false,
+            showPrintMargin: false,
+            highlightActiveLine: false,
+            wrap: false,
+            fontSize: '0.85em',
+        });
+        aceEditor.getSession().setMode('ace/mode/diff');
+        // 現在のエディタテーマを流用
+        try {
+            const currentTheme = ace.edit(document.querySelector('.ace_editor'))?.getTheme();
+            if (currentTheme) aceEditor.setTheme(currentTheme);
+        } catch (_) {}
+        aceEditor.setValue(diffText || '（変更なし）', -1);
+        return aceDiv;
+    }
+
     function renderCommit(c) {
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'border-bottom:1px solid var(--me-color-border,#eee)';
+
+        // ── コミット行 ──
         const item = document.createElement('div');
         item.style.cssText = [
             'display:flex', 'align-items:flex-start',
             'justify-content:space-between',
-            'padding:.45em .6em', 'border-bottom:1px solid #eee', 'gap:.4em'
+            'padding:.45em .6em', 'gap:.3em'
         ].join(';');
 
         const info = document.createElement('div');
@@ -180,27 +230,52 @@ export function createHistoryPanel(editor, api, appState, onRestore) {
 
         item.appendChild(info);
 
-        const btn = document.createElement('button');
-        btn.textContent = '復元';
-        btn.style.cssText = [
-            'flex-shrink:0', 'cursor:pointer',
-            'font-size:.85em', 'padding:2px 8px',
-            'border:1px solid #4caf50', 'border-radius:3px',
-            'background:#fff', 'color:#4caf50',
-            'transition:background .15s,color .15s'
-        ].join(';');
-        btn.addEventListener('mouseenter', () => {
-            btn.style.background = '#4caf50';
-            btn.style.color = '#fff';
-        });
-        btn.addEventListener('mouseleave', () => {
-            btn.style.background = '#fff';
-            btn.style.color = '#4caf50';
-        });
-        btn.addEventListener('click', () => doRestore(c.hash, btn));
-        item.appendChild(btn);
+        const diffBtn = makeOutlineBtn('差分', 'var(--me-color-border,#aaa)', 'var(--me-color-text,#333)');
+        item.appendChild(diffBtn);
 
-        listArea.appendChild(item);
+        const restoreBtn = makeOutlineBtn('復元', '#4caf50', '#4caf50');
+        restoreBtn.addEventListener('click', () => doRestore(c.hash, restoreBtn));
+        item.appendChild(restoreBtn);
+
+        wrapper.appendChild(item);
+
+        // ── diff 展開エリア ──
+        const diffArea = document.createElement('div');
+        diffArea.style.display = 'none';
+        wrapper.appendChild(diffArea);
+
+        let diffLoaded = false;
+        diffBtn.addEventListener('click', async () => {
+            const expanding = diffArea.style.display === 'none';
+            diffArea.style.display = expanding ? 'block' : 'none';
+            diffBtn.textContent = expanding ? '▲ 差分' : '差分';
+
+            if (expanding && !diffLoaded) {
+                diffLoaded = true;
+                const loading = document.createElement('div');
+                loading.style.cssText = 'padding:.5em .6em;color:#888;font-size:.85em';
+                loading.textContent = '読み込み中...';
+                diffArea.appendChild(loading);
+
+                const filterPath = filterCheckbox.checked && appState.CURRENT_FILE?.path
+                    ? appState.CURRENT_FILE.path : null;
+                try {
+                    const data = await api('/api/git_manager.php', {
+                        action: 'commit_diff',
+                        hash: c.hash,
+                        ...(filterPath ? { file: filterPath } : {})
+                    });
+                    diffArea.innerHTML = '';
+                    diffArea.appendChild(createDiffAce(data.diff ?? ''));
+                } catch (e) {
+                    loading.textContent = '差分の取得に失敗しました';
+                    loading.style.color = '#c00';
+                    console.error('[history-panel] diff error:', e);
+                }
+            }
+        });
+
+        listArea.appendChild(wrapper);
     }
 
     async function doRestore(hash, btn) {

@@ -231,7 +231,7 @@ export function createHistoryPanel(editor, api, appState, onRestore) {
                 setMessage('履歴がありません');
                 return;
             }
-            commits.forEach(c => renderCommit(c));
+            commits.forEach((c, i) => renderCommit(c, i === 0));
         } catch (e) {
             setMessage('読み込みに失敗しました', '#c00');
             console.error('[history-panel] loadHistory error:', e);
@@ -259,7 +259,7 @@ export function createHistoryPanel(editor, api, appState, onRestore) {
         return btn;
     }
 
-    function renderCommit(c) {
+    function renderCommit(c, isLatest = false) {
         const wrapper = document.createElement('div');
         wrapper.style.cssText = 'border-bottom:1px solid var(--me-color-border,#eee)';
 
@@ -275,8 +275,18 @@ export function createHistoryPanel(editor, api, appState, onRestore) {
         info.style.cssText = 'flex:1;min-width:0';
 
         const ts = document.createElement('div');
-        ts.textContent = formatTimestamp(c.timestamp);
-        ts.style.cssText = 'font-size:.8em;color:#888;line-height:1.4';
+        ts.style.cssText = 'display:flex;align-items:center;gap:.4em;font-size:.8em;color:#888;line-height:1.4';
+        ts.appendChild(document.createTextNode(formatTimestamp(c.timestamp)));
+        if (isLatest) {
+            const tag = document.createElement('span');
+            tag.textContent = '現在のバージョン';
+            tag.style.cssText = [
+                'font-size:.85em', 'padding:1px 5px', 'border-radius:3px',
+                'background:var(--me-color-accept,#4caf50)', 'color:#fff',
+                'white-space:nowrap'
+            ].join(';');
+            ts.appendChild(tag);
+        }
         info.appendChild(ts);
 
         const msg = document.createElement('div');
@@ -290,7 +300,13 @@ export function createHistoryPanel(editor, api, appState, onRestore) {
         item.appendChild(diffBtn);
 
         const restoreBtn = makeOutlineBtn('復元', '#4caf50', '#4caf50');
-        restoreBtn.addEventListener('click', () => doRestore(c.hash, restoreBtn));
+        if (isLatest) {
+            restoreBtn.disabled = true;
+            restoreBtn.style.opacity = '.35';
+            restoreBtn.style.cursor = 'not-allowed';
+        } else {
+            restoreBtn.addEventListener('click', () => doRestore(c.hash, restoreBtn));
+        }
         item.appendChild(restoreBtn);
 
         wrapper.appendChild(item);
@@ -357,7 +373,6 @@ export function createHistoryPanel(editor, api, appState, onRestore) {
             if (!confirmed) return;
 
             await api('/api/git_manager.php', { action: 'restore', hash });
-            await loadHistory();
             if (typeof onRestore === 'function') onRestore();
         } catch (e) {
             console.error('[history-panel] restore error:', e);

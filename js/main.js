@@ -4,7 +4,7 @@
 
 // Core modules
 import { UserConfig, changeTheme, CONFIG, APP_STATE } from './modules/core/config.js';
-import { loadExplorer, saveSortSettings } from './modules/core/file-manager.js';
+import { loadExplorer, saveSortSettings, loadFile } from './modules/core/file-manager.js';
 import { startSessionPulse } from './modules/core/pulse.js';
 import { ExplorerAutoReload } from './modules/core/explorer-auto-reload.js';
 import { createHistoryPanel } from './modules/core/history-panel.js';
@@ -1240,8 +1240,24 @@ async function main(){
     chatTab.setContent(chat);
 
     // History panel setup
-    let historyPanel = createHistoryPanel(editor, api, APP_STATE, () => {
-        loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
+    let historyPanel = createHistoryPanel(editor, api, APP_STATE, async () => {
+        const file = APP_STATE.CURRENT_FILE;
+        await Promise.all([
+            historyPanel.refresh(),
+            loadExplorer(editor.BASE_DIR, api, APP_STATE, editor),
+            file?.aceObj
+                ? loadFile(file.path, api).then(apiRet => {
+                    if (!apiRet) return;
+                    const cursor = file.aceObj.editor.getCursorPosition();
+                    file.aceObj.setValue(apiRet.content);
+                    file.aceObj.editor.gotoLine(cursor.row + 1, cursor.column);
+                    file.changed = false;
+                    if (typeof editor.removeFileIcon === 'function') {
+                        editor.removeFileIcon(file.path, '*');
+                    }
+                })
+                : Promise.resolve()
+        ]);
     });
     historyTab.setContent(historyPanel.element);
     // タブボタンクリック時に最新の履歴を取得

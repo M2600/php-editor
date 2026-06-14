@@ -554,6 +554,11 @@ export async function saveFile(path, content, api, currentFile, mConsole, DEBUG,
             }
         }
         ret = 1;
+        fetch('/api/git_manager.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'snapshot', message: 'manual save: ' + path })
+        }).catch(() => {});
     });
     return ret;
 }

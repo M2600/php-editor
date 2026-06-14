@@ -81,6 +81,15 @@ function isPathInUserRoot($path, $userRoot){
 }
 
 /**
+ * .git ディレクトリへのパスであれば例外を投げる
+ */
+function assertNotGitPath($userPath){
+    if (preg_match('#(^|/)\.git(/|$)#', $userPath)) {
+        throw new Exception('.git directory is protected');
+    }
+}
+
+/**
  * パスを安全化（危険な文字列を除去）
  * @deprecated この関数は十分なセキュリティを提供しません。isPathInUserRoot()と併用してください
  * @param string $path 安全化するパス
@@ -292,6 +301,7 @@ function getFile($userPath){
 
 // save file content
 function saveFile($userPath, $file){
+    assertNotGitPath($userPath);
     $startTime = logPerformanceStart("saveFile");
     
     // ファイル内容をログ出力（大きいファイルは切り詰め）
@@ -332,6 +342,7 @@ function saveFile($userPath, $file){
 }
 
 function touchFile($userPath){
+    assertNotGitPath($userPath);
     logInfo("File creation started", ['path' => $userPath]);
     try{
         $serverPath = convertUserPath($userPath);
@@ -357,6 +368,7 @@ function touchFile($userPath){
  * ファイルを作成して内容を書き込む（AIツール用）
  */
 function createFileWithContent($userPath, $content = ""){
+    assertNotGitPath($userPath);
     logInfo("File creation with content started", ['path' => $userPath, 'content_length' => strlen($content)]);
     try{
         $serverPath = convertUserPath($userPath);
@@ -387,6 +399,7 @@ function createFileWithContent($userPath, $content = ""){
 }
 
 function makeDirectory($userPath){
+    assertNotGitPath($userPath);
     try{
         $serverPath = convertUserPath($userPath);
         $serverDir = dirname($serverPath);
@@ -407,6 +420,8 @@ function makeDirectory($userPath){
 }
 
 function renameFile($userPath, $newPath){
+    assertNotGitPath($userPath);
+    assertNotGitPath($newPath);
     try{
         $serverPath = convertUserPath($userPath);
         $newServerPath = convertUserPath($newPath);
@@ -481,6 +496,7 @@ function downloadFile($userPath){
 
 // delete file
 function deleteFile($userPath){
+    assertNotGitPath($userPath);
     try{
         $serverPath = convertUserPath($userPath);
         $ret = unlink($serverPath);
@@ -496,6 +512,7 @@ function deleteFile($userPath){
 }
 
 function deleteDirectory($userPath){
+    assertNotGitPath($userPath);
     try{
         $serverPath = convertUserPath($userPath);
         $paths = scandir($serverPath);
@@ -553,6 +570,7 @@ function fileRecursive($path){
     $paths = scandir($path);
     foreach($paths as $p){
         if($p == "." || $p == "..") continue;
+        if($p == ".git" || $p == ".gitignore") continue;
         $fullPath = $path . "/" . $p;
         $htmlSafePath = htmlspecialchars($p, ENT_QUOTES);
         $mtime = filemtime($fullPath);
@@ -790,3 +808,138 @@ function phpRemoveSystemFunctions($phpString){
 }
 
 
+// ==================== Git version management ====================
+
+function ensureGitRepo(string $userDir): bool {
+    if (is_dir($userDir . '.git')) {
+        return true;
+    }
+    $escaped = escapeshellarg(rtrim($userDir, '/'));
+    exec("git -C $escaped init 2>&1", $out, $code);
+    if ($code !== 0) {
+        logError("git init failed", ['dir' => $userDir, 'output' => $out]);
+        return false;
+    }
+    $gitignorePath = $userDir . '.gitignore';
+    if (!file_exists($gitignorePath)) {
+        file_put_contents($gitignorePath, "*.log\n.DS_Store\n");
+    }
+    return true;
+}
+
+function gitCmd(string $userDir, string $userId): string {
+    $escapedDir   = escapeshellarg(rtrim($userDir, '/'));
+    $escapedName  = escapeshellarg($userId);
+    $escapedEmail = escapeshellarg($userId . '@php-editor.local');
+    return "git -C $escapedDir -c user.name=$escapedName -c user.email=$escapedEmail";
+}
+
+function gitSnapshot(string $userDir, string $message, string $userId): array {
+    if (!ensureGitRepo($userDir)) {
+        return ['committed' => false, 'hash' => null, 'message' => 'git init failed'];
+    }
+    $base = gitCmd($userDir, $userId);
+    exec("$base status --porcelain 2>&1", $statusOut, $statusCode);
+    if (empty(array_filter($statusOut))) {
+        return ['committed' => false, 'hash' => null, 'message' => 'no changes'];
+    }
+    exec("$base add -A 2>&1", $addOut, $addCode);
+    if ($addCode !== 0) {
+        return ['committed' => false, 'hash' => null, 'message' => 'git add failed'];
+    }
+    $safeMsg     = mb_substr($message, 0, 80, 'UTF-8');
+    $escapedMsg  = escapeshellarg($safeMsg);
+    exec("$base commit -m $escapedMsg 2>&1", $commitOut, $commitCode);
+    if ($commitCode !== 0) {
+        return ['committed' => false, 'hash' => null, 'message' => implode("\n", $commitOut)];
+    }
+    exec("$base rev-parse HEAD 2>&1", $hashOut, $hashCode);
+    $hash = ($hashCode === 0) ? trim($hashOut[0]) : null;
+    return ['committed' => true, 'hash' => $hash, 'message' => 'snapshot created'];
+}
+
+function gitHistory(string $userDir, string $userId, ?string $filterPath = null, int $limit = 50): array {
+    if (!is_dir($userDir . '.git')) {
+        return [];
+    }
+    $base    = gitCmd($userDir, $userId);
+    $fileArg = '';
+    if ($filterPath !== null) {
+        $relative = ltrim($filterPath, '/');
+        $fileArg  = '-- ' . escapeshellarg($relative);
+    }
+    exec("$base log --format='%H|%ai|%s' -n " . (int)$limit . " $fileArg 2>&1", $out, $code);
+    if ($code !== 0) {
+        return [];
+    }
+    $commits = [];
+    foreach ($out as $line) {
+        $parts = explode('|', $line, 3);
+        if (count($parts) === 3) {
+            $commits[] = [
+                'hash'      => trim($parts[0]),
+                'timestamp' => trim($parts[1]),
+                'message'   => trim($parts[2]),
+            ];
+        }
+    }
+    return $commits;
+}
+
+function gitCommitFiles(string $userDir, string $userId, string $hash): array {
+    if (!is_dir($userDir . '.git')) {
+        return [];
+    }
+    if (!preg_match('/^[0-9a-f]{40}$/i', $hash)) {
+        return [];
+    }
+    $base = gitCmd($userDir, $userId);
+    exec("$base show --name-only --format='' " . escapeshellarg($hash) . " 2>&1", $out, $code);
+    return ($code === 0) ? array_values(array_filter($out)) : [];
+}
+
+function gitRestore(string $userDir, string $userId, string $hash): array {
+    if (!preg_match('/^[0-9a-f]{40}$/i', $hash)) {
+        return ['success' => false, 'error' => 'invalid commit hash'];
+    }
+    if (!is_dir($userDir . '.git')) {
+        return ['success' => false, 'error' => 'no git repository'];
+    }
+    $base        = gitCmd($userDir, $userId);
+    $escapedHash = escapeshellarg($hash);
+    exec("$base show --format='%s' -s $escapedHash 2>&1", $msgOut, $msgCode);
+    $origMsg = ($msgCode === 0 && !empty($msgOut)) ? trim($msgOut[0]) : $hash;
+    exec("$base checkout $escapedHash -- . 2>&1", $checkoutOut, $checkoutCode);
+    if ($checkoutCode !== 0) {
+        return ['success' => false, 'error' => implode("\n", $checkoutOut)];
+    }
+    exec("$base add -A 2>&1", $addOut, $addCode);
+    $restoreMsg  = escapeshellarg('restored to: ' . mb_substr($origMsg, 0, 60, 'UTF-8'));
+    exec("$base commit -m $restoreMsg 2>&1", $commitOut, $commitCode);
+    if ($commitCode !== 0) {
+        return ['success' => false, 'error' => implode("\n", $commitOut)];
+    }
+    exec("$base rev-parse HEAD 2>&1", $hashOut, $hashCode);
+    $newHash = ($hashCode === 0) ? trim($hashOut[0]) : null;
+    return ['success' => true, 'hash' => $newHash];
+}
+
+function gitDiff(string $userDir, string $userId, string $hash1, string $hash2 = 'HEAD', ?string $filterPath = null): string {
+    if (!preg_match('/^[0-9a-f]{40}$/i', $hash1)) return '';
+    if ($hash2 !== 'HEAD' && !preg_match('/^[0-9a-f]{40}$/i', $hash2)) return '';
+    if (!is_dir($userDir . '.git')) return '';
+    $base    = gitCmd($userDir, $userId);
+    $range   = escapeshellarg($hash1) . '..' . ($hash2 === 'HEAD' ? 'HEAD' : escapeshellarg($hash2));
+    $fileArg = ($filterPath !== null) ? '-- ' . escapeshellarg(ltrim($filterPath, '/')) : '';
+    exec("$base diff $range $fileArg 2>&1", $out, $code);
+    return implode("\n", $out);
+}
+
+function gitShowFile(string $userDir, string $userId, string $hash, string $file): string {
+    if (!preg_match('/^[0-9a-f]{40}$/i', $hash)) return '';
+    if (!is_dir($userDir . '.git')) return '';
+    $base      = gitCmd($userDir, $userId);
+    $objectRef = escapeshellarg($hash . ':' . ltrim($file, '/'));
+    exec("$base show $objectRef 2>&1", $out, $code);
+    return ($code === 0) ? implode("\n", $out) : '';
+}

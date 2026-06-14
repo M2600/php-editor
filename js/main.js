@@ -1374,6 +1374,16 @@ async function main(){
 
     // Chat event handlers
     const sendAIMessageHandler = () => {
+        const _snapshotMsg = chat.inputArea.textarea.value.trim();
+        if (_snapshotMsg) {
+            fetch('/api/git_manager.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'snapshot', message: 'AI task: ' + _snapshotMsg })
+            }).then(r => r.json()).then(data => {
+                if (data.committed) console.log('[git] snapshot:', data.hash);
+            }).catch(e => console.warn('[git] snapshot failed (non-critical):', e));
+        }
         // カスタムAPIが有効な場合はURLとAPIキーを渡す
         let customUrl = null;
         let customApiKey = null;

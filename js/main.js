@@ -7,6 +7,7 @@ import { UserConfig, changeTheme, CONFIG, APP_STATE } from './modules/core/confi
 import { loadExplorer, saveSortSettings } from './modules/core/file-manager.js';
 import { startSessionPulse } from './modules/core/pulse.js';
 import { ExplorerAutoReload } from './modules/core/explorer-auto-reload.js';
+import { createHistoryPanel } from './modules/core/history-panel.js';
 
 // UI modules
 import { MEditor } from '../MEditor/MEditor.js';
@@ -722,7 +723,8 @@ async function main(){
             return;
         }
         APP_STATE.CURRENT_FILE = currentFile;
-        
+        if (historyPanel) historyPanel.updateFilter();
+
         // ファイルを開いた後、正しいファイルをハイライト
         if (APP_STATE.CURRENT_FILE && editor.explorer && typeof editor.explorer.highlightFile === 'function') {
             editor.explorer.highlightFile(APP_STATE.CURRENT_FILE.path);
@@ -990,6 +992,7 @@ async function main(){
     const webPreviewTab = tabContainer.createTab("実行結果");
     let dictMenuTab = tabContainer.createTab("API開発メニュー");
     let chatTab = tabContainer.createTab("AI Chat");
+    let historyTab = tabContainer.createTab("履歴");
     // 初期表示タブをGET Parametersタブに設定
     tabContainer.activateTab(dictMenuTab.id);
 
@@ -1230,6 +1233,17 @@ async function main(){
     chat.console = mConsole;
 
     chatTab.setContent(chat);
+
+    // History panel setup
+    let historyPanel = createHistoryPanel(editor, api, APP_STATE, () => {
+        loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
+    });
+    historyTab.setContent(historyPanel.element);
+    // タブボタンクリック時に最新の履歴を取得
+    const historyTabBtn = tabContainer.tabBar.element.querySelector(
+        `#meditor-tab-button-${historyTab.id}`
+    );
+    if (historyTabBtn) historyTabBtn.addEventListener('click', () => historyPanel.refresh());
 
     // AIからの返答のコードブロックのコードに適用ボタンを押したときの処理
     chat.onApplyToCode = function(codeText, applyBtn) {

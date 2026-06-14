@@ -866,20 +866,25 @@ function gitHistory(string $userDir, string $userId, ?string $filterPath = null,
     $fileArg = '';
     if ($filterPath !== null) {
         $relative = ltrim($filterPath, '/');
-        $fileArg  = '-- ' . escapeshellarg($relative);
+        if ($relative !== '') {
+            $fileArg = '-- ' . escapeshellarg($relative);
+        }
     }
-    exec("$base log --format='%H|%ai|%s' -n " . (int)$limit . " $fileArg 2>&1", $out, $code);
+    exec("$base log --format='%H|%ai|%s|%P' -n " . (int)$limit . " $fileArg 2>&1", $out, $code);
     if ($code !== 0) {
         return [];
     }
     $commits = [];
     foreach ($out as $line) {
-        $parts = explode('|', $line, 3);
-        if (count($parts) === 3) {
+        $parts = explode('|', $line, 4);
+        if (count($parts) >= 3) {
+            $parentRaw  = isset($parts[3]) ? trim($parts[3]) : '';
+            $firstParent = $parentRaw ? explode(' ', $parentRaw)[0] : '';
             $commits[] = [
                 'hash'      => trim($parts[0]),
                 'timestamp' => trim($parts[1]),
                 'message'   => trim($parts[2]),
+                'parent'    => $firstParent,
             ];
         }
     }
@@ -930,7 +935,8 @@ function gitDiff(string $userDir, string $userId, string $hash1, string $hash2 =
     if (!is_dir($userDir . '.git')) return '';
     $base    = gitCmd($userDir, $userId);
     $range   = escapeshellarg($hash1) . '..' . ($hash2 === 'HEAD' ? 'HEAD' : escapeshellarg($hash2));
-    $fileArg = ($filterPath !== null) ? '-- ' . escapeshellarg(ltrim($filterPath, '/')) : '';
+    $rel     = ($filterPath !== null) ? ltrim($filterPath, '/') : '';
+    $fileArg = ($rel !== '') ? '-- ' . escapeshellarg($rel) : '';
     exec("$base diff $range $fileArg 2>&1", $out, $code);
     return implode("\n", $out);
 }
@@ -939,7 +945,8 @@ function gitCommitDiff(string $userDir, string $userId, string $hash, ?string $f
     if (!preg_match('/^[0-9a-f]{40}$/i', $hash)) return '';
     if (!is_dir($userDir . '.git')) return '';
     $base    = gitCmd($userDir, $userId);
-    $fileArg = ($filterPath !== null) ? '-- ' . escapeshellarg(ltrim($filterPath, '/')) : '';
+    $rel     = ($filterPath !== null) ? ltrim($filterPath, '/') : '';
+    $fileArg = ($rel !== '') ? '-- ' . escapeshellarg($rel) : '';
     exec("$base show " . escapeshellarg($hash) . " --format='' -p $fileArg 2>&1", $out, $code);
     while (count($out) > 0 && trim($out[0]) === '') array_shift($out);
     return ($code === 0) ? implode("\n", $out) : '';

@@ -399,6 +399,11 @@ async function main(){
         if(postJsonEditor && typeof postJsonEditor.setTheme === 'function'){
             postJsonEditor.setTheme(theme.aceTheme);
         }
+
+        // 履歴パネルの diff Ace エディタも更新
+        if (historyPanel && typeof historyPanel.setTheme === 'function') {
+            historyPanel.setTheme(theme.aceTheme);
+        }
         
         userConfig.set("theme", theme.name);
     });
@@ -1480,6 +1485,11 @@ async function main(){
     // JSONエディタのテーマも設定
     if(postJsonEditor && typeof postJsonEditor.setTheme === 'function'){
         postJsonEditor.setTheme(eventTheme ? eventTheme.aceTheme : theme.aceTheme);
+    }
+
+    // 履歴パネルの diff Ace に初期テーマを反映
+    if (historyPanel && typeof historyPanel.setTheme === 'function') {
+        historyPanel.setTheme(eventTheme ? eventTheme.aceTheme : theme.aceTheme);
     }
 
     // セッション生存確認を開始

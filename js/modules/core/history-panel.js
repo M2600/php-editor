@@ -67,9 +67,88 @@ function showConfirmDialog(editor, files) {
  * @param {function} api       - api(url, body) 関数
  * @param {object} appState    - APP_STATE（CURRENT_FILE.path を参照）
  * @param {function} onRestore - 復元成功後に呼ぶコールバック（エクスプローラー更新用）
- * @returns {{ element: HTMLElement, refresh: () => void, updateFilter: () => void }}
+ * @returns {{ element: HTMLElement, refresh: () => void, updateFilter: () => void, setTheme: (aceTheme: string) => void }}
  */
 export function createHistoryPanel(editor, api, appState, onRestore) {
+    // テーマ管理：editor.ACE_THEME を起点にする
+    let currentAceTheme = editor.ACE_THEME || 'ace/theme/chrome';
+    const activeAceEditors = new Set();
+
+    function clearActiveEditors() {
+        for (const ed of activeAceEditors) {
+            try { ed.destroy(); } catch (_) {}
+        }
+        activeAceEditors.clear();
+    }
+
+    // raw git diff を Ace エディタに _showDiffUnifiedInEditor と同じマーカーで表示
+    function createDiffViewFromGitDiff(rawDiff) {
+        const lines     = [];
+        const lineTypes = [];
+
+        for (const line of (rawDiff ?? '').split('\n')) {
+            if (line.startsWith('diff --git ')) {
+                const m = line.match(/b\/(.+)$/);
+                lines.push('📄 ' + (m ? m[1] : line));
+                lineTypes.push('header');
+            } else if (
+                line.startsWith('index ') ||
+                line.startsWith('--- ') ||
+                line.startsWith('+++ ')
+            ) {
+                // skip
+            } else if (line.startsWith('@@')) {
+                lines.push('···');
+                lineTypes.push('separator');
+            } else if (line.startsWith('+')) {
+                lines.push('+ ' + line.slice(1));
+                lineTypes.push('added');
+            } else if (line.startsWith('-')) {
+                lines.push('- ' + line.slice(1));
+                lineTypes.push('removed');
+            } else {
+                lines.push('  ' + line.slice(1));
+                lineTypes.push('context');
+            }
+        }
+        while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
+            lines.pop();
+            lineTypes.pop();
+        }
+
+        const aceDiv = document.createElement('div');
+        aceDiv.style.cssText = 'width:100%;font-size:.85em';
+
+        const aceEditor = ace.edit(aceDiv);
+        aceEditor.$blockScrolling = Infinity;
+        aceEditor.setOptions({
+            readOnly: true,
+            maxLines: 40,
+            minLines: 2,
+            showGutter: false,
+            showPrintMargin: false,
+            highlightActiveLine: false,
+            wrap: true,
+            fontSize: '0.85em',
+        });
+        aceEditor.setTheme(currentAceTheme);
+        activeAceEditors.add(aceEditor);
+
+        const Range   = ace.require('ace/range').Range;
+        const session = aceEditor.getSession();
+        session.setValue(lines.join('\n'));
+
+        for (let i = 0; i < lineTypes.length; i++) {
+            if (lineTypes[i] === 'added') {
+                session.addMarker(new Range(i, 0, i, 1e5), 'meditor-diff-line-added', 'fullLine');
+            } else if (lineTypes[i] === 'removed') {
+                session.addMarker(new Range(i, 0, i, 1e5), 'meditor-diff-line-removed', 'fullLine');
+            }
+        }
+
+        return aceDiv;
+    }
+
     const container = document.createElement('div');
     container.style.display = 'flex';
     container.style.flexDirection = 'column';
@@ -115,7 +194,7 @@ export function createHistoryPanel(editor, api, appState, onRestore) {
         if (filterCheckbox.checked && appState.CURRENT_FILE?.path) {
             return appState.CURRENT_FILE.path;
         }
-        return editor.BASE_DIR ?? null;
+        return editor.BASE_DIR || null;
     }
 
     function updateFilterOptions() {
@@ -128,6 +207,7 @@ export function createHistoryPanel(editor, api, appState, onRestore) {
     }
 
     function setMessage(text, color = '#888') {
+        clearActiveEditors();
         listArea.innerHTML = '';
         const el = document.createElement('div');
         el.style.cssText = `padding:.8em .6em;color:${color}`;
@@ -145,6 +225,7 @@ export function createHistoryPanel(editor, api, appState, onRestore) {
                 limit: 50
             });
             const commits = data.commits ?? [];
+            clearActiveEditors();
             listArea.innerHTML = '';
             if (commits.length === 0) {
                 setMessage('履歴がありません');
@@ -176,31 +257,6 @@ export function createHistoryPanel(editor, api, appState, onRestore) {
             btn.style.color = textColor;
         });
         return btn;
-    }
-
-    function createDiffAce(diffText) {
-        const aceDiv = document.createElement('div');
-        // maxLines で内容に応じた自動高さ（最大 30 行）
-        aceDiv.style.cssText = 'width:100%;font-size:.85em';
-        const aceEditor = ace.edit(aceDiv);
-        aceEditor.setOptions({
-            readOnly: true,
-            maxLines: 30,
-            minLines: 2,
-            showGutter: false,
-            showPrintMargin: false,
-            highlightActiveLine: false,
-            wrap: false,
-            fontSize: '0.85em',
-        });
-        aceEditor.getSession().setMode('ace/mode/diff');
-        // 現在のエディタテーマを流用
-        try {
-            const currentTheme = ace.edit(document.querySelector('.ace_editor'))?.getTheme();
-            if (currentTheme) aceEditor.setTheme(currentTheme);
-        } catch (_) {}
-        aceEditor.setValue(diffText || '（変更なし）', -1);
-        return aceDiv;
     }
 
     function renderCommit(c) {
@@ -245,37 +301,52 @@ export function createHistoryPanel(editor, api, appState, onRestore) {
         wrapper.appendChild(diffArea);
 
         let diffLoaded = false;
+
         diffBtn.addEventListener('click', async () => {
             const expanding = diffArea.style.display === 'none';
             diffArea.style.display = expanding ? 'block' : 'none';
             diffBtn.textContent = expanding ? '▲ 差分' : '差分';
 
-            if (expanding && !diffLoaded) {
-                diffLoaded = true;
-                const loading = document.createElement('div');
-                loading.style.cssText = 'padding:.5em .6em;color:#888;font-size:.85em';
-                loading.textContent = '読み込み中...';
-                diffArea.appendChild(loading);
+            if (!expanding || diffLoaded) return;
+            diffLoaded = true;
 
-                const filterPath = filterCheckbox.checked && appState.CURRENT_FILE?.path
-                    ? appState.CURRENT_FILE.path : null;
-                try {
-                    const data = await api('/api/git_manager.php', {
-                        action: 'commit_diff',
-                        hash: c.hash,
-                        ...(filterPath ? { file: filterPath } : {})
-                    });
-                    diffArea.innerHTML = '';
-                    diffArea.appendChild(createDiffAce(data.diff ?? ''));
-                } catch (e) {
-                    loading.textContent = '差分の取得に失敗しました';
-                    loading.style.color = '#c00';
-                    console.error('[history-panel] diff error:', e);
+            const loading = document.createElement('div');
+            loading.style.cssText = 'padding:.5em .6em;color:#888;font-size:.85em';
+            loading.textContent = '読み込み中...';
+            diffArea.appendChild(loading);
+
+            const filterPath = filterCheckbox.checked && appState.CURRENT_FILE?.path
+                ? appState.CURRENT_FILE.path : null;
+
+            try {
+                const data = await api('/api/git_manager.php', {
+                    action: 'commit_diff',
+                    hash: c.hash,
+                    file: filterPath
+                });
+                diffArea.innerHTML = '';
+
+                const rawDiff = data.diff ?? '';
+                if (!rawDiff.trim()) {
+                    appendNote(diffArea, '変更なし');
+                    return;
                 }
+                diffArea.appendChild(createDiffViewFromGitDiff(rawDiff));
+            } catch (e) {
+                loading.textContent = '差分の取得に失敗しました';
+                loading.style.color = '#c00';
+                console.error('[history-panel] diff error:', e);
             }
         });
 
         listArea.appendChild(wrapper);
+    }
+
+    function appendNote(container, text) {
+        const el = document.createElement('div');
+        el.style.cssText = 'padding:.4em .6em;font-size:.85em;color:#888';
+        el.textContent = text;
+        container.appendChild(el);
     }
 
     async function doRestore(hash, btn) {
@@ -301,6 +372,10 @@ export function createHistoryPanel(editor, api, appState, onRestore) {
     return {
         element: container,
         refresh: loadHistory,
-        updateFilter: updateFilterOptions
+        updateFilter: updateFilterOptions,
+        setTheme(aceTheme) {
+            currentAceTheme = aceTheme;
+            for (const ed of activeAceEditors) ed.setTheme(aceTheme);
+        }
     };
 }

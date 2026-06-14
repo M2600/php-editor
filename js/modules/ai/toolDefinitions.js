@@ -229,7 +229,7 @@ export const FILE_EDITOR_TOOLS = [
         type: "function",
         function: {
             name: "listHistory",
-            description: "ファイルまたはディレクトリのバージョン履歴（コミット一覧）を取得します。各コミットのハッシュ・日時・メッセージが返ります。",
+            description: "ファイルまたはディレクトリのバージョン履歴（コミット一覧）を取得します。各コミットのハッシュ・日時・メッセージが返ります。ユーザーへの表示ではハッシュを見せず、日時とメッセージだけを表示してください（例: 「2024-06-14 10:30 / manual save: index.php」）。ハッシュは内部処理（showFileAtCommit・restoreSnapshot の引数）にのみ使用します。",
             parameters: {
                 type: "object",
                 properties: {
@@ -253,7 +253,7 @@ export const FILE_EDITOR_TOOLS = [
         type: "function",
         function: {
             name: "showFileAtCommit",
-            description: "指定したコミット時点のファイル内容を取得します。過去のバージョンを確認するために使用します。",
+            description: "指定したコミット時点のファイル内容を取得します。過去のバージョンを確認するために使用します。ユーザーへの報告ではハッシュを言及せず、日時やメッセージで特定してください。",
             parameters: {
                 type: "object",
                 properties: {
@@ -274,7 +274,7 @@ export const FILE_EDITOR_TOOLS = [
         type: "function",
         function: {
             name: "restoreSnapshot",
-            description: "指定したコミット時点の状態にファイルを復元します。ユーザーに確認ダイアログを表示してから実行されます。復元後は新しいコミットが作成され、タイムラインは常に前進します（元の状態に戻すことも可能です）。",
+            description: "指定したコミット時点の状態にファイルを復元します。ユーザーに確認ダイアログを表示してから実行されます。復元後は新しいコミットが作成され、タイムラインは常に前進します（元の状態に戻すことも可能です）。ユーザーへの報告ではハッシュを言及せず、日時やメッセージで特定してください。",
             parameters: {
                 type: "object",
                 properties: {

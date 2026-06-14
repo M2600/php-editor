@@ -35,6 +35,57 @@ function resolveGitPath(filePath, baseDir) {
     return base ? `${base}/${rel}` : rel;
 }
 
+// 復元確認ダイアログ（editor.popupWindow を使ったカスタムUI）
+function showRestoreConfirmation(editor, files) {
+    if (!editor || typeof editor.popupWindow !== 'function') {
+        return Promise.resolve(window.confirm(
+            `以下のファイルをコミット時点の状態に復元します:\n\n${files.join('\n')}\n\n続行しますか？`
+        ));
+    }
+    return new Promise((resolve) => {
+        const contents = document.createElement('div');
+        contents.style.minWidth = '18em';
+
+        const msg = document.createElement('div');
+        msg.textContent = '以下のファイルをコミット時点の状態に復元します:';
+        msg.style.marginBottom = '.5em';
+        contents.appendChild(msg);
+
+        const list = document.createElement('ul');
+        list.style.margin = '0 0 .8em 1em';
+        list.style.padding = '0';
+        list.style.fontSize = '.9em';
+        files.forEach(f => {
+            const li = document.createElement('li');
+            li.textContent = f;
+            list.appendChild(li);
+        });
+        contents.appendChild(list);
+
+        const controls = document.createElement('div');
+        controls.style.display = 'flex';
+        controls.style.gap = '.5em';
+        controls.style.justifyContent = 'flex-end';
+        contents.appendChild(controls);
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'キャンセル';
+        cancelBtn.classList.add('meditor-diff-ignore-btn');
+        cancelBtn.addEventListener('click', () => { popup.remove(); resolve(false); });
+        controls.appendChild(cancelBtn);
+
+        const restoreBtn = document.createElement('button');
+        restoreBtn.textContent = '復元する';
+        restoreBtn.classList.add('meditor-diff-apply-btn');
+        restoreBtn.addEventListener('click', () => { popup.remove(); resolve(true); });
+        controls.appendChild(restoreBtn);
+
+        const popup = editor.popupWindow('restore-confirm', contents);
+        const closeBtn = popup.element.querySelector('.meditor-popup-window-close-button');
+        if (closeBtn) closeBtn.addEventListener('click', () => resolve(false));
+    });
+}
+
 export class AITool {
     constructor() {
     }
@@ -219,17 +270,14 @@ export class AITool {
                 }
                 return { success: true, llmContent: data.content ?? '' };
             } else if (toolName === 'restoreSnapshot') {
-                const { api: apiFunc } = context;
+                const { api: apiFunc, editor } = context;
                 const filesData = await apiFunc('/api/git_manager.php', {
                     action: 'commit_files',
                     hash: args.hash
                 });
-                const fileList = (filesData.files ?? []).join('\n');
-                const confirmed = window.confirm(
-                    `以下のファイルをコミット時点の状態に復元します:\n\n${fileList}\n\n続行しますか？`
-                );
+                const confirmed = await showRestoreConfirmation(editor, filesData.files ?? []);
                 if (!confirmed) {
-                    return { success: false, llmContent: 'ユーザーがキャンセルしました' };
+                    return { success: false, message: 'ユーザーによりキャンセルしました', llmContent: 'キャンセル' };
                 }
                 const data = await apiFunc('/api/git_manager.php', {
                     action: 'restore',

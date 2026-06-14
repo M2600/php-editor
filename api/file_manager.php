@@ -234,13 +234,13 @@ try {
 
 if($action == "list"){
     $files = fileList("");
-    echo json_encode(array("status" => "success", "id" => $_SESSION["id"], "files" => $files));
+    echo json_encode(array("status" => "success", "id" => ($_SESSION['class_admin_id'] ?? '_system_') . '/' . ($_SESSION['class_id'] ?? '_system_') . '/' . $_SESSION["id"], "files" => $files));
     exit();
 }
 
 if($action == "list-object"){
     $files = fileObject($path);
-    echo json_encode(array("status" => "success", "id" => $_SESSION["id"], "files" => $files));
+    echo json_encode(array("status" => "success", "id" => ($_SESSION['class_admin_id'] ?? '_system_') . '/' . ($_SESSION['class_id'] ?? '_system_') . '/' . $_SESSION["id"], "files" => $files));
     exit();
 }
 

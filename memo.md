@@ -261,3 +261,7 @@ BitArrowログイン(ロジックテスト実装済み`test/ba_auth*.php`)
               └── クラスに属さないアカウント/
 ```
 
+## 移行作業
+- `sandbox/*`を`sandbox/_system_/_system_/`に移動
+- user.csvは編集の必要なし
+

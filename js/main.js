@@ -473,6 +473,19 @@ async function main(){
     editor.page.header.header.menu.items.push(leftPanelToggle);
     editor.page.header.header.menu.element.prepend(leftPanelToggle.element);
 
+    // ヘッダー一番左にユーザー情報を表示（パネルトグル後にprependで最左端へ）
+    const _sd = window.SESSION_DATA;
+    const _roleLabel = ({admin: '管理者', teacher: '教員', user: '生徒'})[_sd.role] ?? _sd.role;
+    const _parts = [_sd.id];
+    if (_sd.class_admin_id === '_bitarrow_' && _sd.class_id !== '_teachers_') {
+        _parts.push(_sd.class_id);
+    }
+    _parts.push(_roleLabel);
+    const _userInfoEl = document.createElement('span');
+    _userInfoEl.className = 'header-user-info';
+    _userInfoEl.textContent = _parts.join(' | ');
+    editor.page.header.header.menu.element.prepend(_userInfoEl);
+
     // Register toggle buttons with MEditor for automatic state updates
     editor.registerPanelToggleButton('left', leftPanelToggle);
     editor.registerPanelToggleButton('right', rightPanelToggle);

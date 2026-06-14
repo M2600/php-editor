@@ -7,10 +7,12 @@ requireLogin();
 
 // セッション情報をJavaScriptに渡す
 $sessionData = [
-    'id' => $_SESSION['id'] ?? null,
-    'role' => $_SESSION['role'] ?? null,
-    'is_proxy' => isProxyLogin(),
-    'proxy_info' => null
+    'id'             => $_SESSION['id']             ?? null,
+    'role'           => $_SESSION['role']           ?? null,
+    'class_admin_id' => $_SESSION['class_admin_id'] ?? '_system_',
+    'class_id'       => $_SESSION['class_id']       ?? '_system_',
+    'is_proxy'       => isProxyLogin(),
+    'proxy_info'     => null
 ];
 
 if (isProxyLogin() && isset($_SESSION['proxy_login'])) {

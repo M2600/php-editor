@@ -89,3 +89,13 @@ body {
 body.proxy-login-active {
     /*padding-top: 68px;*/
 }
+
+.header-user-info,
+.meditor-header-menu .meditor-label {
+    color: #aaa;
+    font-size: 0.8em;
+    padding: 0 0.75em;
+    align-self: center;
+    white-space: nowrap;
+}
+

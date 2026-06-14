@@ -213,6 +213,20 @@ index.htmlはプロジェクトルートにおいて
 
 まずは実装せずに計画を立ててください
 
+## 解決
+原因
+- fileReadの履歴が即圧縮
+- JSONエスケープされた状態でAIに送信
+- fileRead時に行数が送信されない
+
+修正後
+- editFileByReplaceのno_change率が30% -> 8%
+- editFileByLinesの成功率 79% -> 91%
+	- 体感上(編集の意味も考慮)の成功率は大幅に上昇
+- 体感
+	- 以前はファイル編集が使い物にならなかった
+	- ミスはあるものの繰り返し編集することで最終的に編集成功
+
 
 # クラス機能
 BitArrowログイン(ロジックテスト実装済み`test/ba_auth*.php`)
@@ -235,12 +249,15 @@ BitArrowログイン(ロジックテスト実装済み`test/ba_auth*.php`)
   │           ├── eh99a002/
   │           └── teacher/
   ├── _bitarrow_/
-  │     └── classA/
-  │           ├── user1/
-  │           ├── user2/
-  │           └── user3/
+  │     ├── classA/
+  │     │     ├── user1/
+  │     │     ├── user2/
+  │     │     └── user3/
+  │     └── _teacher_/
+  │            ├── prof_a/
+  │            └── prof_b/
   └── _system_/
         └── _system_/
-              └── クラスに属さないアカウント/    (教員アカウントのファイルもここに置く？)
+              └── クラスに属さないアカウント/
 ```
 

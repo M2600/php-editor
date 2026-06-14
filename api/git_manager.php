@@ -71,8 +71,12 @@ switch ($action) {
             echo json_encode(['status' => 'error', 'error' => 'hash and file required']);
             exit();
         }
-        $content = gitShowFile($userDir, $userId, $hash, $file);
-        echo json_encode(['status' => 'success', 'content' => $content]);
+        $result = gitShowFile($userDir, $userId, $hash, $file);
+        if (!$result['found']) {
+            echo json_encode(['status' => 'not_found', 'error' => $result['error']]);
+            exit();
+        }
+        echo json_encode(['status' => 'success', 'content' => $result['content']]);
         break;
 
     default:

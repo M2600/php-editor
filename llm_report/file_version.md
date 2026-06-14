@@ -25,10 +25,11 @@ AIエージェントとユーザの手動編集を対象に、ユーザディレ
 
 ```
 コミットメッセージ: "AI task: {ユーザメッセージ先頭80文字}"
-トリガー: js/main.js の sendAIMessageHandler 冒頭（非同期 fire-and-forget）
+タイミング: sendAIMessage() の完了後（ターン終了後）
+トリガー: js/main.js の sendAIMessageHandler を async 化し、await sendAIMessage() の後で fire-and-forget
 ```
 
-変更なし（`git status --porcelain` が空）の場合はスキップ。
+ターン完了後にスナップショットを取ることで、コミットのラベルと内容が一致する（「AI task: M1」コミットにはM1の編集結果が入る）。変更なしの場合はスキップ。
 
 #### 2. 手動保存時コミット
 

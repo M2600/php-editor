@@ -224,6 +224,68 @@ export const FILE_EDITOR_TOOLS = [
                 required: ["query"]
             }
         }
+    },
+    {
+        type: "function",
+        function: {
+            name: "listHistory",
+            description: "ファイルまたはディレクトリのバージョン履歴（コミット一覧）を取得します。各コミットのハッシュ・日時・メッセージが返ります。",
+            parameters: {
+                type: "object",
+                properties: {
+                    file: {
+                        type: "string",
+                        description: "絞り込むファイルまたはディレクトリのパス。省略時は現在のディレクトリ全体の履歴を返します。"
+                    },
+                    limit: {
+                        type: "integer",
+                        description: "取得する件数（デフォルト: 20、最大: 100）",
+                        minimum: 1,
+                        maximum: 100,
+                        default: 20
+                    }
+                },
+                required: []
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "showFileAtCommit",
+            description: "指定したコミット時点のファイル内容を取得します。過去のバージョンを確認するために使用します。",
+            parameters: {
+                type: "object",
+                properties: {
+                    hash: {
+                        type: "string",
+                        description: "コミットハッシュ（listHistoryで取得した40文字の16進数）"
+                    },
+                    file: {
+                        type: "string",
+                        description: "取得するファイルのパス"
+                    }
+                },
+                required: ["hash", "file"]
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "restoreSnapshot",
+            description: "指定したコミット時点の状態にファイルを復元します。ユーザーに確認ダイアログを表示してから実行されます。復元後は新しいコミットが作成され、タイムラインは常に前進します（元の状態に戻すことも可能です）。",
+            parameters: {
+                type: "object",
+                properties: {
+                    hash: {
+                        type: "string",
+                        description: "復元先のコミットハッシュ（listHistoryで取得した40文字の16進数）"
+                    }
+                },
+                required: ["hash"]
+            }
+        }
     }
 ];
 

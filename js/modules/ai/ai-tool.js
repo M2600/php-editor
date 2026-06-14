@@ -27,6 +27,14 @@ async function logToolInvocationError(toolName, parameters, errorCode, message) 
 }
 
 
+// BASE_DIR 相対パスを git repo ルート相対パスに変換する
+function resolveGitPath(filePath, baseDir) {
+    if (!filePath) return filePath;
+    const base = (baseDir || '').replace(/\/$/, '');
+    const rel  = filePath.replace(/^\.?\/+/, '');
+    return base ? `${base}/${rel}` : rel;
+}
+
 export class AITool {
     constructor() {
     }
@@ -184,6 +192,53 @@ export class AITool {
                     maxResults: args.maxResults,
                     contextLines: args.contextLines
                 });
+            } else if (toolName === 'listHistory') {
+                const { api: apiFunc, baseDir } = context;
+                const data = await apiFunc('/api/git_manager.php', {
+                    action: 'history',
+                    file: args.file ? resolveGitPath(args.file, baseDir) : (baseDir ?? null),
+                    limit: args.limit ?? 20
+                });
+                const commits = (data.commits ?? []).map(c =>
+                    `${c.hash} | ${c.timestamp} | ${c.message}`
+                ).join('\n');
+                return { success: true, llmContent: commits || '(履歴なし)' };
+            } else if (toolName === 'showFileAtCommit') {
+                const { api: apiFunc, baseDir } = context;
+                const data = await apiFunc('/api/git_manager.php', {
+                    action: 'show',
+                    hash: args.hash,
+                    file: resolveGitPath(args.file, baseDir)
+                });
+                if (data.status !== 'success') {
+                    const reason = data.error ? ` (${data.error})` : '';
+                    return {
+                        success: false,
+                        llmContent: `このコミット時点ではファイルが存在しませんでした: ${args.file}${reason}`
+                    };
+                }
+                return { success: true, llmContent: data.content ?? '' };
+            } else if (toolName === 'restoreSnapshot') {
+                const { api: apiFunc } = context;
+                const filesData = await apiFunc('/api/git_manager.php', {
+                    action: 'commit_files',
+                    hash: args.hash
+                });
+                const fileList = (filesData.files ?? []).join('\n');
+                const confirmed = window.confirm(
+                    `以下のファイルをコミット時点の状態に復元します:\n\n${fileList}\n\n続行しますか？`
+                );
+                if (!confirmed) {
+                    return { success: false, llmContent: 'ユーザーがキャンセルしました' };
+                }
+                const data = await apiFunc('/api/git_manager.php', {
+                    action: 'restore',
+                    hash: args.hash
+                });
+                return {
+                    success: data.success ?? false,
+                    llmContent: data.success ? `復元しました (新コミット: ${data.hash})` : (data.error ?? '復元失敗')
+                };
             } else {
                 await logToolInvocationError(
                     toolName,

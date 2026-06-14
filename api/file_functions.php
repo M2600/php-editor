@@ -935,11 +935,19 @@ function gitDiff(string $userDir, string $userId, string $hash1, string $hash2 =
     return implode("\n", $out);
 }
 
-function gitShowFile(string $userDir, string $userId, string $hash, string $file): string {
-    if (!preg_match('/^[0-9a-f]{40}$/i', $hash)) return '';
-    if (!is_dir($userDir . '.git')) return '';
+function gitShowFile(string $userDir, string $userId, string $hash, string $file): array {
+    if (!preg_match('/^[0-9a-f]{40}$/i', $hash)) {
+        return ['found' => false, 'content' => '', 'error' => 'invalid commit hash'];
+    }
+    if (!is_dir($userDir . '.git')) {
+        return ['found' => false, 'content' => '', 'error' => 'no git repository'];
+    }
     $base      = gitCmd($userDir, $userId);
     $objectRef = escapeshellarg($hash . ':' . ltrim($file, '/'));
     exec("$base show $objectRef 2>&1", $out, $code);
-    return ($code === 0) ? implode("\n", $out) : '';
+    if ($code !== 0) {
+        $errMsg = preg_replace('/^fatal:\s*/i', '', trim(implode(' ', $out)));
+        return ['found' => false, 'content' => '', 'error' => $errMsg];
+    }
+    return ['found' => true, 'content' => implode("\n", $out), 'error' => ''];
 }

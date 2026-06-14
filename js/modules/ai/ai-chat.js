@@ -1116,7 +1116,8 @@ export async function sendAIMessage({
     mConsole = null,
     api = null,
     appState = null,  // APP_STATEを追加
-    enableTools = true  // ツール機能を有効にするかどうか
+    enableTools = true,  // ツール機能を有効にするかどうか
+    onTurnComplete = null  // ターン正常完了時のコールバック
 }) {
     try {
         if(historyManager.getStreaming()) return;
@@ -1234,6 +1235,7 @@ export async function sendAIMessage({
             historyManager.setStreaming(false);
             if (typeof chat.hideLoading === 'function') chat.hideLoading();
             ensureLinksOpenInNewTab(chat?.content?.element);
+            if (typeof onTurnComplete === 'function') onTurnComplete();
         };
         // まず空のAIメッセージを追加
         chat.addMessage("", "ai", true);

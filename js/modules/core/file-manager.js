@@ -432,7 +432,12 @@ export async function loadExplorer(path, api, appState, editor) {
         let prevFILE_LIST = appState.FILE_LIST;
         appState.FILE_LIST = data.files;
         editor.BASE_DIR = path;
-        let dir = Path.join(appState.USER_ID, path);
+        const _sd = window.SESSION_DATA;
+        const _systemIds = ['_system_', '_teachers_'];
+        const _displayUser = _sd && !_systemIds.includes(_sd.class_id)
+            ? (_sd.class_id + '/' + _sd.id)
+            : (_sd ? _sd.id : appState.USER_ID);
+        let dir = Path.join(_displayUser, path);
         //editor.explorer.setMenuTitle(dir);
         editor.explorer.setTitle(dir);
         

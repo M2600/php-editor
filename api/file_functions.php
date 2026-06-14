@@ -439,6 +439,8 @@ function renameFile($userPath, $newPath){
 }
 
 function renameDirectory($userPath, $newPath){
+    assertNotGitPath($userPath);
+    assertNotGitPath($newPath);
     try{
         $serverPath = convertUserPath($userPath);
         $newServerPath = convertUserPath($newPath);
@@ -456,6 +458,8 @@ function renameDirectory($userPath, $newPath){
 }
 
 function duplicateFile($userPath, $newPath){
+    assertNotGitPath($userPath);
+    assertNotGitPath($newPath);
     try{
         $serverPath = convertUserPath($userPath);
         $newServerPath = convertUserPath($newPath);
@@ -477,8 +481,9 @@ function duplicateFile($userPath, $newPath){
 
 // upload file
 function uploadFile($userPath, $fileInfo){
+    $fileOriginalName = $fileInfo["name"];
+    assertNotGitPath($userPath . '/' . $fileOriginalName);
     try{
-        $fileOriginalName = $fileInfo["name"];
         $fileTempName = $fileInfo["tmp_name"];
         $serverPath = convertUserPath($userPath) . "/" . $fileOriginalName;
         move_uploaded_file($fileTempName, $serverPath);

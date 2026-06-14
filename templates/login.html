@@ -77,7 +77,21 @@
         .login-submit:hover {
             background-color: #666;
         }
-        
+
+        .ba-btn {
+            background-color: #2a5298;
+        }
+        .ba-btn:hover {
+            background-color: #3a63b0;
+        }
+
+        .login-divider {
+            text-align: center;
+            color: #777;
+            margin: 0.75em 0;
+            font-size: 0.85em;
+        }
+
     </style>
 </head>
 <body>
@@ -95,6 +109,8 @@
             </div>
             <div id="message"></div>
             <button id="submit" class="login-submit">ログイン</button>
+            <div class="login-divider">または</div>
+            <button id="ba-login" class="login-submit ba-btn">BitArrowでログイン</button>
         </div>
     </div>
     <script>
@@ -155,6 +171,92 @@
         });
 
         document.getElementById("id").focus();
+
+        // BitArrow認証フロー
+        document.getElementById("ba-login").addEventListener("click", async function() {
+            const message = document.getElementById("message");
+            message.style.color = "#ccc";
+            message.innerHTML = "BitArrow認証画面へ移動中...";
+
+            const stateRes = await fetch("api/ba_login.php").then(r => r.json());
+            const state = stateRes.state;
+
+            const callbackUrl = new URL(window.location.href);
+            callbackUrl.search = "";
+            callbackUrl.searchParams.set("state", state);
+
+            const authUrl = "https://bitarrow3.eplang.jp/bitarrow/?Login/curStatus&otp=1&callback=" + encodeURIComponent(callbackUrl.toString());
+            window.location.href = authUrl;
+        });
+
+        const BA_LOGIN_URL = "https://bitarrow3.eplang.jp/bitarrow/?Login/form";
+
+        async function startBAAuthFlow() {
+            const stateRes = await fetch("api/ba_login.php").then(r => r.json());
+            const state = stateRes.state;
+            const callbackUrl = new URL(window.location.href);
+            callbackUrl.search = "";
+            callbackUrl.searchParams.set("state", state);
+            const authUrl = "https://bitarrow3.eplang.jp/bitarrow/?Login/curStatus&otp=1&callback=" + encodeURIComponent(callbackUrl.toString());
+            window.location.href = authUrl;
+        }
+
+        async function openBALoginAndRetry() {
+            const popup = window.open(BA_LOGIN_URL, "BitArrow Login", "width=600,height=600");
+            if (!popup) {
+                // ポップアップがブロックされた場合はリンクで案内
+                return;
+            }
+            // ポップアップが閉じるまで待機（1秒ポーリング）
+            await new Promise(resolve => {
+                const interval = setInterval(() => {
+                    if (popup.closed) {
+                        clearInterval(interval);
+                        resolve();
+                    }
+                }, 1000);
+            });
+            // ポップアップが閉じたら再度ログインチェック
+            await startBAAuthFlow();
+        }
+
+        function showBANotLoggedIn() {
+            const message = document.getElementById("message");
+            message.style.color = "orange";
+            message.innerHTML =
+                "BitArrowにログインしていません。<br>" +
+                "<a href='" + BA_LOGIN_URL + "' target='_blank' style='color:#7aadff;'>BitArrowログインページを開く</a>";
+            openBALoginAndRetry();
+        }
+
+        // BitArrowコールバック処理（ページロード時にstateとcodeを検出）
+        (async function() {
+            const params = new URLSearchParams(window.location.search);
+            const state = params.get("state");
+            const code = params.get("code");
+            if (!state || !code) return;
+
+            const message = document.getElementById("message");
+            message.style.color = "#ccc";
+            message.innerHTML = "BitArrow認証中...";
+
+            const res = await fetch("api/ba_login.php", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({state, code})
+            }).then(r => r.json()).catch(err => ({status: "failure", message: err.message}));
+
+            if (res.status === "success") {
+                message.style.color = "green";
+                message.innerHTML = res.message;
+                window.location.href = res.redirect || "index.php";
+            } else if (res.status === "not_logged_in") {
+                showBANotLoggedIn();
+            } else {
+                message.style.color = "red";
+                message.innerHTML = res.message || "認証に失敗しました";
+            }
+        })();
 
     </script>
 </body>

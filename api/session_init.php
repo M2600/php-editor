@@ -22,7 +22,7 @@ $isHttps = (
 ini_set('session.use_only_cookies', 1);          // URLパラメータでのセッションID送信を無効化
 ini_set('session.cookie_httponly', 1);           // JavaScriptからのアクセスを防止
 ini_set('session.cookie_secure', $isHttps ? 1 : 0);  // HTTPS時のみセキュアCookieを使用
-ini_set('session.cookie_samesite', 'Strict');    // CSRF対策（Strictに変更）
+ini_set('session.cookie_samesite', 'Lax');       // OAuthコールバック対応（Strictだとリダイレクト時にCookieが送られない）
 
 // セッションCookieのDomainを設定してサブドメイン分離を推奨
 // 本番環境では editor.example.com と user-programs.example.com のように

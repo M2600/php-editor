@@ -28,9 +28,10 @@ $USER_SCRIPT_PHP_INI = $userRoot . "/data/php_editor/sandbox/php.ini";
  */
 function getUserRoot(){
     global $FILE_ROOT;
-    $userRoot = $FILE_ROOT . basename($_SESSION["id"]) . "/";
-    //error_log("userroot: ". $userRoot);
-    return $userRoot;
+    $classAdminId = basename($_SESSION['class_admin_id'] ?? '_system_');
+    $classId      = basename($_SESSION['class_id']       ?? '_system_');
+    $userId       = basename($_SESSION['id']);
+    return $FILE_ROOT . $classAdminId . '/' . $classId . '/' . $userId . '/';
 }
 
 /**

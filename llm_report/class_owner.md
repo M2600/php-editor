@@ -60,6 +60,8 @@ prof_suzuki
 
 同一クラスに別の教員IDが既に登録されていても、上書きせず行を追加する（複数教員の共存）。
 
+`addClassOwner()` は新規にオーナーを追加した場合のみ `true` を返す。これを使い、クラスが新規にアクティベートされた場合のみ、教員を `teacher.php`（教員用メニューページ）にリダイレクトし、アクティベート通知とPHPEditorの使い方・注意点を表示する。同じ教員が既にオーナーのクラスに再ログインした場合は通常のリダイレクト（`redirect_after_login` or `/index.php`）のまま。
+
 ### 学生ログイン
 
 ```
@@ -77,13 +79,14 @@ prof_suzuki
 | ファイル | 内容 |
 |---|---|
 | `api/file_functions.php` | `getClassOwnerFilePath` / `getClassOwners` / `isClassActivated` / `addClassOwner` |
-| `api/ba_login.php` | 学生ログイン時の有効化チェック、教員ログイン時の `addClassOwner` 呼び出し |
+| `api/ba_login.php` | 学生ログイン時の有効化チェック、教員ログイン時の `addClassOwner` 呼び出しと新規アクティベート時のリダイレクト |
+| `teacher.php` / `templates/teacher.html` | 教員用メニューページ（ランディングページ）。`?activated=1&class=...` でアクセスした場合のみアクティベート通知バナーを表示。PHPEditorの使い方・注意点を常設表示 |
 
 ---
 
 ## 未実装・今後の課題
 
-- `teacher.php`（教員管理画面）— 担当クラス一覧の表示と、各クラスの学生への代理ログイン機能。`getClassOwners()` を使い、戻り値に自分のIDが含まれるクラスを一覧表示する想定。
+- `teacher.php`（教員用メニューページ）— ランディングページ自体は実装済みだが、担当クラス一覧の表示と、各クラスの学生への代理ログイン機能は未実装。`getClassOwners()` を使い、戻り値に自分のIDが含まれるクラスを一覧表示する想定。
 - クラス有効化の取り消し手段（管理者操作のみ？）
 - `.owner` から教員を削除する手段（現状は追加のみで削除APIはない）
 - `_system_` ユーザー（ローカルCSVログイン）の教員とクラスの関係は別途設計が必要

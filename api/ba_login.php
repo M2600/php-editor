@@ -65,7 +65,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 		// BitArrowが返す class は「最後にアクセスしたクラス」＝オーナーであることが保証される
 		if (!empty($userData['class'])) {
-			addClassOwner($userData['class'], $userData['teacher']);
+			$newlyActivated = addClassOwner($userData['class'], $userData['teacher']);
+			if ($newlyActivated) {
+				$redirect = '/teacher.php?activated=1&class=' . urlencode($userData['class']);
+			}
 		}
 	} else {
 		$_SESSION['id']             = $userData['user'];

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../media/icon.svg">
+    <title>教員用メニュー - PHPEditor</title>
+    <h1>教員用メニュー - PHPEditor</h1>
+
+    <div id="activatedBanner" style="display: none;">
+        <h2 style="color: red;">クラス「<span id="activatedClassName"></span>」がアクティベートされました</h2>
+        <p>このクラスの生徒は今後PHPEditorにログインできるようになります。</p>
+    </div>
+
+    <h2>PHPEditorを使う上での注意点</h2>
+    <ul>
+        <li>PHPEditor上で作成されたファイルは即座にインターネット上に公開されます。</li>
+		<li></li>
+    </ul>
+
+    <h2>今後追加予定の機能</h2>
+    <p class="menu-note">担当クラスの一覧表示・生徒への代理ログイン機能は未実装です。</p>
+
+    <a href="/2.php" class="back-link">← エディタに戻る</a>
+
+    <script>
+        const params = new URLSearchParams(location.search);
+        if (params.get('activated') === '1') {
+            const className = params.get('class') || '';
+            document.getElementById('activatedClassName').textContent = className;
+            document.getElementById('activatedBanner').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

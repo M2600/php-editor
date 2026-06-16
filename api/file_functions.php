@@ -118,7 +118,7 @@ function isClassActivated($classId){
 /**
  * クラスのオーナーに教員IDを追加登録（冪等）。
  * 既に他の教員が登録されていても上書きせず追加する（複数教員を許容）。
- * @return bool 常にtrue（追加 or 既に登録済み）
+ * @return bool 新規に追加した場合のみtrue。既に登録済み・予約名の場合はfalse
  */
 function addClassOwner($classId, $teacherId){
     if (basename($classId) === '_teachers_' || $classId === '') {
@@ -126,7 +126,7 @@ function addClassOwner($classId, $teacherId){
     }
     $owners = getClassOwners($classId);
     if (in_array($teacherId, $owners, true)) {
-        return true; // 既に登録済み（冪等）
+        return false; // 既に登録済み（新規アクティベートではない）
     }
     $path = getClassOwnerFilePath($classId);
     $dir  = dirname($path);

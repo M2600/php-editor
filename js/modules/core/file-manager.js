@@ -433,7 +433,7 @@ export async function loadExplorer(path, api, appState, editor) {
         appState.FILE_LIST = data.files;
         editor.BASE_DIR = path;
         const _sd = window.SESSION_DATA;
-        const _systemIds = ['_system_', '_teachers_'];
+        const _systemIds = ['_system_'];
         const _displayUser = _sd && !_systemIds.includes(_sd.class_id)
             ? (_sd.class_id + '/' + _sd.id)
             : (_sd ? _sd.id : appState.USER_ID);

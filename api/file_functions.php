@@ -118,11 +118,11 @@ function isClassActivated($classId){
 /**
  * クラスのオーナーに教員IDを追加登録（冪等）。
  * 既に他の教員が登録されていても上書きせず追加する（複数教員を許容）。
- * @return bool 新規に追加した場合のみtrue。既に登録済み・予約名の場合はfalse
+ * @return bool 新規に追加した場合のみtrue。既に登録済み・クラスID未指定の場合はfalse
  */
 function addClassOwner($classId, $teacherId){
-    if (basename($classId) === '_teachers_' || $classId === '') {
-        return false; // 予約名は対象外
+    if ($classId === '') {
+        return false;
     }
     $owners = getClassOwners($classId);
     if (in_array($teacherId, $owners, true)) {

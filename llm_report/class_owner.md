@@ -8,11 +8,12 @@ BitArrow認証では、教員アカウントのログイン時（代理ログイ
 {"teacher": "prof_tanaka", "class": "3a"}
 ```
 
-`class` を含まない教員ログインもある（クラスへの最終アクセス情報がない場合）：
+BitArrow上では教員の編集データもクラスごとに分かれているため、`class` を含まない教員ログイン（クラスを開かずにBitArrowにログインした状態）は受け付けない。教員にはBitArrow上で対象クラスを開いた状態でログインしてもらう必要がある。
 
 ```json
 {"teacher": "prof_tanaka"}
 ```
+→ `class` がないため拒否（`status: class_not_selected`）。
 
 代理ログイン時は `user` も含まれる：
 
@@ -28,13 +29,14 @@ BitArrow上では1つのクラスに複数の教員を登録できる仕様の�
 
 ```
 sandbox/_bitarrow_/
-  ├── 3a/
-  │   ├── .owner        ← 1行1教員ID（複数行可）
-  │   ├── eh99a001/
-  │   └── eh99a002/
-  └── _teachers_/
-        └── prof_tanaka/
+  └── 3a/
+      ├── .owner        ← 1行1教員ID（複数行可）
+      ├── eh99a001/     ← 学生のホーム
+      ├── eh99a002/
+      └── prof_tanaka/  ← 教員のホーム（クラスごとに分かれる）
 ```
+
+教員のホームディレクトリも学生と同じクラス配下に置かれる（`_teachers_` のような専用ディレクトリは存在しない）。これはBitArrow上で教員の編集画面もクラスごとにデータが分かれていることに合わせたもの。同じ教員が複数クラスを担当する場合は、クラスごとに別のホームディレクトリ（`sandbox/_bitarrow_/{class}/prof_tanaka/`）を持つ。
 
 `.owner` はテキストファイル。1行ごとに教員IDを1つ格納する。
 
@@ -50,12 +52,13 @@ prof_suzuki
 ### クラス有効化（教員側）
 
 ```
-教員がBitArrowログイン（通常 or 代理）
+教員がBitArrowログイン（通常 or 代理。対象クラスを開いた状態が必須）
   → BitArrowが {"teacher": "prof_tanaka", "class": "3a", ...} を返す
+  → class がない場合は拒否（status: class_not_selected）
   → ba_login.php が teacher + class を検出
   → addClassOwner("3a", "prof_tanaka") を呼び、sandbox/_bitarrow_/3a/.owner に
     "prof_tanaka" を追記（既に登録済みなら何もしない＝冪等）
-  → 教員としてログイン完了（3a が有効化される）
+  → 教員としてログイン完了。class_id は "3a"（教員ホームも sandbox/_bitarrow_/3a/prof_tanaka/ になる）
 ```
 
 同一クラスに別の教員IDが既に登録されていても、上書きせず行を追加する（複数教員の共存）。

@@ -483,7 +483,7 @@ async function main(){
     const _sd = window.SESSION_DATA;
     const _roleLabel = ({admin: '管理者', teacher: '教員', user: '生徒'})[_sd.role] ?? _sd.role;
     const _parts = [_sd.id];
-    if (_sd.class_admin_id === '_bitarrow_' && _sd.class_id !== '_teachers_') {
+    if (_sd.class_admin_id === '_bitarrow_') {
         _parts.push(_sd.class_id);
     }
     _parts.push(_roleLabel);

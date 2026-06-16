@@ -44,6 +44,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	$userData = json_decode($code, true);
 	$redirect = $_SESSION['redirect_after_login'] ?? '/index.php';
 
+	// 教員ログイン時：BitArrow上でクラスを開いた状態でログインしてもらう必要がある
+	if (isset($userData['teacher']) && empty($userData['class'])) {
+		http_response_code(403);
+		echo json_encode([
+			'status'  => 'class_not_selected',
+			'message' => 'クラスを選択した状態でBitArrowにログインしてください。'
+		]);
+		exit();
+	}
+
 	// 学生ログイン時：クラスが有効化されているか確認
 	if (!isset($userData['teacher']) && !isClassActivated($userData['class'])) {
 		http_response_code(403);
@@ -58,17 +68,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 	// teacherキー優先（代理ログイン中も教員として扱う）
 	if (isset($userData['teacher'])) {
+		// BitArrow上では教員の編集データもクラスごとに分かれるため、教員もクラスを指定してログインする
 		$_SESSION['id']             = $userData['teacher'];
 		$_SESSION['class_admin_id'] = '_bitarrow_';
-		$_SESSION['class_id']       = '_teachers_';
+		$_SESSION['class_id']       = $userData['class'];
 		$_SESSION['role']           = 'teacher';
 
 		// BitArrowが返す class は「最後にアクセスしたクラス」＝オーナーであることが保証される
-		if (!empty($userData['class'])) {
-			$newlyActivated = addClassOwner($userData['class'], $userData['teacher']);
-			if ($newlyActivated) {
-				$redirect = '/teacher.php?activated=1&class=' . urlencode($userData['class']);
-			}
+		$newlyActivated = addClassOwner($userData['class'], $userData['teacher']);
+		if ($newlyActivated) {
+			$redirect = '/teacher.php?activated=1&class=' . urlencode($userData['class']);
 		}
 	} else {
 		$_SESSION['id']             = $userData['user'];

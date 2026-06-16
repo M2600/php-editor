@@ -90,6 +90,56 @@ function assertNotGitPath($userPath){
 }
 
 /**
+ * クラスの .owner ファイルパスを取得
+ */
+function getClassOwnerFilePath($classId){
+    global $FILE_ROOT;
+    return $FILE_ROOT . '_bitarrow_/' . basename($classId) . '/.owner';
+}
+
+/**
+ * クラスを所有する教員ID一覧を取得（未有効化なら空配列）
+ * .owner は1行1教員IDのリスト形式
+ */
+function getClassOwners($classId){
+    $path = getClassOwnerFilePath($classId);
+    if (!file_exists($path)) return [];
+    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    return array_values(array_unique(array_map('trim', $lines)));
+}
+
+/**
+ * クラスが有効化済みかどうか（オーナーが1人以上いるか）
+ */
+function isClassActivated($classId){
+    return count(getClassOwners($classId)) > 0;
+}
+
+/**
+ * クラスのオーナーに教員IDを追加登録（冪等）。
+ * 既に他の教員が登録されていても上書きせず追加する（複数教員を許容）。
+ * @return bool 常にtrue（追加 or 既に登録済み）
+ */
+function addClassOwner($classId, $teacherId){
+    if (basename($classId) === '_teachers_' || $classId === '') {
+        return false; // 予約名は対象外
+    }
+    $owners = getClassOwners($classId);
+    if (in_array($teacherId, $owners, true)) {
+        return true; // 既に登録済み（冪等）
+    }
+    $path = getClassOwnerFilePath($classId);
+    $dir  = dirname($path);
+    if (!file_exists($dir)) {
+        mkdir($dir, 0777, true);
+    }
+    $owners[] = $teacherId;
+    file_put_contents($path, implode("\n", $owners) . "\n");
+    logInfo('Class owner registered', ['class' => $classId, 'teacher' => $teacherId, 'owners' => $owners]);
+    return true;
+}
+
+/**
  * パスを安全化（危険な文字列を除去）
  * @deprecated この関数は十分なセキュリティを提供しません。isPathInUserRoot()と併用してください
  * @param string $path 安全化するパス

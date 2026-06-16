@@ -1,6 +1,7 @@
 <?php
 require_once(__DIR__ . '/session_init.php');
 require_once(__DIR__ . '/includes/ba_auth.php');
+require_once(__DIR__ . '/file_functions.php');
 
 header('Content-Type: application/json');
 
@@ -43,6 +44,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	$userData = json_decode($code, true);
 	$redirect = $_SESSION['redirect_after_login'] ?? '/index.php';
 
+	// 学生ログイン時：クラスが有効化されているか確認
+	if (!isset($userData['teacher']) && !isClassActivated($userData['class'])) {
+		http_response_code(403);
+		echo json_encode([
+			'status'  => 'class_not_activated',
+			'message' => 'このクラスは有効化されていません。担当教員にBitArrowへのログインを依頼してください。'
+		]);
+		exit();
+	}
+
 	session_regenerate_id(true);
 
 	// teacherキー優先（代理ログイン中も教員として扱う）
@@ -51,6 +62,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		$_SESSION['class_admin_id'] = '_bitarrow_';
 		$_SESSION['class_id']       = '_teachers_';
 		$_SESSION['role']           = 'teacher';
+
+		// BitArrowが返す class は「最後にアクセスしたクラス」＝オーナーであることが保証される
+		if (!empty($userData['class'])) {
+			addClassOwner($userData['class'], $userData['teacher']);
+		}
 	} else {
 		$_SESSION['id']             = $userData['user'];
 		$_SESSION['class_admin_id'] = '_bitarrow_';

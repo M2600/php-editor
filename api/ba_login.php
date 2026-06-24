@@ -5,6 +5,12 @@ require_once(__DIR__ . '/file_functions.php');
 
 header('Content-Type: application/json');
 
+if (!BAAuth::isEnabled()) {
+	http_response_code(404);
+	echo json_encode(['status' => 'error', 'message' => 'Not Found']);
+	exit();
+}
+
 $baAuth = new BAAuth();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {

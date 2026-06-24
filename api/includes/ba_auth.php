@@ -1,6 +1,13 @@
 <?php
 
 class BAAuth {
+	public static function isEnabled(): bool {
+		$configFile = __DIR__ . '/../config.php';
+		$config = file_exists($configFile) ? require $configFile : [];
+		// キーが存在しない場合は有効（既存環境を壊さないためのデフォルト）
+		return $config['bitarrow_login_enabled'] ?? true;
+	}
+
 	public function generateState() {
 		return bin2hex(random_bytes(16));
 	}

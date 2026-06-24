@@ -13,6 +13,8 @@ if(isset($_SESSION["id"])){
     exit();
 }
 
+require_once(__DIR__ . '/api/includes/ba_auth.php');
+
 require("templates/login.html");
 
 

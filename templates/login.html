@@ -109,8 +109,10 @@
             </div>
             <div id="message"></div>
             <button id="submit" class="login-submit">ログイン</button>
+<?php if (BAAuth::isEnabled()): ?>
             <div class="login-divider">または</div>
             <button id="ba-login" class="login-submit ba-btn">BitArrowでログイン</button>
+<?php endif; ?>
         </div>
     </div>
     <script>
@@ -172,6 +174,7 @@
 
         document.getElementById("id").focus();
 
+<?php if (BAAuth::isEnabled()): ?>
         // BitArrow認証フロー
         document.getElementById("ba-login").addEventListener("click", async function() {
             const message = document.getElementById("message");
@@ -257,6 +260,7 @@
                 message.innerHTML = res.message || "認証に失敗しました";
             }
         })();
+<?php endif; ?>
 
     </script>
 </body>

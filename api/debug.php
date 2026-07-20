@@ -115,7 +115,7 @@ class Debug {
         // - log_errors=1: エラーをstderr（エラーログ）に出力
         // - auto_prepend_file: スクリプト実行前に自動的にロードするファイル
         $phpOptions = [
-        //    'open_basedir=' . escapeshellarg($systemUserRoot . '/data/php_editor/sandbox'),
+            buildUserOpenBasedirOption($userRoot, $debugConfig),
         //    'display_errors=0',
         //    'html_errors=0',
         //    'log_errors=1'

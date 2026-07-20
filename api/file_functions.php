@@ -215,6 +215,31 @@ function shellEscape($str){
     return escapeshellarg($str);
 }
 
+/**
+ * APIモード実行用の open_basedir オプション文字列を構築
+ * webモード（nginx）の open_basedir=user-dir:.composer/:/tmp/ と同じ組み合わせに揃える。
+ * さらに、ini で指定された auto_prepend_file/auto_append_file がユーザーディレクトリ外を
+ * 指していても読み込めるよう、その値も許可パスに動的追加する。
+ * @param string $userRoot ユーザー個別ディレクトリ（getUserRoot()の戻り値）
+ * @param string|null $iniPath 実行に使用するphp.iniのパス（存在する場合のみ参照）
+ * @return string "-d"オプションに渡す "open_basedir=..." 文字列
+ */
+function buildUserOpenBasedirOption($userRoot, $iniPath = null) {
+    global $FILE_ROOT;
+    $paths = [$userRoot, $FILE_ROOT . '.composer/', '/tmp'];
+
+    if ($iniPath && file_exists($iniPath)) {
+        $ini = parse_ini_file($iniPath);
+        foreach (['auto_prepend_file', 'auto_append_file'] as $key) {
+            if (!empty($ini[$key])) {
+                $paths[] = $ini[$key];
+            }
+        }
+    }
+
+    return 'open_basedir=' . escapeshellarg(implode(':', $paths));
+}
+
 // get file type text | image | other
 function getFileType($serverPath){
     // 拡張子による明示的判定を先に実行
@@ -636,6 +661,7 @@ function phpRunError($userPath){
     try{
         $serverPath = convertUserPath($userPath);
         $realPath = realpath($serverPath);
+        $userRoot = getUserRoot();
 
         // 実行するファイルのディレクトリに移動
         $fileDirectory = dirname($serverPath);
@@ -645,6 +671,7 @@ function phpRunError($userPath){
         if(file_exists($USER_SCRIPT_PHP_INI)){
             $command .= "-c " . shellEscape($USER_SCRIPT_PHP_INI) . " ";
         }
+        $command .= "-d " . buildUserOpenBasedirOption($userRoot, $USER_SCRIPT_PHP_INI) . " ";
         $command .= shellEscape($serverPath) . " ";
         $command .= "2>&1";
         exec($command, $output, $return);
@@ -690,7 +717,8 @@ function phpCgiRun($userPath, $printHttpHeaders=false, $GETParams=array()){
         // 実行するファイルのディレクトリに移動
         $fileDirectory = dirname($serverPath);
         chdir($fileDirectory);
-        
+
+        $userRoot = getUserRoot();
         global $USER_SCRIPT_PHP_INI;
         $command = "php-cgi ";
         if(!$printHttpHeaders){
@@ -699,6 +727,7 @@ function phpCgiRun($userPath, $printHttpHeaders=false, $GETParams=array()){
         if(file_exists($USER_SCRIPT_PHP_INI)){
             $command .= "-c " . shellEscape($USER_SCRIPT_PHP_INI) . " ";
         }
+        $command .= "-d " . buildUserOpenBasedirOption($userRoot, $USER_SCRIPT_PHP_INI) . " ";
         $command .= "-f ";
         $command .= shellEscape($serverPath) . " ";
         foreach($GETParams as $key => $value){

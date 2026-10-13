@@ -431,9 +431,14 @@ export function deleteFileDialog(path, editor, api, mConsole, currentFile, DEBUG
         cleanupAceInstance(path, APP_STATE.ACE_LIST);
         
         await deleteFile(path, api, mConsole);
-        if(currentFile.path == path){
-            currentFile = false;
+        // 引数のcurrentFileへの代入は呼び出し元に反映されないため、APP_STATEを直接クリアする
+        // (残すと次のファイル切り替え時に削除済みファイルが自動保存され復活する)
+        if(APP_STATE.CURRENT_FILE && APP_STATE.CURRENT_FILE.path == path){
+            APP_STATE.CURRENT_FILE = false;
             hideAllPreviewer();
+            if (APP_STATE.FILE_ACTION_BUTTONS) {
+                APP_STATE.FILE_ACTION_BUTTONS.update();
+            }
         }
         await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
     });
@@ -860,6 +865,15 @@ export function deleteDirDialog(path, editor, api, mConsole, DEBUG) {
     // ディレクトリ配下のAceを事前にクリーンアップ
     cleanupAceInstancesInDir(path, APP_STATE.ACE_LIST);
         await deleteDir(path, api, mConsole);
+        // 開いているファイルが削除ディレクトリ配下ならクリア(自動保存による復活を防ぐ)
+        const dirPrefix = path.endsWith('/') ? path : path + '/';
+        if (APP_STATE.CURRENT_FILE && APP_STATE.CURRENT_FILE.path.startsWith(dirPrefix)) {
+            APP_STATE.CURRENT_FILE = false;
+            hideAllPreviewer();
+            if (APP_STATE.FILE_ACTION_BUTTONS) {
+                APP_STATE.FILE_ACTION_BUTTONS.update();
+            }
+        }
         await loadExplorer(editor.BASE_DIR, api, APP_STATE, editor);
     });
     controls.appendChild(deleteButton);

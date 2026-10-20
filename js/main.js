@@ -266,15 +266,9 @@ async function executeCurrentFile() {
         
         // プレビューURLを構築
         const filePath = APP_STATE.CURRENT_FILE.path;
-        let previewUrl = `${CONFIG.FILE_PAGE_BASE_URL}${APP_STATE.USER_ID}${filePath}?`;
-        
-        // GETパラメータを追加
-        for (const [key, value] of Object.entries(getParams)) {
-            if (key) { // 空のキーはスキップ
-                previewUrl += `&${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
-            }
-        }
-        
+        // GETパラメータはAPI開発モード用の設定なので、Webページモードでは付与しない
+        const previewUrl = `${CONFIG.FILE_PAGE_BASE_URL}${APP_STATE.USER_ID}${filePath}`;
+
         // プレビューiframeにURLを設定
         if (APP_STATE.WEB_PREVIEWER) {
             APP_STATE.WEB_PREVIEWER.setURL(previewUrl);
@@ -291,7 +285,6 @@ async function executeCurrentFile() {
                 APP_STATE.RUN_BROWSER_TAB,
                 CONFIG.FILE_PAGE_BASE_URL,
                 APP_STATE.USER_ID,
-                getParams,
             );
 
             console.error("WEB_PREVIEWER not available");
@@ -579,7 +572,7 @@ async function main(){
             console.log("QR Code: " + APP_STATE.CURRENT_FILE.path);
             window.logInfo?.("show_qr_code", { source: "user_action", file: APP_STATE.CURRENT_FILE.path });
             // dictMenuからGETパラメータを取得
-            const getParams = dictMenu ? dictMenu.getItemsAsObject() : {};
+            const getParams = (APP_STATE.RUN_MODE === 'API_MODE' && dictMenu) ? dictMenu.getItemsAsObject() : {};
             showQRCode(
                 APP_STATE.CURRENT_FILE,
                 (path, content) => saveFile(path, content, api, APP_STATE.CURRENT_FILE, mConsole, CONFIG.DEBUG, phpSyntaxCheck, editor, APP_STATE),

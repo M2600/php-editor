@@ -279,6 +279,15 @@ export async function openInOtherWindow(currentFile, saveFile, runBrowserTab, fi
     return targetTab;
 }
 
+// ドメイン付きの絶対実行URL (GETパラメータ無し) を組み立てる
+export function buildRunUrl(filePageBaseUrl, userId, path) {
+    let url = window.location.origin + Path.join(filePageBaseUrl, userId, path);
+    if(url.endsWith("/")){
+        url = url.substring(0, url.length - 1);
+    }
+    return url;
+}
+
 export async function showQRCode(currentFile, saveFile, editor, filePageBaseUrl, userId, mConsole, DEBUG, getParams = {}) {
     if (!currentFile) {
         return;
@@ -287,12 +296,8 @@ export async function showQRCode(currentFile, saveFile, editor, filePageBaseUrl,
         await saveFile(currentFile.path, currentFile.aceObj.editor.getValue());
         mConsole.print("File saved: " + currentFile.path, "success");
     }
-    let url = new URL(window.location.href);
-    url = url.origin + Path.join(filePageBaseUrl, userId, currentFile.path);
-    if(url.endsWith("/")){
-        url = url.substring(0, url.length - 1);
-    }
-    
+    let url = buildRunUrl(filePageBaseUrl, userId, currentFile.path);
+
     // GETパラメータをクエリ文字列として追加
     if (getParams && Object.keys(getParams).length > 0) {
         const queryString = new URLSearchParams(getParams).toString();

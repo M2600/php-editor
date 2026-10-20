@@ -25,7 +25,7 @@ import {
 } from './modules/ui/dialogs.js';
 
 // Editor modules
-import { aceKeybinds, openFile, pushSaveButton, openInOtherWindow, showQRCode } from './modules/editor/ace-editor.js';
+import { aceKeybinds, openFile, pushSaveButton, openInOtherWindow, showQRCode, buildRunUrl } from './modules/editor/ace-editor.js';
 
 // AI modules
 import { 
@@ -597,7 +597,7 @@ async function main(){
                 console.warn("No file is currently open");
                 return;
             }
-            const url = `${CONFIG.FILE_PAGE_BASE_URL}${APP_STATE.USER_ID}${APP_STATE.CURRENT_FILE.path}`;
+            const url = buildRunUrl(CONFIG.FILE_PAGE_BASE_URL, APP_STATE.USER_ID, APP_STATE.CURRENT_FILE.path);
             window.logInfo?.("copy_run_url", { source: "user_action", file: APP_STATE.CURRENT_FILE.path });
             try {
                 await navigator.clipboard.writeText(url);

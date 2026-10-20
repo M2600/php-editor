@@ -591,7 +591,7 @@ async function main(){
     // Copy URL button (GETパラメータ無しの実行URLをコピー)
     const copyUrlButton = editor.generateButton(
         editorEditor.menu.left,
-        "🔗URLコピー",
+        "⧉URLコピー",
         async (e) => {
             if (!APP_STATE.CURRENT_FILE) {
                 console.warn("No file is currently open");

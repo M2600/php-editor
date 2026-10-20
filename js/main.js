@@ -588,10 +588,34 @@ async function main(){
     );
     editorEditor.menu.left.items.push(qrButton);
 
+    // Copy URL button (GETパラメータ無しの実行URLをコピー)
+    const copyUrlButton = editor.generateButton(
+        editorEditor.menu.left,
+        "🔗URLコピー",
+        async (e) => {
+            if (!APP_STATE.CURRENT_FILE) {
+                console.warn("No file is currently open");
+                return;
+            }
+            const url = `${CONFIG.FILE_PAGE_BASE_URL}${APP_STATE.USER_ID}${APP_STATE.CURRENT_FILE.path}`;
+            window.logInfo?.("copy_run_url", { source: "user_action", file: APP_STATE.CURRENT_FILE.path });
+            try {
+                await navigator.clipboard.writeText(url);
+                mConsole?.print("実行URLをコピーしました: " + url, "info");
+            } catch (err) {
+                console.error("Failed to copy URL:", err);
+                mConsole?.print("実行URLのコピーに失敗しました: " + err.message, "error");
+            }
+        },
+        "GETパラメータ無しの実行URLをクリップボードにコピーします"
+    );
+    editorEditor.menu.left.items.push(copyUrlButton);
+
     // 初期状態でボタンを無効化
     saveButton.setEnabled(false);
     runButton.setEnabled(false);
     qrButton.setEnabled(false);
+    copyUrlButton.setEnabled(false);
 
     // ファイルが開かれたときにボタンを有効化する関数
     function updateFileActionButtons() {
@@ -599,6 +623,7 @@ async function main(){
         saveButton.setEnabled(hasFile);
         runButton.setEnabled(hasFile);
         qrButton.setEnabled(hasFile);
+        copyUrlButton.setEnabled(hasFile);
         consoleRunButton.setEnabled(hasFile);
     }
 
@@ -607,6 +632,7 @@ async function main(){
         save: saveButton,
         run: runButton,
         qr: qrButton,
+        copyUrl: copyUrlButton,
         update: updateFileActionButtons
     };
 

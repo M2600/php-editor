@@ -13,7 +13,7 @@ class BAAuth {
 	}
 
 	public function verifyCode(string $code) {
-		$verifyUrl = 'https://bitarrow3.eplang.jp/bitarrow/?Login/bauth&status=' . urlencode($code);
+		$verifyUrl = 'https://bitarrow4.eplang.jp/bitarrow/?Login/bauth&status=' . urlencode($code);
 		$response = @file_get_contents($verifyUrl);
 		if ($response === false) {
 			return false;

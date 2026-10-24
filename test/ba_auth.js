@@ -42,7 +42,7 @@ export class BAAuth {
 	async getAuthURL() {
 		// 末尾?必須 stateをいれるのであれば大丈夫
 		// curStatusのあとに=が入っていると動作しないので手動で記述。 NG: curStatus=&otp=1, OK: curStatus&otp=1
-		let BAAuthURL = 'https://bitarrow3.eplang.jp/bitarrow/?Login/curStatus&otp=1';
+		let BAAuthURL = 'https://bitarrow4.eplang.jp/bitarrow/?Login/curStatus&otp=1';
 		const state = await this.#generateState();
 		const callbackURL = this.getCallbackURL(state);
 		BAAuthURL += `&callback=${encodeURIComponent(callbackURL)}`;
@@ -83,7 +83,7 @@ export class BAAuth {
 	 * @param {HTMLElement} iframe 
 	 */
 	async BALoginCheck() {
-		const baStatusURL = "https://bitarrow3.eplang.jp/bitarrow/?Login/curStatus";
+		const baStatusURL = "https://bitarrow4.eplang.jp/bitarrow/?Login/curStatus";
 		const response = await fetch(baStatusURL, {
 			method: 'GET',
 			credentials: 'include'
@@ -118,7 +118,7 @@ export class BAAuth {
 	}
 
 	async openBALogin() {
-		const BALoginURL = 'https://bitarrow3.eplang.jp/bitarrow/?Login/form';
+		const BALoginURL = 'https://bitarrow4.eplang.jp/bitarrow/?Login/form';
 		const popup = window.open(BALoginURL, 'BitArrow Login', 'width=600,height=600');
 		if (!popup || popup === null) {
 			alert('Popup blocked. Please allow popups for this site.');

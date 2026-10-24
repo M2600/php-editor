@@ -16,7 +16,7 @@ if ($code !== null) {
 	}
 
 	// codeが正しいかBitArrowサーバに問い合わせる
-	$verifyUrl = 'https://bitarrow3.eplang.jp/bitarrow/?Login/bauth&status=' . urlencode($code);
+	$verifyUrl = 'https://bitarrow4.eplang.jp/bitarrow/?Login/bauth&status=' . urlencode($code);
 	$response = file_get_contents($verifyUrl);
 	if ($response !== "OK") {
 		echo "認証に失敗しました。";
@@ -45,7 +45,7 @@ if ($code !== null) {
 	else {
 		// ログインしていない
 		echo "BitArrowにログインしていないようです。ログイン後に再度認証してください。<br>";
-		echo "<a href='https://bitarrow3.eplang.jp/bitarrow/?Login/form'>BitArrowログイン</a>";
+		echo "<a href='https://bitarrow4.eplang.jp/bitarrow/?Login/form'>BitArrowログイン</a>";
 		exit();
 	}
 
@@ -63,7 +63,7 @@ $state = bin2hex(random_bytes(16));
 $_SESSION['oauth_state'] = $state;
 // stateを含んだリダイレクト用URLを生成
 $callbackUrl = (empty($_SERVER['HTTPS']) ? 'http://' : 'https://') . $_SERVER['HTTP_HOST'] . $_SERVER['SCRIPT_NAME'] . '?' . 'state=' . $state;
-$authUrl = 'https://bitarrow3.eplang.jp/bitarrow/?Login/curStatus&otp=1&callback=' . urlencode($callbackUrl);
+$authUrl = 'https://bitarrow4.eplang.jp/bitarrow/?Login/curStatus&otp=1&callback=' . urlencode($callbackUrl);
 header('Location: ' . $authUrl);
 exit();
 ?>

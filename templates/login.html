@@ -188,11 +188,11 @@
             callbackUrl.search = "";
             callbackUrl.searchParams.set("state", state);
 
-            const authUrl = "https://bitarrow3.eplang.jp/bitarrow/?Login/curStatus&otp=1&callback=" + encodeURIComponent(callbackUrl.toString());
+            const authUrl = "https://bitarrow4.eplang.jp/bitarrow/?Login/curStatus&otp=1&callback=" + encodeURIComponent(callbackUrl.toString());
             window.location.href = authUrl;
         });
 
-        const BA_LOGIN_URL = "https://bitarrow3.eplang.jp/bitarrow/?Login/form";
+        const BA_LOGIN_URL = "https://bitarrow4.eplang.jp/bitarrow/?Login/form";
 
         async function startBAAuthFlow() {
             const stateRes = await fetch("api/ba_login.php").then(r => r.json());
@@ -200,7 +200,7 @@
             const callbackUrl = new URL(window.location.href);
             callbackUrl.search = "";
             callbackUrl.searchParams.set("state", state);
-            const authUrl = "https://bitarrow3.eplang.jp/bitarrow/?Login/curStatus&otp=1&callback=" + encodeURIComponent(callbackUrl.toString());
+            const authUrl = "https://bitarrow4.eplang.jp/bitarrow/?Login/curStatus&otp=1&callback=" + encodeURIComponent(callbackUrl.toString());
             window.location.href = authUrl;
         }
 

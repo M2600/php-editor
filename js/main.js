@@ -351,7 +351,21 @@ async function restoreDirFromURL() {
     if (!dirPath) {
         dirPath = "/";
     }
+    // loadExplorerがURLを書き換える前にfileパラメータを取得
+    const filePath = urlParams.get("file");
     await loadExplorer(dirPath, api, APP_STATE, editor);
+
+    if (!filePath) return;
+    const normalizedPath = filePath.startsWith('/') ? filePath : '/' + filePath;
+    const fileInfo = findFileInList(APP_STATE.FILE_LIST && APP_STATE.FILE_LIST.files, normalizedPath);
+    if (!fileInfo || fileInfo.type === "dir") {
+        console.warn("File in URL not found: ", normalizedPath);
+        return;
+    }
+    if (editor.explorer && typeof editor.explorer.fileClickAction === 'function') {
+        await editor.explorer.fileClickAction(fileInfo);
+        editor.explorer.highlightFile(normalizedPath);
+    }
 }
 
 

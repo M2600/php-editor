@@ -1565,6 +1565,11 @@ async function main(){
             }
         }
     });
+
+	// console out something
+	
+	console.log(`Ace keyboard mode is set to ${APP_STATE.ACE_KEYBOARD_HANDLER}.\n Change mode with changing APP_STATE.ACE_KEYBOARD_HANDLER valiable.\nAPP_SATE.ACE_KEYBOARD_HANDLER = "ace/keyboard/vim".`);
+
 }
 
 // アプリケーション開始

@@ -20,7 +20,9 @@ export function markPrivateFiles(fileList, parentPath = '/') {
     return fileList.map(file => {
         // ファイルのフルパスを構築
         const fullPath = parentPath + file.name;
-        const isPrivate = isPrivateFile(fullPath);
+        // ディレクトリは末尾に/を付けて判定（data/ 等のフォルダ名パターンに一致させる）
+        const checkPath = (file.type === 'dir' && !fullPath.endsWith('/')) ? fullPath + '/' : fullPath;
+        const isPrivate = isPrivateFile(checkPath);
         
         // フラグとパスを追加
         const markedFile = {

@@ -106,7 +106,10 @@ export const AI_CONFIG = {
 // =============================================================
 export const PRIVATE_FILE_PATTERNS = [
     /(^|\/)\./, // ドットファイル・ドットフォルダ（任意の階層）
-    /(^|\/)config(\/|$)/ // configディレクトリ内のファイル
+    /(^|\/)config(\/|$)/, // configディレクトリ内のファイル
+    /(^|\/)(data|logs|log|db|private)\//i, // データ用フォルダ（配下のPHPも含めて非公開）
+    /\.ini$/, // iniファイル
+    /(\.(db|sqlite|sqlite3|db3)|-(journal|wal|shm))$/i // SQLite DB本体と journal / WAL / shm
 ];
 
 /**

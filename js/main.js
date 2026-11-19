@@ -6,6 +6,8 @@
 import { UserConfig, changeTheme, CONFIG, APP_STATE } from './modules/core/config.js';
 import { loadExplorer, saveSortSettings, loadFile } from './modules/core/file-manager.js';
 import { startSessionPulse } from './modules/core/pulse.js';
+import { showErrorToast } from './modules/ui/loading.js';
+import { showReloginModal } from './modules/ui/relogin.js';
 import { ExplorerAutoReload } from './modules/core/explorer-auto-reload.js';
 import { createHistoryPanel } from './modules/core/history-panel.js';
 
@@ -717,9 +719,30 @@ async function main(){
     explorer.setMenuTitle("");
 
     // Explorer event handlers
+    // ファイルを開く処理中の再入防止用 (#27)
+    let isOpeningFile = false;
     explorer.setFileClickAction(async function (file) {
+        if (isOpeningFile) {
+            showErrorToast("ファイルを読み込み中です。完了してからもう一度クリックしてください。", { type: 'warning', duration: 3000 });
+            return;
+        }
+        isOpeningFile = true;
+        try {
+            await handleFileClick(file);
+        } catch (error) {
+            // ApiError は api() 側で通知済み。それ以外の予期せぬエラーはここで通知する
+            console.error("File open error:", error);
+            if (!(error && error.notified)) {
+                showErrorToast("ファイルを開けませんでした: " + (error && error.message ? error.message : error));
+            }
+        } finally {
+            isOpeningFile = false;
+        }
+    });
+
+    async function handleFileClick(file) {
         if(APP_STATE.CURRENT_FILE && !APP_STATE.CURRENT_FILE.readonly && APP_STATE.CURRENT_FILE.changed){
-            await saveFile(
+            const saved = await saveFile(
                 APP_STATE.CURRENT_FILE.path, 
                 APP_STATE.CURRENT_FILE.aceObj.editor.getValue(),
                 api,
@@ -730,6 +753,11 @@ async function main(){
                 editor,
                 APP_STATE
             );
+            // 保存に失敗した場合は未保存の内容を失わないよう、ファイルを切り替えない
+            if (!saved && !APP_STATE.CURRENT_FILE.aceObj.editor.isDiffView) {
+                showErrorToast("現在のファイルを保存できなかったため、ファイルを開きませんでした。");
+                return;
+            }
         }
         const currentFile = await openFile(
             file,
@@ -772,7 +800,7 @@ async function main(){
         if (APP_STATE.FILE_ACTION_BUTTONS) {
             APP_STATE.FILE_ACTION_BUTTONS.update();
         }
-    });
+    }
 
     explorer.setDirClickAction(async function (dir) {
         console.log("re: dir click: ", dir);
@@ -1541,6 +1569,26 @@ async function main(){
         historyPanel.setTheme(eventTheme ? eventTheme.aceTheme : theme.aceTheme);
     }
 
+    // 未保存のファイルがある状態でのタブ閉じ・リロードを警告 (#27)
+    window.addEventListener('beforeunload', (e) => {
+        const files = (APP_STATE.FILE_LIST && APP_STATE.FILE_LIST.files) || [];
+        const hasUnsaved = files.some(f => f && f.changed && !f.readonly)
+            || !!(APP_STATE.CURRENT_FILE && APP_STATE.CURRENT_FILE.changed && !APP_STATE.CURRENT_FILE.readonly);
+        if (hasUnsaved) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    // ネットワーク接続状態の通知 (#27)
+    let offlineToastClose = null;
+    window.addEventListener('offline', () => {
+        offlineToastClose = showErrorToast("ネットワークに接続できません。接続が回復するまで保存や読み込みはできません。", { type: 'warning', duration: 0 });
+    });
+    window.addEventListener('online', () => {
+        if (offlineToastClose) { offlineToastClose(); offlineToastClose = null; }
+    });
+
     // セッション生存確認を開始
     startSessionPulse({
         interval: CONFIG.SESSION_PULSE_INTERVAL || 60000, // デフォルト1分
@@ -1549,13 +1597,8 @@ async function main(){
             // nothing to do
         },
         onSessionExpired: function(data) {
-            // セッション期限切れ時の処理
-            if (mConsole) {
-                mConsole.print("セッションが期限切れです。再ログインしてください。", "error");
-            }
-            setTimeout(() => {
-                window.location.href = '/login.php';
-            }, 2000);
+            // セッション期限切れ時は再ログインモーダルで作業を止める (編集内容は画面に残る)
+            showReloginModal();
         },
         onError: function(error) {
             // エラーハンドリング（ネットワークエラーなど）

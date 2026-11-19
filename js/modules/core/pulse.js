@@ -22,6 +22,14 @@ class SessionPulse {
             this.checkSession();
         }, this.interval);
         
+        // タブ復帰・ネットワーク復帰時は次の周期を待たず即チェック (スリープ/バックグラウンド後の期限切れ検知)
+        this.onVisible = () => {
+            if (document.visibilityState === 'visible') this.checkSession();
+        };
+        this.onOnline = () => this.checkSession();
+        document.addEventListener('visibilitychange', this.onVisible);
+        window.addEventListener('online', this.onOnline);
+
         console.log('Session pulse started');
     }
 
@@ -31,6 +39,8 @@ class SessionPulse {
             this.intervalId = null;
         }
         this.isRunning = false;
+        if (this.onVisible) document.removeEventListener('visibilitychange', this.onVisible);
+        if (this.onOnline) window.removeEventListener('online', this.onOnline);
         console.log('Session pulse stopped');
     }
 
@@ -44,6 +54,12 @@ class SessionPulse {
                 }
             });
 
+            // 401 はセッション切れ (サーバーは session_error を 401 で返す)
+            if (response.status === 401) {
+                console.warn('Session expired or invalid');
+                this.onSessionExpired({ status: 'session_error' });
+                return;
+            }
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }

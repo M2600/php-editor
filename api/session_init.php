@@ -32,6 +32,9 @@ ini_set('session.cookie_samesite', 'Lax');       // OAuthコールバック対�
 // セッション名の設定（デフォルトのPHPSESSIDから変更してセキュリティ向上）
 ini_set('session.name', 'PHP_EDITOR_SID');
 
+// セッション有効期間を明示 (8時間)。リクエスト毎に延長される (#27)
+ini_set('session.gc_maxlifetime', 28800);
+
 // セッション開始
 session_start();
 

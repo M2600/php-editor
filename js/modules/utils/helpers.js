@@ -2,6 +2,8 @@
  * ユーティリティヘルパー関数
  */
 
+import { showReloginModal } from '../ui/relogin.js';
+
 export function hideAllPreviewer(){
     let viewers = document.querySelectorAll(".viewer");
     viewers.forEach((viewer) => {
@@ -42,8 +44,9 @@ export function fileNameCheck(fileName) {
 }
 
 export function sessionError() {
+    // 強制リダイレクトせず、再ログインモーダルを表示する (#27)
     console.error("Session error");
-    window.location.href = "/login.php";
+    showReloginModal();
 }
 
 export function getCurrentPath(baseDir) {

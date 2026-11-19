@@ -82,12 +82,6 @@ export async function openFile(file, aceList, editor, mConsole, extLangMap, DEBU
         return;
     }
     
-    // URLのクエリパラメータを更新
-    let url = new URL(window.location.href);
-    url.searchParams.set("file", file.path);
-    window.history.pushState({}, "", url);
-    console.log("URL updated: " + url);
-
     DEBUG && console.log("fileInfo", file);
     const apiRet = await loadFile(file.path, api);
     if (!apiRet) {
@@ -95,6 +89,12 @@ export async function openFile(file, aceList, editor, mConsole, extLangMap, DEBU
         // reload Explorer
         return;
     }
+
+    // 読み込み成功後にURLのクエリパラメータを更新 (失敗時にURLだけ変わるのを防ぐ #27)
+    let url = new URL(window.location.href);
+    url.searchParams.set("file", file.path);
+    window.history.pushState({}, "", url);
+    console.log("URL updated: " + url);
     hideAllPreviewer();
     
     if(file.type == "text"){

@@ -3,6 +3,7 @@
  */
 
 import { sessionError } from '../utils/helpers.js';
+import { showErrorToast } from '../ui/loading.js';
 import { Path } from '../utils/api.js';
 import { isPrivateFile } from './config.js';
 
@@ -495,6 +496,7 @@ export async function loadFile(path, api) {
     .then(data => {
         if (data.status === "error") {
             console.error(data.message);
+            showErrorToast("ファイルを読み込めませんでした: " + (data.message || ""));
             return;
         }
         if (data.status === "session_error") {
@@ -526,6 +528,7 @@ export async function saveFile(path, content, api, currentFile, mConsole, DEBUG,
         if (data.status === "error") {
             console.error(data.error);
             mConsole.print("File save error: " + path, "error");
+            showErrorToast("ファイルを保存できませんでした: " + (data.message || data.error || path));
             ret = 0;
             return;
         }

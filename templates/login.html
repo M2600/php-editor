@@ -116,6 +116,12 @@
         </div>
     </div>
     <script>
+        // セッション切れで遷移してきた場合のメッセージ (#27)
+        if (new URLSearchParams(window.location.search).get("expired") === "1") {
+            const expiredMessage = document.getElementById("message");
+            expiredMessage.style.color = "orange";
+            expiredMessage.textContent = "セッションの有効期限が切れました。もう一度ログインしてください。";
+        }
         async function loginRequest(){
             let message = document.getElementById("message");
             let id = document.getElementById("id").value;

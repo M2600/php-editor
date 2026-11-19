@@ -6,8 +6,8 @@
 import { UserConfig, changeTheme, CONFIG, APP_STATE } from './modules/core/config.js';
 import { loadExplorer, saveSortSettings, loadFile } from './modules/core/file-manager.js';
 import { startSessionPulse } from './modules/core/pulse.js';
-import { showErrorToast } from './modules/ui/loading.js';
-import { showReloginModal } from './modules/ui/relogin.js';
+import { showEditorBanner, showErrorToast, setBannerHost, delayedIndicator, slowNoticeText } from './modules/ui/loading.js';
+import { redirectToLogin } from './modules/utils/helpers.js';
 import { ExplorerAutoReload } from './modules/core/explorer-auto-reload.js';
 import { createHistoryPanel } from './modules/core/history-panel.js';
 
@@ -519,6 +519,8 @@ async function main(){
 
     const editorEditor = editor.workPlace(editor.page.main.mid.container.main);
     editor.wp = editorEditor;
+    // 通信エラーのバナーはエディタ上部(メニューの下)に表示する (#27)
+    setBannerHost(editorEditor.element, editorEditor.content.element);
 
     // Save button
     const saveButton = editor.generateButton(
@@ -727,6 +729,12 @@ async function main(){
             return;
         }
         isOpeningFile = true;
+        // エクスプローラのファイル名にスピナー (300ms以内に終われば出さない / 5秒超で警告)
+        const stopIndicator = delayedIndicator(
+            () => editor.setFileLoading(file.path, true),
+            () => editor.setFileLoading(file.path, false),
+            () => showEditorBanner({ message: slowNoticeText, type: 'warning' })
+        );
         try {
             await handleFileClick(file);
         } catch (error) {
@@ -736,6 +744,7 @@ async function main(){
                 showErrorToast("ファイルを開けませんでした: " + (error && error.message ? error.message : error));
             }
         } finally {
+            stopIndicator();
             isOpeningFile = false;
         }
     });
@@ -1572,6 +1581,7 @@ async function main(){
     // 未保存のファイルがある状態でのタブ閉じ・リロードを警告 (#27)
     window.addEventListener('beforeunload', (e) => {
         const files = (APP_STATE.FILE_LIST && APP_STATE.FILE_LIST.files) || [];
+        if (window.__redirectingToLogin) return; // セッション切れの自動遷移では確認しない
         const hasUnsaved = files.some(f => f && f.changed && !f.readonly)
             || !!(APP_STATE.CURRENT_FILE && APP_STATE.CURRENT_FILE.changed && !APP_STATE.CURRENT_FILE.readonly);
         if (hasUnsaved) {
@@ -1583,7 +1593,8 @@ async function main(){
     // ネットワーク接続状態の通知 (#27)
     let offlineToastClose = null;
     window.addEventListener('offline', () => {
-        offlineToastClose = showErrorToast("ネットワークに接続できません。接続が回復するまで保存や読み込みはできません。", { type: 'warning', duration: 0 });
+        if (offlineToastClose) offlineToastClose();
+        offlineToastClose = showEditorBanner({ message: "ネットワークに接続できません。接続が回復するまで保存や読み込みはできません。", type: 'warning' });
     });
     window.addEventListener('online', () => {
         if (offlineToastClose) { offlineToastClose(); offlineToastClose = null; }
@@ -1597,8 +1608,8 @@ async function main(){
             // nothing to do
         },
         onSessionExpired: function(data) {
-            // セッション期限切れ時は再ログインモーダルで作業を止める (編集内容は画面に残る)
-            showReloginModal();
+            // セッション期限切れ時はログイン画面へ自動遷移する
+            redirectToLogin();
         },
         onError: function(error) {
             // エラーハンドリング（ネットワークエラーなど）

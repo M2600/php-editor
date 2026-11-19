@@ -2,7 +2,6 @@
  * ユーティリティヘルパー関数
  */
 
-import { showReloginModal } from '../ui/relogin.js';
 
 export function hideAllPreviewer(){
     let viewers = document.querySelectorAll(".viewer");
@@ -43,10 +42,19 @@ export function fileNameCheck(fileName) {
     return true;
 }
 
+/**
+ * セッション切れ時にログイン画面へ自動遷移する (#27)
+ * 自動遷移なので beforeunload の確認ダイアログは出さない。
+ */
+export function redirectToLogin() {
+    if (window.__redirectingToLogin) return;
+    window.__redirectingToLogin = true;
+    window.location.replace("/login.php?expired=1");
+}
+
 export function sessionError() {
-    // 強制リダイレクトせず、再ログインモーダルを表示する (#27)
     console.error("Session error");
-    showReloginModal();
+    redirectToLogin();
 }
 
 export function getCurrentPath(baseDir) {

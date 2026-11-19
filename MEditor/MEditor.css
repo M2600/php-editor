@@ -2316,3 +2316,23 @@ i {
 .meditor-checkbox-input {
     accent-color: var(--me-color-accent, #4da3ff);
 }
+/* 通信中スピナー: エクスプローラのファイル名・ボタン上 (#27) */
+.meditor-file-spinner,
+.meditor-button-spinner {
+    display: inline-block;
+    box-sizing: border-box;
+    width: 0.9em;
+    height: 0.9em;
+    border: 2px solid var(--me-color-border, #bbb);
+    border-top-color: #4caf50;
+    border-radius: 50%;
+    animation: meditor-spin 0.9s linear infinite;
+    vertical-align: -0.1em;
+}
+.meditor-file-spinner { margin-right: 0.3em; }
+.meditor-button-spinner { margin-right: 0.4em; }
+.meditor-button.meditor-button-loading { pointer-events: none; opacity: 0.85; }
+@media (prefers-reduced-motion: reduce) {
+    .meditor-file-spinner,
+    .meditor-button-spinner { animation-duration: 3s; }
+}

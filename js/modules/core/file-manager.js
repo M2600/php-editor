@@ -3,7 +3,7 @@
  */
 
 import { sessionError } from '../utils/helpers.js';
-import { showErrorToast } from '../ui/loading.js';
+import { showErrorToast, showEditorBanner, delayedIndicator, slowNoticeText } from '../ui/loading.js';
 import { Path } from '../utils/api.js';
 import { isPrivateFile } from './config.js';
 
@@ -517,6 +517,14 @@ export async function saveFile(path, content, api, currentFile, mConsole, DEBUG,
         return 0;
     }
     DEBUG && console.log("saveFile: ", path, content);
+    // 保存ボタンにスピナー (300ms以内に終われば出さない / 5秒超で警告)
+    const saveBtn = appState && appState.FILE_ACTION_BUTTONS && appState.FILE_ACTION_BUTTONS.save;
+    const stopIndicator = delayedIndicator(
+        () => saveBtn && saveBtn.setLoading && saveBtn.setLoading(true),
+        () => saveBtn && saveBtn.setLoading && saveBtn.setLoading(false),
+        () => showEditorBanner({ message: slowNoticeText, type: 'warning' })
+    );
+    try {
     let body = {
         action: "save",
         path: path,
@@ -566,6 +574,9 @@ export async function saveFile(path, content, api, currentFile, mConsole, DEBUG,
         }).catch(() => {});
     });
     return ret;
+    } finally {
+        stopIndicator();
+    }
 }
 
 export async function renameFile(path, newPath, api, mConsole) {

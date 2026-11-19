@@ -1173,6 +1173,19 @@ export class MEditor {
         button.setEnabled = (enabled) => {
             button.element.disabled = !enabled;
         }
+        // 通信中スピナーの表示/非表示 (表示中は二重操作防止のためクリックを無効化)
+        button.setLoading = (loading) => {
+            const spinnerClass = this.CLASS_NAME_PREFIX + "button-spinner";
+            const existing = button.element.querySelector('.' + spinnerClass);
+            if (loading && !existing) {
+                const spinner = document.createElement("span");
+                spinner.classList.add(spinnerClass);
+                button.element.prepend(spinner);
+            } else if (!loading && existing) {
+                existing.remove();
+            }
+            button.element.classList.toggle(this.CLASS_NAME_PREFIX + "button-loading", !!loading);
+        }
 
         if (parentObj && parentObj.element instanceof HTMLElement) {
             parentObj.element.appendChild(button.element);
@@ -2329,7 +2342,7 @@ export class MEditor {
      * @param {string} iconTitle アイコンタイトル
      * @returns 
      */
-    addFileIcon(path, iconText, iconTitle="") {
+    addFileIcon(path, iconText, iconTitle="", opts={}) {
         // ファイル要素を取得
         const fileBtn = document.getElementById(path);
         if (!fileBtn) return false;
@@ -2347,8 +2360,27 @@ export class MEditor {
         const iconElm = document.createElement("span");
         iconElm.classList.add(this.CLASS_NAME_PREFIX + "file-icon");
         iconElm.textContent = iconText;
+        if (opts.spinner) iconElm.classList.add(this.CLASS_NAME_PREFIX + "file-spinner");
         if (iconTitle) iconElm.title = iconTitle;
         iconContainer.prepend(iconElm);
+        return true;
+    }
+
+    /**
+     * エクスプローラのファイル名にローディングスピナーを表示/非表示する
+     * @param {string} path ファイルの絶対パス
+     * @param {boolean} loading true で表示、false で除去
+     */
+    setFileLoading(path, loading) {
+        const fileBtn = document.getElementById(path);
+        if (!fileBtn) return false;
+        const spinnerClass = this.CLASS_NAME_PREFIX + "file-spinner";
+        const existing = fileBtn.querySelector('.' + spinnerClass);
+        if (loading) {
+            if (existing) return true;
+            return this.addFileIcon(path, "", "読み込み中", { spinner: true });
+        }
+        if (existing) existing.remove();
         return true;
     }
 

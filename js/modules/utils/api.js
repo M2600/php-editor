@@ -1,26 +1,13 @@
 /**
  * API通信ユーティリティ
  * - タイムアウト / ネットワーク断 / 非JSON応答 / セッション切れを ApiError に統一 (#27)
- * - 時間のかかる通信ではローディングダイアログを表示
  */
 
-import { beginLoading, endLoading, showErrorToast } from '../ui/loading.js';
-import { showReloginModal } from '../ui/relogin.js';
+import { showErrorToast } from '../ui/loading.js';
+import { redirectToLogin } from './helpers.js';
 
 const DEFAULT_TIMEOUT_MS = 15000;
 
-// ローディングダイアログを出す file_manager のアクション
-const LOADING_ACTIONS = {
-    get: 'ファイルを読み込み中...',
-    save: 'ファイルを保存中...',
-    delete: 'ファイルを削除中...',
-    deleteDir: 'フォルダを削除中...',
-    duplicate: 'ファイルを複製中...',
-    rename: '名前を変更中...',
-    mkdir: 'フォルダを作成中...',
-    touch: 'ファイルを作成中...',
-    'list-object': 'フォルダを読み込み中...',
-};
 // 実行系は時間がかかり得るためタイムアウトを設けない
 const NO_TIMEOUT_ACTIONS = ['run', 'cgi_run'];
 
@@ -39,14 +26,11 @@ export class ApiError extends Error {
 /**
  * @param {string} url
  * @param {object} body
- * @param {{timeout?: number, loading?: boolean|string, notify?: boolean}} options
- *   timeout: ms (0で無制限) / loading: false で非表示、文字列で表示テキスト指定 / notify: false でエラートースト抑制
+ * @param {{timeout?: number, notify?: boolean}} options
+ *   timeout: ms (0で無制限) / notify: false でエラーバナー抑制
  */
 export async function api(url, body = {}, options = {}) {
     const action = body && body.action;
-    const loadingText = options.loading !== undefined
-        ? (options.loading === true ? '通信中...' : options.loading)
-        : LOADING_ACTIONS[action];
     const timeoutMs = options.timeout !== undefined
         ? options.timeout
         : (NO_TIMEOUT_ACTIONS.includes(action) ? 0 : DEFAULT_TIMEOUT_MS);
@@ -58,7 +42,6 @@ export async function api(url, body = {}, options = {}) {
     if (timeoutMs > 0) {
         timer = setTimeout(() => { timedOut = true; controller.abort(); }, timeoutMs);
     }
-    const loadingToken = loadingText ? beginLoading(loadingText, () => controller.abort()) : null;
 
     const fail = (error) => {
         if (notify && error.kind !== 'session') {
@@ -92,7 +75,7 @@ export async function api(url, body = {}, options = {}) {
 
         // セッション切れ: 再ログインを促し、元の処理は中断する(リトライはしない)
         if (response.status === 401) {
-            showReloginModal();
+            redirectToLogin();
             throw new ApiError('session', '未ログインまたはセッションが無効です。再度ログインしてください。', { status: 401, notified: true });
         }
         if (!response.ok) {
@@ -113,13 +96,12 @@ export async function api(url, body = {}, options = {}) {
         }
         // 200 でも session_error が返るエンドポイントへの保険
         if (data && data.status === 'session_error') {
-            showReloginModal();
+            redirectToLogin();
             throw new ApiError('session', data.message || 'セッションが無効です。', { status: 401, notified: true });
         }
         return data;
     } finally {
         if (timer) clearTimeout(timer);
-        if (loadingToken !== null) endLoading(loadingToken);
     }
 }
 

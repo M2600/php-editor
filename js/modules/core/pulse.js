@@ -88,8 +88,8 @@ class SessionPulse {
 
     defaultSessionExpiredHandler(data) {
         // デフォルトのセッション期限切れ処理
-        alert('セッションが期限切れです。再ログインしてください。');
-        window.location.href = '/login.php';
+        window.__redirectingToLogin = true;
+        window.location.replace('/login.php?expired=1');
     }
 
     defaultErrorHandler(error) {
